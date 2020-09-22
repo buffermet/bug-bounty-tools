@@ -241,6 +241,88 @@ const hexEncodeThreeUpperCase = str => {
 }
 
 /*
+ * Returns a hex encoded string (type 4) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
+ */
+const hexEncodeFourLowerCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 4) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
+ */
+const hexEncodeFourUpperCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 3) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
+ */
+const hexEncodeFiveLowerCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    if (x.indexOf(str.charAt(a)) == -1) {
+      encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
+    }
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 3) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
+ */
+const hexEncodeFiveUpperCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    if (x.indexOf(str.charAt(a)) == -1) {
+      encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
+    }
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 4) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
+ */
+const hexEncodeSixLowerCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 4) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
+ */
+const hexEncodeSixUpperCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
+  }
+  return encoded;
+}
+
+/*
  * 
  */
 const unescapeHTML = str => {
@@ -679,32 +761,34 @@ console.log("this URL candidate:", thisURLCandidate);
  * Init fuzzer.
  */
 (async()=>{
-  for (let a = 0; a < redirectURLs.length; a++) {
-    const thisRedirectURL = redirectURLs[a];
-    const redirectHost = parseURL(thisRedirectURL)[1];
-    if (
-      location.host.toLowerCase() == redirectHost.toLowerCase()
-    ) {
-      const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
-      alert(msg);
-      console.log(msg);
-    } 
-  }
+  if (confirm("Start open redirect fuzzing?")) {
+    for (let a = 0; a < redirectURLs.length; a++) {
+      const thisRedirectURL = redirectURLs[a];
+      const redirectHost = parseURL(thisRedirectURL)[1];
+      if (
+        location.host.toLowerCase() == redirectHost.toLowerCase()
+      ) {
+        const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
+        alert(msg);
+        console.log(msg);
+      } 
+    }
 
-  scanForExploitableURIsAndQueue();
+    scanForExploitableURIsAndQueue();
 
-  if (globalThis.document) {
-    globalThis.document.addEventListener("DOMContentLoaded", async()=>{
+    if (globalThis.document) {
+      globalThis.document.addEventListener("DOMContentLoaded", async()=>{
+        scanForExploitableURIsAndQueue();
+      });
+    }
+
+    globalThis.addEventListener("load", async()=>{
       scanForExploitableURIsAndQueue();
+      if (pendingURLs.length > 0) {
+        console.log(pendingURLs);
+        openPendingURLs();
+      }
     });
   }
-
-  globalThis.addEventListener("load", async()=>{
-    scanForExploitableURIsAndQueue();
-    if (pendingURLs.length > 0) {
-      console.log(pendingURLs);
-      openPendingURLs();
-    }
-  });
 })();
 
