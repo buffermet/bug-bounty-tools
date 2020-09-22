@@ -17,6 +17,7 @@
 "use strict";
 
 let pendingURLs = [];
+let shuttingDown = false;
 
 const redirectURLs = [
   "https://www.runescape.com",
@@ -30,7 +31,7 @@ const regexpSelectorURLWithURIParameter = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%
 const regexpSelectorFullURL = /^()$/ig;
 
 let protocols = ["http://", "https://"];
-let requestDelay = [2000, 6000];
+let requestDelay = [4000, 8000];
 let session_id = "2y5jti4nj53454j6k53";
 let threads = 4;
 
@@ -150,6 +151,93 @@ let threads = 4;
  */
 const getIntFromRange = (min, max) => {
   return parseInt(min + (Math.random() * (max - min)));
+}
+
+const x = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-";
+/*
+ * Returns a hex encoded string (type 1) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
+ */
+const hexEncodeOneLowerCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    if (x.indexOf(str.charAt(a)) == -1) {
+      encoded = encoded + "%" + str.charCodeAt(a).toString(16).toLowerCase();
+    }
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 1) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2f")
+ */
+const hexEncodeOneUpperCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    if (x.indexOf(str.charAt(a)) == -1) {
+      encoded = encoded + "%" + str.charCodeAt(a).toString(16).toUpperCase();
+    }
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 2) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
+ */
+const hexEncodeTwoLowerCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    encoded = encoded + "%" + str.charCodeAt(a).toString(16).toLowerCase();
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 2) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
+ */
+const hexEncodeTwoUpperCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    encoded = encoded + "%" + str.charCodeAt(a).toString(16).toUpperCase();
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 3) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
+ */
+const hexEncodeThreeLowerCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    if (x.indexOf(str.charAt(a)) == -1) {
+      encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
+    }
+  }
+  return encoded;
+}
+
+/*
+ * Returns a hex encoded string (type 3) using a given string.
+ * (example input: "https://myredirectsite.com/")
+ * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
+ */
+const hexEncodeThreeUpperCase = str => {
+  let encoded = "";
+  for (let a = 0; a < str.length; a++) {
+    if (x.indexOf(str.charAt(a)) == -1) {
+      encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
+    }
+  }
+  return encoded;
 }
 
 /*
@@ -301,7 +389,7 @@ const stripURLAnchor = url => {
  */
 const getURLVariants = url => {
   const parsedURL = parseURL(url);
-  const urls = new Array(12);
+  const urls = new Array(16);
   urls[0] = (   
     "https://" +
     parsedURL[1] +
@@ -478,9 +566,7 @@ const toFullURL = uri => {
  * where this script will attempt check if the redirection was successful.
  */
 const loadResource = url => {
-  console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-  const anchoredURL = url.toString().replace(/(?:[#].*|$)/ig, "#" + session_id);
-  console.log("Fetching", anchoredURL);
+  console.log("Fetching", url);
 //  setTimeout(globalThis.open(url, "_blank"), 0);
 }
 
@@ -489,6 +575,7 @@ const loadResource = url => {
  */
 const sleep = ms => {
   return new Promise(res=>{
+    console.log("Sleeping for", ms, "milliseconds.");
     setTimeout(res, ms);
   });
 }
@@ -571,14 +658,6 @@ console.log("this URL candidate:", thisURLCandidate);
         for (let b = 0; b < redirectURLs.length; b++) {
           const redirectURLVariants = getURLVariants(redirectURLs[b]);
           for (let c = 0; c < redirectURLVariants.length; c++) {
-//            if (
-//              globalThis.location.host.toLowerCase()
-//                .endsWith(parseURL(thisRedirectVariant)[1])
-//            ) {
-//              const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
-//              alert(msg);
-//              console.log(msg);
-//            } 
             const injectedURL = injectURL(thisURLCandidate, redirectURLVariants[c]);
             pendingURLs.push(injectedURL);
             console.log("Added URL to queue: " + injectedURL);
@@ -597,9 +676,21 @@ console.log("this URL candidate:", thisURLCandidate);
 }
 
 /* 
- * Init.
+ * Init fuzzer.
  */
 (async()=>{
+  for (let a = 0; a < redirectURLs.length; a++) {
+    const thisRedirectURL = redirectURLs[a];
+    const redirectHost = parseURL(thisRedirectURL)[1];
+    if (
+      location.host.toLowerCase() == redirectHost.toLowerCase()
+    ) {
+      const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
+      alert(msg);
+      console.log(msg);
+    } 
+  }
+
   scanForExploitableURIsAndQueue();
 
   if (globalThis.document) {
