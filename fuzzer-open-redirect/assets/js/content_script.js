@@ -261,7 +261,6 @@ const unescapeHTML = str => {
  */
 const parseURL = url => {
   const strippedURL = stripAllTrailingWhitespaces(url);
-  console.log("parsing: " + strippedURL);
   const retval = ["","","","","",""];
   // protocol
   if (strippedURL.match(/^((?:\w+:)?\/\/).*$/i)) {
@@ -287,7 +286,6 @@ const parseURL = url => {
   if (strippedURL.match(/^[^#]*([#].*)/i)) {
     retval[5] = strippedURL.replace(/^[^#]*([#].*)/i, "$1");
   }
-  console.log(retval);
   return retval;
 }
 
@@ -302,102 +300,89 @@ const stripURLAnchor = url => {
  * Returns an array of 4 potential URLs that lead to the same address as a given URL.
  */
 const getURLVariants = url => {
-  let urls = [];
   const parsedURL = parseURL(url);
-  urls = [].concat(urls, [ 
-    "https://",
-    parsedURL[1],
-    parsedURL[2],
-    parsedURL[3],
-    parsedURL[4],
-    parsedURL[5]
-  ]);
-  urls = [].concat(urls, [ 
-    "http://",
-    parsedURL[1],
-    parsedURL[2],
-    parsedURL[3],
-    parsedURL[4],
-    parsedURL[5]
-  ]);
-  urls = [].concat(urls, [ 
-    "//",
-    parsedURL[1],
-    parsedURL[2],
-    parsedURL[3],
-    parsedURL[4],
-    parsedURL[5]
-  ]);
-  urls = [].concat(urls, [ 
-    parsedURL[1],
-    parsedURL[2],
-    parsedURL[3],
-    parsedURL[4],
-    parsedURL[5]
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent("https://"),
-    encodeURIComponent(parsedURL[1]),
-    encodeURIComponent(parsedURL[2]),
-    encodeURIComponent(parsedURL[3]),
-    encodeURIComponent(parsedURL[4]),
-    encodeURIComponent(parsedURL[5])
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent("http://"),
-    encodeURIComponent(parsedURL[1]),
-    encodeURIComponent(parsedURL[2]),
-    encodeURIComponent(parsedURL[3]),
-    encodeURIComponent(parsedURL[4]),
-    encodeURIComponent(parsedURL[5])
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent("//"),
-    encodeURIComponent(parsedURL[1]),
-    encodeURIComponent(parsedURL[2]),
-    encodeURIComponent(parsedURL[3]),
-    encodeURIComponent(parsedURL[4]),
-    encodeURIComponent(parsedURL[5])
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent(parsedURL[1]),
-    encodeURIComponent(parsedURL[2]),
-    encodeURIComponent(parsedURL[3]),
-    encodeURIComponent(parsedURL[4]),
-    encodeURIComponent(parsedURL[5])
-  ]);
-
-  urls = [].concat(urls, [ 
-    encodeURIComponent(encodeURIComponent("https://")),
-    encodeURIComponent(encodeURIComponent(parsedURL[1])),
-    encodeURIComponent(encodeURIComponent(parsedURL[2])),
-    encodeURIComponent(encodeURIComponent(parsedURL[3])),
-    encodeURIComponent(encodeURIComponent(parsedURL[4])),
-    encodeURIComponent(encodeURIComponent(parsedURL[5]))
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent(encodeURIComponent("http://")),
-    encodeURIComponent(encodeURIComponent(parsedURL[1])),
-    encodeURIComponent(encodeURIComponent(parsedURL[2])),
-    encodeURIComponent(encodeURIComponent(parsedURL[3])),
-    encodeURIComponent(encodeURIComponent(parsedURL[4])),
-    encodeURIComponent(encodeURIComponent(parsedURL[5]))
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent(encodeURIComponent("//")),
-    encodeURIComponent(encodeURIComponent(parsedURL[1])),
-    encodeURIComponent(encodeURIComponent(parsedURL[2])),
-    encodeURIComponent(encodeURIComponent(parsedURL[3])),
-    encodeURIComponent(encodeURIComponent(parsedURL[4])),
-    encodeURIComponent(encodeURIComponent(parsedURL[5]))
-  ]);
-  urls = [].concat(urls, [ 
-    encodeURIComponent(encodeURIComponent(parsedURL[1])),
-    encodeURIComponent(encodeURIComponent(parsedURL[2])),
-    encodeURIComponent(encodeURIComponent(parsedURL[3])),
-    encodeURIComponent(encodeURIComponent(parsedURL[4])),
-    encodeURIComponent(encodeURIComponent(parsedURL[5]))
-  ]);
+  const urls = new Array(12);
+  urls[0] = (   
+    "https://" +
+    parsedURL[1] +
+    parsedURL[2] +
+    parsedURL[3] +
+    parsedURL[4] +
+    parsedURL[5]);
+  urls[1] = (   
+    "http://" +
+    parsedURL[1] +
+    parsedURL[2] +
+    parsedURL[3] +
+    parsedURL[4] +
+    parsedURL[5]);
+  urls[2] = (   
+    "//" +
+    parsedURL[1] +
+    parsedURL[2] +
+    parsedURL[3] +
+    parsedURL[4] +
+    parsedURL[5]);
+  urls[3] = (   
+    parsedURL[1] +
+    parsedURL[2] +
+    parsedURL[3] +
+    parsedURL[4] +
+    parsedURL[5]);
+  urls[4] = (   
+    encodeURIComponent("https://") +
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[5] = (   
+    encodeURIComponent("http://") +
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[6] = (   
+    encodeURIComponent("//") +
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[7] = (   
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[8] = (   
+    encodeURIComponent(encodeURIComponent("https://")) +
+    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[5])));
+  urls[9] = (   
+    encodeURIComponent(encodeURIComponent("http://")) +
+    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[5])));
+  urls[10] = (   
+    encodeURIComponent(encodeURIComponent("//")) +
+    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[5])));
+  urls[11] = (   
+    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
+    encodeURIComponent(encodeURIComponent(parsedURL[5])));
   return urls;
 }
 
@@ -413,24 +398,21 @@ const getURLVariants = url => {
 const injectURL = (targetURL, redirectURL) => {
   const parsedURL = parseURL(targetURL);
   const query = parsedURL[4];
-  let newQuery = "";
-  if (query != "") {
-    newQuery = "?";
-  }
+  let injectedQuery = query;
   const parameters = query.split("&");
   for (let a = 0; a < parameters.length; a++) {
-    const parameterName = parameters[a].replace(/([=]*)=.*/, "$1");
+    const parameterName = parameters[a].replace(/([^=]*)=.*/, "$1");
     const parameterValue = parameters[a].replace(/.*?=(.*)\s*/, "$1");
     if (parameterValue.match(/^(?:http|[/]|%2f)/i)) {
       const replacedParameter = parameterName + "=" + redirectURL;
-      targetURL.replace(parameters[a], replacedParameter);
+      injectedQuery.replace(parameters[a], replacedParameter);
     }
   }
   return parsedURL[0] +
     parsedURL[1] +
     parsedURL[2] +
     parsedURL[3] +
-    newQuery +
+    injectedQuery +
     parsedURL[5];
 }
 
@@ -498,7 +480,7 @@ const toFullURL = uri => {
 const loadResource = url => {
   console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
   console.log(url);
-  const anchoredURL = url.replace(/(?:[#].*|$)/ig, "#" + session_id);
+  const anchoredURL = url.toString().replace(/(?:[#].*|$)/ig, "#" + session_id);
   console.log("Fetching", anchoredURL);
 //  setTimeout(globalThis.open(url, "_blank"), 0);
 }
@@ -534,6 +516,8 @@ const openPendingURLs = () => {
     pendingURLs.filter((url, index)=>{
       return pendingURLs.indexOf(url) == index;
     });
+console.log("Pending URLs:");
+console.log(pendingURLs);
     const chunkedPendingURLs = chunkURLArray(pendingURLs);
     if (chunkedPendingURLs.length != threads) {
       const errorMsg = "Amount of chunked URLs does not match the specified amount of threads.";
@@ -564,16 +548,16 @@ const scanForExploitableURIsAndQueue = async () => {
 //    for (let a = 0; a < nonRecursiveGlobalThis.length; a++) {
 //      discoveredURLs.push(nonRecursiveGlobalThis[a]);
 //    }
-console.log("Scan finished.",
-  "Found " + discoveredURLs.length + " potentially exploitable URL(s).");
-console.log(discoveredURLs);
     if (discoveredURLs && discoveredURLs.length > 0) {
+      console.log("Scan finished.",
+        "Found " + discoveredURLs.length + " potentially exploitable URL(s).");
       for (let a = 0; a < discoveredURLs.length; a++) {
         discoveredURLs[a] = toFullURL(unescapeHTML(stripTrailingQuotes(discoveredURLs[a])));
       }
       discoveredURLs.filter((url, index)=>{
         return (discoveredURLs.indexOf(url) == index);
       });
+console.log(discoveredURLs);
       const chunkSize = Math.floor(redirectURLs.length / threads);
       const chunks = [];
       for (let a = 1; a <= threads; a++) {
@@ -584,17 +568,18 @@ console.log(discoveredURLs);
 console.log("this URL candidate:", thisURLCandidate);
         for (let b = 0; b < redirectURLs.length; b++) {
           const redirectURLVariants = getURLVariants(redirectURLs[b]);
+console.log("redirectURLVariants");
+console.log(redirectURLVariants);
           for (let c = 0; c < redirectURLVariants.length; c++) {
-            const thisRedirectVariant = redirectURLVariants[c];
-            if (
-              globalThis.location.host.toLowerCase()
-                .endsWith(parseURL(thisRedirectVariant)[1])
-            ) {
-              const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
-              alert(msg);
-              console.log(msg);
-            } 
-            const injectedURL = injectURL(thisURLCandidate, thisRedirectVariant);
+//            if (
+//              globalThis.location.host.toLowerCase()
+//                .endsWith(parseURL(thisRedirectVariant)[1])
+//            ) {
+//              const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
+//              alert(msg);
+//              console.log(msg);
+//            } 
+            const injectedURL = injectURL(thisURLCandidate, redirectURLVariants[c]);
             pendingURLs.push(injectedURL);
             console.log("Added URL to queue: " + injectedURL);
           }
