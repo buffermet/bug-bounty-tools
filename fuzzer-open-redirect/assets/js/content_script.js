@@ -33,7 +33,7 @@ const regexpSelectorFullURL = /^()$/ig;
 let protocols = ["http://", "https://"];
 let requestDelay = [4000, 8000];
 let session_id = "2y5jti4nj53454j6k53";
-let threads = 4;
+let threads = 2;
 
 (function () {
   var DEFAULT_MAX_DEPTH = 6;
@@ -323,7 +323,7 @@ const hexEncodeSixUpperCase = str => {
 }
 
 /*
- * 
+ * Decodes all HTML entities in a given string.
  */
 const unescapeHTML = str => {
   let unescapedStr = str
@@ -472,87 +472,114 @@ const stripURLAnchor = url => {
 const getURLVariants = url => {
   const parsedURL = parseURL(url);
   const urls = new Array(16);
-  urls[0] = (   
+  urls[0] = (
     "https://" +
     parsedURL[1] +
     parsedURL[2] +
     parsedURL[3] +
     parsedURL[4] +
     parsedURL[5]);
-  urls[1] = (   
+  urls[1] = (
     "http://" +
     parsedURL[1] +
     parsedURL[2] +
     parsedURL[3] +
     parsedURL[4] +
     parsedURL[5]);
-  urls[2] = (   
+  urls[2] = (
     "//" +
     parsedURL[1] +
     parsedURL[2] +
     parsedURL[3] +
     parsedURL[4] +
     parsedURL[5]);
-  urls[3] = (   
+  urls[3] = (
     parsedURL[1] +
     parsedURL[2] +
     parsedURL[3] +
     parsedURL[4] +
     parsedURL[5]);
-  urls[4] = (   
+  urls[4] = (
     encodeURIComponent("https://") +
     encodeURIComponent(parsedURL[1]) +
     encodeURIComponent(parsedURL[2]) +
     encodeURIComponent(parsedURL[3]) +
     encodeURIComponent(parsedURL[4]) +
     encodeURIComponent(parsedURL[5]));
-  urls[5] = (   
+  urls[5] = (
     encodeURIComponent("http://") +
     encodeURIComponent(parsedURL[1]) +
     encodeURIComponent(parsedURL[2]) +
     encodeURIComponent(parsedURL[3]) +
     encodeURIComponent(parsedURL[4]) +
     encodeURIComponent(parsedURL[5]));
-  urls[6] = (   
+  urls[6] = (
     encodeURIComponent("//") +
     encodeURIComponent(parsedURL[1]) +
     encodeURIComponent(parsedURL[2]) +
     encodeURIComponent(parsedURL[3]) +
     encodeURIComponent(parsedURL[4]) +
     encodeURIComponent(parsedURL[5]));
-  urls[7] = (   
+  urls[7] = (
     encodeURIComponent(parsedURL[1]) +
     encodeURIComponent(parsedURL[2]) +
     encodeURIComponent(parsedURL[3]) +
     encodeURIComponent(parsedURL[4]) +
     encodeURIComponent(parsedURL[5]));
-  urls[8] = (   
+  urls[8] = (
     encodeURIComponent(encodeURIComponent("https://")) +
     encodeURIComponent(encodeURIComponent(parsedURL[1])) +
     encodeURIComponent(encodeURIComponent(parsedURL[2])) +
     encodeURIComponent(encodeURIComponent(parsedURL[3])) +
     encodeURIComponent(encodeURIComponent(parsedURL[4])) +
     encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[9] = (   
+  urls[9] = (
     encodeURIComponent(encodeURIComponent("http://")) +
     encodeURIComponent(encodeURIComponent(parsedURL[1])) +
     encodeURIComponent(encodeURIComponent(parsedURL[2])) +
     encodeURIComponent(encodeURIComponent(parsedURL[3])) +
     encodeURIComponent(encodeURIComponent(parsedURL[4])) +
     encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[10] = (   
+  urls[10] = (
     encodeURIComponent(encodeURIComponent("//")) +
     encodeURIComponent(encodeURIComponent(parsedURL[1])) +
     encodeURIComponent(encodeURIComponent(parsedURL[2])) +
     encodeURIComponent(encodeURIComponent(parsedURL[3])) +
     encodeURIComponent(encodeURIComponent(parsedURL[4])) +
     encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[11] = (   
+  urls[11] = (
     encodeURIComponent(encodeURIComponent(parsedURL[1])) +
     encodeURIComponent(encodeURIComponent(parsedURL[2])) +
     encodeURIComponent(encodeURIComponent(parsedURL[3])) +
     encodeURIComponent(encodeURIComponent(parsedURL[4])) +
     encodeURIComponent(encodeURIComponent(parsedURL[5])));
+  urls[12] = (
+    encodeURIComponent("https://") +
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[13] = (
+    encodeURIComponent("http://") +
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[14] = (
+    encodeURIComponent("//") +
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
+  urls[15] = (
+    encodeURIComponent(parsedURL[1]) +
+    encodeURIComponent(parsedURL[2]) +
+    encodeURIComponent(parsedURL[3]) +
+    encodeURIComponent(parsedURL[4]) +
+    encodeURIComponent(parsedURL[5]));
   return urls;
 }
 
@@ -721,14 +748,16 @@ const scanForExploitableURIsAndQueue = async () => {
 //    }
     if (discoveredURLs && discoveredURLs.length > 0) {
       console.log("Scan finished.",
-        "Found " + discoveredURLs.length + " potentially exploitable URL(s).");
+        "Found " + discoveredURLs.length + " potentially exploitable URI(s).");
       for (let a = 0; a < discoveredURLs.length; a++) {
         discoveredURLs[a] = toFullURL(unescapeHTML(stripTrailingQuotes(discoveredURLs[a])));
       }
       discoveredURLs.filter((url, index)=>{
         return (discoveredURLs.indexOf(url) == index);
       });
-console.log(discoveredURLs);
+iscoveredURLs.forEach(str=>{
+console.log(str);
+})
       const chunkSize = Math.floor(redirectURLs.length / threads);
       const chunks = [];
       for (let a = 1; a <= threads; a++) {
@@ -761,27 +790,29 @@ console.log("this URL candidate:", thisURLCandidate);
  * Init fuzzer.
  */
 (async()=>{
+  for (let a = 0; a < redirectURLs.length; a++) {
+    const thisRedirectURL = redirectURLs[a];
+    const redirectHost = parseURL(thisRedirectURL)[1];
+    if (
+      location.host.toLowerCase() == redirectHost.toLowerCase()
+    ) {
+      const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
+      alert(msg);
+      alert(msg);
+      alert(msg);
+      alert(msg);
+      alert(msg);
+      console.log(msg);
+      return;
+    } 
+  }
   if (confirm("Start open redirect fuzzing?")) {
-    for (let a = 0; a < redirectURLs.length; a++) {
-      const thisRedirectURL = redirectURLs[a];
-      const redirectHost = parseURL(thisRedirectURL)[1];
-      if (
-        location.host.toLowerCase() == redirectHost.toLowerCase()
-      ) {
-        const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
-        alert(msg);
-        console.log(msg);
-      } 
-    }
-
     scanForExploitableURIsAndQueue();
-
     if (globalThis.document) {
       globalThis.document.addEventListener("DOMContentLoaded", async()=>{
         scanForExploitableURIsAndQueue();
       });
     }
-
     globalThis.addEventListener("load", async()=>{
       scanForExploitableURIsAndQueue();
       if (pendingURLs.length > 0) {
