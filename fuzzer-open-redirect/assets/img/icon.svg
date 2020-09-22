@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   id="svg8"
+   version="1.1"
+   viewBox="0 0 118.53334 118.53333"
+   height="480pt"
+   width="480pt">
+  <defs
+     id="defs2" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(0,-30.10001)"
+     id="layer1">
+    <path
+       d="M 15.621586,75.068959 H 2.2505675 L 1.9073486e-8,46.208741 H 17.739767 Z m 27.933514,0 H 30.184081 L 28.0659,46.208741 h 17.739767 z"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:132.38632202px;line-height:1.25;font-family:Geometos;-inkscape-font-specification:Geometos;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#00ff00;fill-opacity:1;stroke:none;stroke-width:5.51609707"
+       id="path1059" />
+    <path
+       d="M 118.53333,87.910433 V 104.85588 L 59.621422,132.52462 V 113.59338 L 99.602091,96.383157 59.621422,79.040549 V 60.241691 Z"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:132.38632202px;line-height:1.25;font-family:Geometos;-inkscape-font-specification:Geometos;text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#00ff00;fill-opacity:1;stroke:none;stroke-width:5.51609707"
+       id="path1061" />
+  </g>
+</svg>

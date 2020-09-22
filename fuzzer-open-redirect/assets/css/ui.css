@@ -1,0 +1,196 @@
+@font-face {
+    font-family: "Ubuntu Condensed";
+    src: url("../fonts/ubuntu-condensed.ttf");
+}
+@font-face {
+    font-family: "Ubuntu Mono";
+    src: url("../fonts/ubuntu-mono.ttf");
+}
+
+html, body {
+    margin: 0;
+}
+
+ui {
+    position: relative;
+    width: 480pt;
+    height: 240pt;
+    display: block;
+    background-color: #000;
+    font-family: "Ubuntu Mono";
+    font-size: 11pt;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+ui topbar {
+    width: 100%;
+    height: 32pt;
+    display: block;
+}
+ui topbar btn {
+    float: left;
+    width: 20%;
+    height: 32pt;
+    color: #fff;
+    background-color: #101010;
+    line-height: 32pt;
+    text-align: center;
+    cursor: pointer;
+}
+ui topbar btn:hover {
+    background-color: #161616;
+}
+ui topbar btn.selected {
+    background-color: transparent;
+    cursor: default;
+}
+
+ui content {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: calc(100% - 64pt);
+}
+ui content separator {
+    float: left;
+    display: inline-block;
+    width: 1pt;
+    height: 100%;
+    background-color: #101010;
+    margin: 0 4pt;
+}
+ui content section {
+    float: left;
+    scroll-behavior: auto;
+}
+ui content section heading {
+    display: inline-block;
+    margin: 12pt;
+    color: #fff;
+}
+ui content section subheading {
+    display: inline-block;
+    margin: 0pt 12pt 12pt 12pt;
+    color: #fff;
+}
+ui content section line {
+    min-width: 128pt;
+    margin: 4pt;
+    display: block;
+    text-align: right;
+}
+ui content section line btn.add {
+    width: 11pt;
+    height: 11pt;
+    margin: 6pt;
+    display: inline-block;
+    vertical-align: middle;
+    opacity: 0.25;
+    background-image: url("../img/btn_add.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100%;
+    cursor: pointer;
+}
+ui content section line btn.add:hover {
+    opacity: 1;
+}
+ui content section line btn.info {
+    width: 11pt;
+    height: 11pt;
+    margin: 6pt;
+    display: inline-block;
+    vertical-align: middle;
+    opacity: 0.25;
+    background-image: url("../img/btn_info.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100%;
+}
+ui content section line input[type=text] {
+    width: 96pt;
+    display: inline-block;
+    vertical-align: middle;
+}
+ui content section line checkbox {
+    display: inline-block;
+    vertical-align: middle;
+    padding: 4pt;
+    width: 8pt;
+    height: 8pt;
+    background: url("../img/box_unchecked.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+}
+ui content checkbox[state=checked] {
+    background: url("../img/box_checked.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+ui bottombar {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 32pt;
+    background-color: #101010;
+    display: block;
+}
+ui bottombar btn {
+    float: right;
+    width: 32pt;
+    height: 32pt;
+    display: inline-block;
+    background-color: red;
+    cursor: pointer;
+}
+ui bottombar btn.play {
+    background-image: url("../img/btn_play.svg");
+    background-color: #1ee22c;
+}
+ui bottombar btn.pause {
+    background-image: url("../img/btn_pause.svg");
+    background-color: #e1b11e;
+}
+ui bottombar btn.stop {
+    background-image: url("../img/btn_stop.svg");
+    background-color: #e21e1e;
+}
+ui bottombar btn:hover {
+    box-shadow: inset 0 0 0 100px rgba(255,255,255,0.2);
+}
+ui bottombar btn:active {
+    box-shadow: none;
+}
+ui bottombar status-bar {
+    font-size: 11pt;
+    font-family: "Ubuntu Condensed";
+}
+ui bottombar status-bar span {
+    line-height: 32pt;
+    padding: 0 0 0 12pt;
+}
+ui bottombar status-bar span value-sent,
+ui bottombar status-bar span value-failed,
+ui bottombar status-bar span value-queued {
+    color: #fff;
+    font-family: "Ubuntu Mono";
+}
+
+ui[state=stopped] bottombar btn.pause,
+ui[state=fuzzing] bottombar btn.play {
+    display: none;
+}
+ui[state=fuzzing] bottombar btn.pause {
+    display: inline-block;
+}
+
+input[type=text] {
+    color: #fff;
+    background: #101010;
+    padding: 4pt;
+    border-radius: none;
+    border: none;
+}
