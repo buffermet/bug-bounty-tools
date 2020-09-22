@@ -405,7 +405,7 @@ const injectURL = (targetURL, redirectURL) => {
     const parameterValue = parameters[a].replace(/.*?=(.*)\s*/, "$1");
     if (parameterValue.match(/^(?:http|[/]|%2f)/i)) {
       const replacedParameter = parameterName + "=" + redirectURL;
-      injectedQuery.replace(parameters[a], replacedParameter);
+      injectedQuery = injectedQuery.replace(parameters[a], replacedParameter);
     }
   }
   return parsedURL[0] +
@@ -479,7 +479,6 @@ const toFullURL = uri => {
  */
 const loadResource = url => {
   console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-  console.log(url);
   const anchoredURL = url.toString().replace(/(?:[#].*|$)/ig, "#" + session_id);
   console.log("Fetching", anchoredURL);
 //  setTimeout(globalThis.open(url, "_blank"), 0);
@@ -513,8 +512,8 @@ const stripAllTrailingWhitespaces = str => {
  */
 const openPendingURLs = () => {
   return new Promise((res, err)=>{
-    pendingURLs.filter((url, index)=>{
-      return pendingURLs.indexOf(url) == index;
+    pendingURLs.filter((url, index, arr)=>{
+      return arr.indexOf(url) == index;
     });
 console.log("Pending URLs:");
 console.log(pendingURLs);
@@ -527,8 +526,11 @@ console.log(pendingURLs);
     for (let a = 0; a < threads; a++) {
       (async()=>{
         for (let b = 0; b < chunkedPendingURLs.length; b++) {
-          loadResource(chunkedPendingURLs[b]);
-          await sleep(getIntFromRange(requestDelay[0], requestDelay[1]));
+          const thisPendingURLChunk = chunkedPendingURLs[b];
+          for (let c = 0; c < thisPendingURLChunk.length; c++) {
+            loadResource(thisPendingURLChunk[c]);
+            await sleep(getIntFromRange(requestDelay[0], requestDelay[1]));
+          }
         }
       })();
     }
@@ -568,8 +570,6 @@ console.log(discoveredURLs);
 console.log("this URL candidate:", thisURLCandidate);
         for (let b = 0; b < redirectURLs.length; b++) {
           const redirectURLVariants = getURLVariants(redirectURLs[b]);
-console.log("redirectURLVariants");
-console.log(redirectURLVariants);
           for (let c = 0; c < redirectURLVariants.length; c++) {
 //            if (
 //              globalThis.location.host.toLowerCase()
