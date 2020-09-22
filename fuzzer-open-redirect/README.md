@@ -1,2 +1,3 @@
-# xss-fuzzer
-Browser extension for aggressive XSS fuzzing.
+A recursive and multi-threaded open redirect URL scanner and fuzzer.
+
+...
