@@ -1570,13 +1570,8 @@ console.log(nonRecursiveGlobalThis);
       discoveredURLs.filter((url, index)=>{
         return (discoveredURLs.indexOf(url) == index);
       });
-console.log("Discovered URLs:");
+console.log("Discovered URLs (filtered):");
 console.log(discoveredURLs);
-      const chunkSize = Math.floor(redirectURLs.length / threads);
-      const chunks = [];
-      for (let a = 1; a <= threads; a++) {
-        chunks[a] = redirectURLs.slice(chunkSize * a, (chunkSize * a) + chunkSize);
-      }
       for (let a = 0; a < discoveredURLs.length; a++) {
         let thisURLCandidate = discoveredURLs[a];
         for (let b = 0; b < redirectURLs.length; b++) {
