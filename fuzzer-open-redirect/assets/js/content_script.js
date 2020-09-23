@@ -1596,9 +1596,7 @@ console.log(discoveredURLs);
   for (let a = 0; a < redirectURLs.length; a++) {
     const thisRedirectURL = redirectURLs[a];
     const redirectHost = parseURL(thisRedirectURL)[1];
-    if (
-      location.host.toLowerCase() == redirectHost.toLowerCase()
-    ) {
+    if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
       const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
       alert(msg);
       alert(msg);
