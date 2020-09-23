@@ -28,15 +28,14 @@ const redirectURLs = [
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const anchor = location.anchor;
-const regexpSelectorURLWithURIParameter = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
-const regexpSelectorFullURL = /^()$/ig;
+const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
+const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let protocols = ["http://", "https://"];
-let requestDelay = [5000, 15000];
+let requestDelay = [15000, 30000];
 let session_id = "2y5jti4nj53454j6k53";
 let threads = 2;
 
-(function () {
+(()=>{
   var DEFAULT_MAX_DEPTH = 6;
   var DEFAULT_ARRAY_MAX_LENGTH = 50;
   var seen;
@@ -83,7 +82,7 @@ let threads = 2;
     }) + '"' : '"' + string + '"';
   }
   function str(key, holder, depthDecr, arrayMaxLength) {
-    if (key == "webkitStorageInfo") return 'webkitStorageInfo';
+    if (key.match(/webkitStorageInfo/)) key = replace(/webkitStorageInfo/g, "navigator.webkitTemporaryStorage");
     var i, k, v, length, partial, value = holder[key];
     if (value && typeof value === 'object' && typeof value.toPrunedJSON === 'function') {
       value = value.toPrunedJSON(key);
@@ -146,7 +145,7 @@ let threads = 2;
     }));
   }
   JSON.prune.forEachProperty = forEachProperty;
-}());
+})();
 
 /*
  * Returns an integer value between a minimum and maximum range of milliseconds.
@@ -1414,7 +1413,7 @@ const injectURL = (targetURL, redirectURL) => {
  */
 const getAllStringValues = obj => {
   let strings = [];
-  keys = Object.keys(obj);
+  const keys = Object.keys(obj);
   keys.forEach(key=>{
     if (typeof(obj[key]) == "object" && obj[key]) {
       strings = [].concat(strings, getAllStringValues(obj[key]));
@@ -1471,7 +1470,8 @@ const toFullURL = uri => {
  * where this script will attempt check if the redirection was successful.
  */
 const loadResource = url => {
-  console.log("Fetching", url);
+  const anchoredURL = url.replace(/^([^#]*)/ig, "$1#" + session_id);
+  console.log("Fetching", anchoredURL);
 //  setTimeout(globalThis.open(url, "_blank"), 0);
 }
 
@@ -1480,7 +1480,6 @@ const loadResource = url => {
  */
 const sleep = ms => {
   return new Promise(res=>{
-    console.log("Sleeping for", ms, "milliseconds.");
     setTimeout(res, ms);
   });
 }
@@ -1503,7 +1502,7 @@ const stripAllTrailingWhitespaces = str => {
  * Opens all pending and unique URLs.
  */
 const openPendingURLs = () => {
-  return new Promise((res, err)=>{
+  return new Promise(async(res, err)=>{
     pendingURLs.filter((url, index, arr)=>{
       return arr.indexOf(url) == index;
     });
@@ -1515,16 +1514,24 @@ console.log(chunkedPendingURLs);
       alert(errorMsg);
       err(errorMsg);
     }
-    for (let a = 0; a < threads; a++) {
+    for (let a = 0; a < threads.length; a++) {
       (async()=>{
-        for (let b = 0; b < chunkedPendingURLs.length; b++) {
-          const thisPendingURLChunk = chunkedPendingURLs[b];
-          for (let c = 0; c < thisPendingURLChunk.length; c++) {
-            loadResource(thisPendingURLChunk[c]);
-            await sleep(getIntFromRange(requestDelay[0], requestDelay[1]));
-          }
+        const thisPendingURLChunk = chunkedPendingURLs[a];
+        for (let c = 0; c < thisPendingURLChunk.length; c++) {
+          const thisURLCandidate = thisPendingURLChunk[c];
+          loadResource(thisURLCandidate);
+          pendingURLs.filter(url=>{
+            return url != thisURLCandidate;
+          });
+          await sleep(getIntFromRange(requestDelay[0], requestDelay[1]));
         }
       })();
+    }
+    while (
+         !shuttingDown
+      && pendingURLs.length != 0
+    ) {
+      await sleep(4000);
     }
     res();
   });
@@ -1536,12 +1543,23 @@ console.log(chunkedPendingURLs);
  */
 const scanForExploitableURIsAndQueue = async () => {
   return new Promise(async(res)=>{
-    let discoveredURLs = document.documentElement.innerHTML.match(
-      regexpSelectorURLWithURIParameter);
+    let discoveredURLs = document.documentElement.innerHTML
+      .match(regexpSelectorURLWithURIParameterHTML) || [];
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
 console.log(nonRecursiveGlobalThis);
-    for (let a = 0; a < nonRecursiveGlobalThis.length; a++) {
-      discoveredURLs.push(nonRecursiveGlobalThis[a]);
+    const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
+    for (let a = 0; a < globalThisStringValues.length; a++) {
+      if (globalThisStringValues[a].match(regexpSelectorURLWithURIParameterPlain)) {
+        const parsedURL = parseURL(globalThisStringValues[a]);
+        if (
+             parsedURL[1] != "" /* host */
+          || parsedURL[3] != "" /* path */
+          || parsedURL[4] != "" /* query */
+        ) {
+
+          discoveredURLs.push(toFullURL(globalThisStringValues[a]));
+        }
+      }
     }
     if (discoveredURLs && discoveredURLs.length > 0) {
       console.log("Scan finished.",
@@ -1568,10 +1586,6 @@ console.log(discoveredURLs);
             pendingURLs.push(injectedURL);
           }
         }
-      }
-      await sleep(4000);
-      if (globalThis.location.anchor == "#" + session_id) {
-        self.close();
       }
     } else {
       console.log("No exploitable URIs found in this document.");
@@ -1611,9 +1625,20 @@ console.log(discoveredURLs);
     globalThis.addEventListener("load", async()=>{
       scanForExploitableURIsAndQueue();
       if (pendingURLs.length > 0) {
-        openPendingURLs();
+        await openPendingURLs();
+        shuttingDown = true;
       }
     });
   }
+  (async()=>{
+    while (!shuttingDown) {
+      await sleep(4000);
+    }
+    await sleep(4000);
+    if (globalThis.location.hash.toLowerCase() == "#" + session_id.toLowerCase()) {
+      globalThis.close();
+    }
+    console.log("Fuzzer has ended.");
+  })();
 })();
 
