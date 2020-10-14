@@ -147,14 +147,14 @@ let threads = 2;
   JSON.prune.forEachProperty = forEachProperty;
 })();
 
-/*
+/**
  * Returns an integer value between a minimum and maximum range of milliseconds.
  */
 const getIntFromRange = (min, max) => {
   return parseInt(min + (Math.random() * (max - min)));
 }
 
-/*
+/**
  * Returns a hex encoded string (type 1) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
@@ -171,7 +171,7 @@ const hexEncodeOneLowerCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 1) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2f")
@@ -188,7 +188,7 @@ const hexEncodeOneUpperCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 2) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
@@ -201,7 +201,7 @@ const hexEncodeTwoLowerCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 2) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
@@ -214,7 +214,7 @@ const hexEncodeTwoUpperCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
@@ -231,7 +231,7 @@ const hexEncodeThreeLowerCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
@@ -248,7 +248,7 @@ const hexEncodeThreeUpperCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 4) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
@@ -261,7 +261,7 @@ const hexEncodeFourLowerCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 4) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
@@ -274,7 +274,7 @@ const hexEncodeFourUpperCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
@@ -291,7 +291,7 @@ const hexEncodeFiveLowerCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
@@ -308,7 +308,7 @@ const hexEncodeFiveUpperCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 4) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
@@ -321,7 +321,7 @@ const hexEncodeSixLowerCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Returns a hex encoded string (type 4) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
@@ -334,7 +334,7 @@ const hexEncodeSixUpperCase = str => {
   return encoded;
 }
 
-/*
+/**
  * Decodes all HTML entities in a given string.
  */
 const unescapeHTML = str => {
@@ -437,9 +437,18 @@ const unescapeHTML = str => {
   return unescapedStr;
 }
 
-/*
+/**
  * Returns an array containing the protocol, host, port, path, query and anchor of a
  * given URL if found.
+ * (example input: "/path/to/file?v=4.4.2#hash")
+ * (example output: [
+ *   "",
+ *   "",
+ *   "",
+ *   "/path/to/file",
+ *   "?v=4.4.2",
+ *   "#hash"
+ * ])
  */
 const parseURL = url => {
   const strippedURL = stripAllTrailingWhitespaces(url);
@@ -458,7 +467,7 @@ const parseURL = url => {
   }
   // path
   if (strippedURL.match(/^(?:(?:\w+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)?([/][^?#]*).*/i)) {
-    retval[3] = strippedURL.replace(/^(?:(?:\w+:)?\/\/)?[^/?#]*([/][^/?#]*).*$/i, "$1");
+    retval[3] = strippedURL.replace(/^(?:(?:\w+:)?\/\/)?[^/?#]*([/][^?#]*).*$/i, "$1");
   }
   // query
   if (strippedURL.match(/^.*?([?][^#]*).*/i)) {
@@ -471,15 +480,15 @@ const parseURL = url => {
   return retval;
 }
 
-/*n
+/**
  * Removes the anchor part of a given URL.
  */
 const stripURLAnchor = url => {
-  return url.replace(/(^[^#]*)/ig, "");
+  return url.replace(/(^[^#]*)/ig, "$1");
 }
 
-/*
- * Returns an array of 4 potential URLs that lead to the same address as a given URL.
+/**
+ * Returns an array of 72 URLs that could lead to the same address as a given URL.
  */
 const getURLVariants = url => {
   const parsedURL = parseURL(url);
@@ -1378,7 +1387,7 @@ const getURLVariants = url => {
   return urls;
 }
 
-/*
+/**
  * Replaces every URI found in query parameters of a given URL. Returns an array of new
  * URLs that contains variations in the query of your specified redirect URL.
  * (example input: (
@@ -1408,7 +1417,7 @@ const injectURL = (targetURL, redirectURL) => {
     parsedURL[5];
 }
 
-/*
+/**
  * Returns an array of all string values that were found in a given object.
  */
 const getAllStringValues = obj => {
@@ -1424,7 +1433,7 @@ const getAllStringValues = obj => {
   return strings;
 }
 
-/*
+/**
  * Chunks the given array of redirect URLs to a length equal to the specified amount of
  * threads.
  */
@@ -1437,10 +1446,19 @@ const chunkURLArray = urls => {
   return chunks;
 }
 
-/*
+/**
  * Returns the full URL based on a given URI that was found in the current document.
  */
 const toFullURL = uri => {
+  if (
+       !uri.match(/^(?:http[s]?[:])?[/][/]/i)
+    && !uri.match(/^[^/]+/i)
+    && !uri.match(/^[/][^?#]*/i)
+    && !uri.match(/^[?].*/i)
+    && uri.match(/^[#].*/i)
+  ) {
+    return location.origin + location.pathname + location.query + uri;
+  }
   if (
        !uri.match(/^(?:http[s]?[:])?[/][/]/i)
     && !uri.match(/^[^/]+/i)
@@ -1452,7 +1470,7 @@ const toFullURL = uri => {
   if (
        !uri.match(/^(?:http[s]?[:])?[/][/]/i)
     && !uri.match(/^[^/]+/i)
-    && uri.match(/^[/][^?#]*/i)
+    && uri.match(/^[/](?:[^/]|$)/i)
   ) {
     return location.origin + uri;
   }
@@ -1460,22 +1478,22 @@ const toFullURL = uri => {
        !uri.match(/^(?:http[s]?[:])?[/][/]/i)
     && uri.match(/^[^/]+/i)
   ) {
-    return location.origin + uri;
+    return location.origin + "/" +  uri;
   }
   return uri;
 }
 
-/*
+/**
  * Attempts to load the resources in a new window with the session ID in the URL anchor,
  * where this script will attempt check if the redirection was successful.
  */
 const loadResource = url => {
   const anchoredURL = url.replace(/^([^#]*)/ig, "$1#" + session_id);
   console.log("Fetching", anchoredURL);
-//  setTimeout(globalThis.open(url, "_blank"), 0);
+//  setTimeout(globalThis.open(anchoredURL, "_blank"), 0);
 }
 
-/*
+/**
  * Sleeps an awaited promise value for the given amount of milliseconds.
  */
 const sleep = ms => {
@@ -1484,21 +1502,21 @@ const sleep = ms => {
   });
 }
 
-/*
+/**
  * Strips trailing single/double quote.
  */
 const stripTrailingQuotes = str => {
   return str.replace(/^["'](.*)["']$/g, "$1");
 }
 
-/*
+/**
  * Strips all trailing whitespace.
  */
 const stripAllTrailingWhitespaces = str => {
   return str.replace(/^\s*(.*)\s*$/g, "$1");
 }
 
-/*
+/**
  * Opens all pending and unique URLs.
  */
 const openPendingURLs = () => {
@@ -1537,7 +1555,7 @@ console.log(chunkedPendingURLs);
   });
 }
 
-/*
+/**
  * Starts scanning an array of potential open redirect URLs that is chunked to the specified
  * amount of threads.
  */
@@ -1589,6 +1607,29 @@ console.log(discoveredURLs);
   });
 }
 
+/**
+ * Draws the UI on top of the current document.
+ */
+const drawUI = async () => {
+  const UICSS = `
+    ui-open-redirect-scanner-frame {
+      display: block;
+      z-index: 999999999;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 400px;
+      height: 200px;
+      background-color: white;
+    }
+  `;
+  const UIStyleSheet = document.createElement("style");
+  UIStyleSheet.type = "text/css";
+  UIStyleSheet.innerText = UICSS;
+  const UIHTML = ``;
+  const UIFrame = document.createElement("ui-open-redirect-scanner-frame");
+}
+
 /* 
  * Init fuzzer.
  */
@@ -1607,22 +1648,20 @@ console.log(discoveredURLs);
       return;
     } 
   }
-  if (confirm("Start open redirect fuzzing?")) {
-    console.log("Scanning for exploitable URIs.");
-    scanForExploitableURIsAndQueue();
-    if (globalThis.document) {
-      globalThis.document.addEventListener("DOMContentLoaded", async()=>{
-        scanForExploitableURIsAndQueue();
-      });
-    }
-    globalThis.addEventListener("load", async()=>{
+  console.log("Scanning for exploitable URIs.");
+  scanForExploitableURIsAndQueue();
+  if (globalThis.document) {
+    globalThis.document.addEventListener("DOMContentLoaded", async()=>{
       scanForExploitableURIsAndQueue();
-      if (pendingURLs.length > 0) {
-        await openPendingURLs();
-        shuttingDown = true;
-      }
     });
   }
+  globalThis.addEventListener("load", async()=>{
+    scanForExploitableURIsAndQueue();
+    if (pendingURLs.length > 0) {
+      await openPendingURLs();
+      shuttingDown = true;
+    }
+  });
   (async()=>{
     while (!shuttingDown) {
       await sleep(4000);
