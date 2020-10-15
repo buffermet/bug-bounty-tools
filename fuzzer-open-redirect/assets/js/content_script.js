@@ -1690,14 +1690,16 @@ console.log(nonRecursiveGlobalThis);
     if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
       const date = new Date();
       const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+      let callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0,4).join("");
       if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
-        parsedCallbackURLOpenRedirectTimestamps[4] = parsedCallbackURLOpenRedirectTimestamps[4] +
+        callbackURL = callbackURL + parsedCallbackURLOpenRedirectTimestamps[4] +
           "&fuzzer-open-redirect-callback=" + encodeURIComponent(timestamp);
       } else {
-        parsedCallbackURLOpenRedirectTimestamps[4] = "?fuzzer-open-redirect-callback=" +
+        callbackURL = callbackURL + "?fuzzer-open-redirect-callback=" +
           encodeURIComponent(timestamp);
       }
-      globalThis.location = parsedCallbackURLOpenRedirectTimestamps.join("");
+      callbackURL = callbackURL + parsedCallbackURLOpenRedirectTimestamps.slice(5);
+      globalThis.location = callbackURL;
     } 
   }
   if (
