@@ -21,17 +21,19 @@ const anchor = location.anchor;
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let callbackURL = "https://webhook.site/d74dabfe-d9ea-4964-8c04-70631c936266";
+let callbackURLOpenRedirectTimestamps = "https://webhook.site/0f9d0bc4-6879-40cd-a880-9de7c7558df8";
+let callbackURLRequestTimestamps = "https://webhook.site/0f9d0bc4-6879-40cd-a880-9de7c7558df8";
 let delayCloseTabs = 10000;
-let parsedCallbackURL = ["","","","","",""];
+let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
+let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let requestDelay = [5000, 10000];
-let requestTimeout = 16000;
+let requests = [];
 let scanOutOfScopeOrigins = false;
 let scope = [
   "*://stackoverflow.com",
 ];
 let threads = 2;
-
+let timeoutCallback = 32000;
 
 (() => {
   var DEFAULT_MAX_DEPTH = 6;
@@ -1498,9 +1500,23 @@ const toFullURL = uri => {
  * Attempts to load a given URL in a new window.
  */
 const loadURL = async url => {
-  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black", new Date().toLocaleTimeString(),
+  const date = new Date();
+  const timestamp = date.toLocaleDateString() + " " + date.toLocaleTimeString();
+  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    timestamp,
     "Fetching", url);
-  const popup = globalThis.open(url, "_blank");
+  let callbackURL = parsedCallbackURLRequestTimestamps.slice(0,4).join("");
+  if (parsedCallbackURLRequestTimestamps[4] !== "") {
+    callbackURL = callbackURL + parsedCallbackURLRequestTimestamps[4] +
+      "&fuzzer-open-redirect-request-callback=" +
+      encodeURIComponent(timestamp + " - " + url);
+  } else {
+    callbackURL = callbackURL + "?fuzzer-open-redirect-request-callback=" +
+      encodeURIComponent(timestamp + " - " + url);
+  }
+  callbackURL = callbackURL + parsedCallbackURLRequestTimestamps.slice(5);
+  globalThis.open(callbackURL, "_blank")
+  globalThis.open(url, "_blank");
 }
 
 /**
@@ -1632,34 +1648,56 @@ console.log(nonRecursiveGlobalThis);
  * Init fuzzer.
  */
 (async () => {
-  parsedCallbackURL = parseURL(callbackURL);
-  if (parsedCallbackURL[1] === "") {
+  parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
+  if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
     console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "No host was provided in the specified callback URL (" + callbackURL + ").");
+    "No valid origin was provided in the specified callback URL for open redirects (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
-  if (parsedCallbackURL[0] === "") {
+  if (parsedCallbackURLOpenRedirectTimestamps[0] === "") {
     console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-      "No protocol was provided in the specified callback URL (" + callbackURL + ").",
+      "No protocol was provided in the specified callback URL for open redirects (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
-    parsedCallbackURL[0] = "http://";
+    parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
   }
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "Callback URL parsed: " + parsedCallbackURL.join(""));
+    "Open redirect callback URL parsed: " + parsedCallbackURLOpenRedirectTimestamps.join(""));
+  parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
+  if (parsedCallbackURLRequestTimestamps[1] === "") {
+    console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "No valid origin was provided in the specified callback URL for timestamped requests (" + callbackURLOpenRedirectTimestamps + ").");
+    return;
+  }
+  if (parsedCallbackURLRequestTimestamps[0] === "") {
+    console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+      "No protocol was provided in the specified callback URL for timestamped requests (" + callbackURLOpenRedirectTimestamps + ").",
+      "Defaulting to \"http://\".");
+    parsedCallbackURLRequestTimestamps[0] = "http://";
+  }
+  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "Open redirect callback URL parsed: " + parsedCallbackURLOpenRedirectTimestamps.join(""));
+  if (
+    globalThis.location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
+      .slice(0,2)
+      .join("").toLowerCase()
+  ) {
+    globalThis.addEventListener("load", self.close);
+    return;
+  }
   for (let a = 0; a < redirectURLs.length; a++) {
     const thisRedirectURL = redirectURLs[a];
     const redirectHost = parseURL(thisRedirectURL)[1];
     if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
       const date = new Date();
       const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-      if (parsedCallbackURL[4] !== "") {
-        parsedCallbackURL[4] = parsedCallbackURL[4] +
+      if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
+        parsedCallbackURLOpenRedirectTimestamps[4] = parsedCallbackURLOpenRedirectTimestamps[4] +
           "&fuzzer-open-redirect-callback=" + encodeURIComponent(timestamp);
       } else {
-        parsedCallbackURL[4] = "?fuzzer-open-redirect-callback=" +
+        parsedCallbackURLOpenRedirectTimestamps[4] = "?fuzzer-open-redirect-callback=" +
           encodeURIComponent(timestamp);
       }
-      globalThis.location = parsedCallbackURL.join("");
+      globalThis.location = parsedCallbackURLOpenRedirectTimestamps.join("");
     } 
   }
   if (
