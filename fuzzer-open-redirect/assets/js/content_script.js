@@ -1,23 +1,15 @@
-// anchor communication structure
-//
-// #{session_id}
-//
-
-// onBeforeSendHeaders
-// 
-// Example headers:
-//
-// Host: www.inscope.com
-// Location: https://some.unexpected.subdomain.myredirecturl.com/
-// X-Open-Redirect-Scanner-Session-ID: 2y5jti4nj53454j6k53
-// X-Open-Redirect-Scanner-Cookie: a=2839ht493t374h9
-// X-Open-Redirect-Scanner-Host: myredirecturl.com
-//
+/**
+ * A recursive, multi-threaded open redirect URL scanner.
+ */
 
 "use strict";
 
 let pendingURLs = [];
 let shuttingDown = false;
+
+const scope = [
+  "*://developer.mozilla.org",
+];
 
 const redirectURLs = [
   "https://www.runescape.com",
@@ -31,9 +23,10 @@ const anchor = location.anchor;
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let requestDelay = [15000, 30000];
+let requestDelay = [5000, 15000];
 let session_id = "2y5jti4nj53454j6k53";
 let threads = 2;
+let requestTimeout = 16000;
 
 (()=>{
   var DEFAULT_MAX_DEPTH = 6;
@@ -249,7 +242,7 @@ const hexEncodeThreeUpperCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 4) using a given string.
+ * Returns a lowercase hex encoded string (type 4) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
  */
@@ -262,7 +255,7 @@ const hexEncodeFourLowerCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 4) using a given string.
+ * Returns an uppercase hex encoded string (type 4) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
  */
@@ -275,7 +268,7 @@ const hexEncodeFourUpperCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 3) using a given string.
+ * Returns a lowercase hex encoded string (type 5) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
  */
@@ -292,7 +285,7 @@ const hexEncodeFiveLowerCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 3) using a given string.
+ * Returns an uppercase hex encoded string (type 5) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
  */
@@ -309,7 +302,7 @@ const hexEncodeFiveUpperCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 4) using a given string.
+ * Returns a lowercase hex encoded string (type 6) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
  */
@@ -322,7 +315,7 @@ const hexEncodeSixLowerCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 4) using a given string.
+ * Returns an uppercase hex encoded string (type 6) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
  */
@@ -1418,6 +1411,48 @@ const injectURL = (targetURL, redirectURL) => {
 }
 
 /**
+ * Returns a case insensitive regexp selector for a given protocol.
+ * (example input: "*://")
+ * (example output: /.*?[:][/][/]/ig)
+ */
+const urlProtocolSpecifierToRegexpIgnoreCase = protocolSpecifier => {
+  protocolSpecifier = protocolSpecifer.replace(/([^*a-z0-9\]])/ig, "[$1]");
+  protocolSpecifier = protocolSpecifer.replace(/[*]/g, ".*?");
+  return new RegExp(protocolSpecifier, "ig");
+}
+
+/**
+ * Returns a case insensitive regexp selector for a given host.
+ * (example input: "*://")
+ * (example output: /.*?[:][/][/]/ig)
+ */
+const urlProtocolSpecifierToRegexpIgnoreCase = protocolSpecifier => {
+  protocolSpecifier = protocolSpecifer.replace(/([^*a-z0-9\]])/ig, "[$1]");
+  protocolSpecifier = protocolSpecifer.replace(/[*]/g, ".*?");
+  return new RegExp(protocolSpecifier, "ig");
+}
+
+/**
+ * Returns true if a given origin matches an origin specifier that's in the specified scope.
+ * (example input: "http://www.in.scope.domain.com")
+ * (example output given "*://*.in.scope.*" is in the scope: true)
+ */
+const isInScopeOrigin = origin => {
+  const parsedOriginURL = parseURL(origin);
+  for (let a = 0 a < scope.length; a++) {
+    const regexpInScopeOrigin = new RegExp(
+      scope[a]
+        .replace(/([^a-z0-9\]])/ig, "[$1]")
+        .replace(/[*]/ig, ".*?"),
+      "ig");
+    if (parsedInScopeOriginURL[1].match(regexpInScopeOrigin)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Returns an array of all string values that were found in a given object.
  */
 const getAllStringValues = obj => {
@@ -1484,13 +1519,16 @@ const toFullURL = uri => {
 }
 
 /**
- * Attempts to load the resources in a new window with the session ID in the URL anchor,
- * where this script will attempt check if the redirection was successful.
+ * Attempts to load a given URL in a new window.
  */
-const loadResource = url => {
-  const anchoredURL = url.replace(/^([^#]*)/ig, "$1#" + session_id);
-  console.log("Fetching", anchoredURL);
-//  setTimeout(globalThis.open(anchoredURL, "_blank"), 0);
+const loadURL = async url => {
+  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black", new Date().toLocaleTimeString(),
+    "Fetching", url);
+  const popup = globalThis.open(url, "fuzzer-open-redirect", "menubar=no,status=no,scrollbars=no,width=200,height=400");
+  (async()=>{
+    await sleep(4000);
+    popup.close();
+  })();
 }
 
 /**
@@ -1520,24 +1558,23 @@ const stripAllTrailingWhitespaces = str => {
  * Opens all pending and unique URLs.
  */
 const openPendingURLs = () => {
-  return new Promise(async(res, err)=>{
+  return new Promise(async(res)=>{
     pendingURLs.filter((url, index, arr)=>{
       return arr.indexOf(url) == index;
     });
     const chunkedPendingURLs = chunkURLArray(pendingURLs);
-console.log("Chunked URLs:");
+console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+"Chunked URLs:");
 console.log(chunkedPendingURLs);
-    if (chunkedPendingURLs.length != threads) {
-      const errorMsg = "Amount of chunked URLs does not match the specified amount of threads.";
-      alert(errorMsg);
-      err(errorMsg);
-    }
-    for (let a = 0; a < threads.length; a++) {
+    for (let a = 0; a < threads; a++) {
       (async()=>{
         const thisPendingURLChunk = chunkedPendingURLs[a];
+console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+"Using chunk:");
+console.log(thisPendingURLChunk);
         for (let c = 0; c < thisPendingURLChunk.length; c++) {
           const thisURLCandidate = thisPendingURLChunk[c];
-          loadResource(thisURLCandidate);
+          loadURL(thisURLCandidate);
           pendingURLs.filter(url=>{
             return url != thisURLCandidate;
           });
@@ -1564,6 +1601,8 @@ const scanForExploitableURIsAndQueue = async () => {
     let discoveredURLs = document.documentElement.innerHTML
       .match(regexpSelectorURLWithURIParameterHTML) || [];
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
+console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+  "JSON pruned DOM tree:"),
 console.log(nonRecursiveGlobalThis);
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
@@ -1580,15 +1619,23 @@ console.log(nonRecursiveGlobalThis);
       }
     }
     if (discoveredURLs && discoveredURLs.length > 0) {
-      console.log("Scan finished.",
+      console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+        "Scan finished.",
         "Found " + discoveredURLs.length + " potentially exploitable URI(s).");
       for (let a = 0; a < discoveredURLs.length; a++) {
         discoveredURLs[a] = toFullURL(unescapeHTML(stripTrailingQuotes(discoveredURLs[a])));
       }
       discoveredURLs.filter((url, index)=>{
-        return (discoveredURLs.indexOf(url) == index);
+        const parsedURL = parseURL(url);
+        if (
+             discoveredURLs.indexOf(url) == index
+          && isInScopeOrigin(parsedURL[0] + parsedURL[1])
+        ) {
+          return true;
+        }
       });
-console.log("Discovered URLs (filtered):");
+console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+  "Discovered URLs that are potentially vulnerable and in scope:");
 console.log(discoveredURLs);
       for (let a = 0; a < discoveredURLs.length; a++) {
         let thisURLCandidate = discoveredURLs[a];
@@ -1601,7 +1648,8 @@ console.log(discoveredURLs);
         }
       }
     } else {
-      console.log("No exploitable URIs found in this document.");
+      console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+        "No exploitable URIs found.");
     }
     res();
   });
@@ -1615,7 +1663,7 @@ const drawUI = async () => {
     ui-open-redirect-scanner-frame {
       display: block;
       z-index: 999999999;
-      position: absolute;
+      position: fixed;
       left: 0;
       top: 0;
       width: 400px;
@@ -1626,8 +1674,15 @@ const drawUI = async () => {
   const UIStyleSheet = document.createElement("style");
   UIStyleSheet.type = "text/css";
   UIStyleSheet.innerText = UICSS;
-  const UIHTML = ``;
+  const UIHTML = `
+    <ui-open-redirect-scanner-frame>
+      <p>test</p>
+    </ui-open-redirect-scanner-frame>
+  `;
   const UIFrame = document.createElement("ui-open-redirect-scanner-frame");
+  if (globalThis.document && globalThis.document.documentElement) {
+    globalThis.document.documentElement.appendChild(UIFrame);
+  }
 }
 
 /* 
@@ -1638,7 +1693,9 @@ const drawUI = async () => {
     const thisRedirectURL = redirectURLs[a];
     const redirectHost = parseURL(thisRedirectURL)[1];
     if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
-      const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---";
+      const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---" +
+        "\n\n" +
+        new Date().toLocaleTimeString();
       alert(msg);
       alert(msg);
       alert(msg);
@@ -1648,7 +1705,18 @@ const drawUI = async () => {
       return;
     } 
   }
-  console.log("Scanning for exploitable URIs.");
+  let inScope = false;
+  for (let b = 0; b < scope.length; b++) {
+    if (matchesOriginSpecifier(globalThis.location.origin), scope[b]) {
+      inScope = true;
+    }
+  }
+  if (!inScope) {
+    self.close();
+  }
+  drawUI();
+  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "Scanning for exploitable URIs.");
   scanForExploitableURIsAndQueue();
   if (globalThis.document) {
     globalThis.document.addEventListener("DOMContentLoaded", async()=>{
@@ -1670,7 +1738,8 @@ const drawUI = async () => {
     if (globalThis.location.hash.toLowerCase() == "#" + session_id.toLowerCase()) {
       globalThis.close();
     }
-    console.log("Fuzzer has ended.");
+    console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+      "Fuzzer has finished.");
   })();
 })();
 
