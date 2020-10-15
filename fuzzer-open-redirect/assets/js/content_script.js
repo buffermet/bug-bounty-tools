@@ -4,6 +4,8 @@
 
 "use strict";
 
+globalThis.console.clear = function() {}
+
 let pendingURLs = [];
 let shuttingDown = false;
 
@@ -19,8 +21,9 @@ const anchor = location.anchor;
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let session_id = "2y5jti4nj53454j6k53";
-let requestDelay = [5000, 15000];
+let callbackURL = "https://webhook.site/7ffb57df-8105-4fc7-ad3e-b73a586846cd";
+let parsedCallbackURL = ["","","","","",""];
+let requestDelay = [1000, 1000];
 let requestTimeout = 16000;
 let scanOutOfScopeOrigins = false;
 let scope = [
@@ -1607,9 +1610,9 @@ console.log(nonRecursiveGlobalThis);
           filteredDiscoveredURLs.push(discoveredURLs[a]);
         }
       }
-console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-  "Discovered URLs that are potentially vulnerable and in scope:");
-console.log(filteredDiscoveredURLs);
+      console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+        "Discovered URLs that are potentially vulnerable and in scope:");
+      console.log(filteredDiscoveredURLs);
       for (let a = 0; a < filteredDiscoveredURLs.length; a++) {
         let thisURLCandidate = filteredDiscoveredURLs[a];
         for (let b = 0; b < redirectURLs.length; b++) {
@@ -1628,24 +1631,37 @@ console.log(filteredDiscoveredURLs);
   });
 }
 
-/* 
+/**
  * Init fuzzer.
  */
 (async () => {
+  parsedCallbackURL = parseURL(callbackURL);
+  if (parsedCallbackURL[1] === "") {
+    console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "No host was provided in the specified callback URL (" + callbackURL + ").");
+    return;
+  }
+  if (parsedCallbackURL[0] === "") {
+    console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "No protocol was provided in the specified callback URL (" + callbackURL + "). Defaulting to \"http://\".");
+    parsedCallbackURL[0] = "http://";
+  }
+  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "Callback URL parsed: " + callbackURL);
   for (let a = 0; a < redirectURLs.length; a++) {
     const thisRedirectURL = redirectURLs[a];
     const redirectHost = parseURL(thisRedirectURL)[1];
     if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
-      window.opener.postMessage("OPEN_REDIRECT_FOUND", "*");
-      const msg = "--- OPEN REDIRECT FOUND --- PRESS OK TO CONTINUE SCANNING ---" +
-        "\n\n" + new Date().toLocaleTimeString();
-      console.log(msg);
-      alert(msg);
-      alert(msg);
-      alert(msg);
-      alert(msg);
-      alert(msg);
-      return;
+      const date = new Date();
+      const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+      if (parsedCallbackURL[4] !== "") {
+        parsedCallbackURL[4] = parsedCallbackURL[4] +
+          "&fuzzer-open-redirect-callback=" + encodeURIComponent(timestamp);
+      } else {
+        parsedCallbackURL[4] = "?fuzzer-open-redirect-callback=" +
+          encodeURIComponent(timestamp);
+      }
+      globalThis.location = parsedCallbackURL.join("");
     } 
   }
   if (
@@ -1669,12 +1685,10 @@ console.log(filteredDiscoveredURLs);
       shuttingDown = true;
     }
   });
-  (async () => {
-    while (!shuttingDown) {
-      await sleep(4000);
-    }
-    console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-      "Fuzzer has finished.");
-  })();
+  while (!shuttingDown) {
+    await sleep(4000);
+  }
+  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    "Fuzzer has finished.");
 })();
 
