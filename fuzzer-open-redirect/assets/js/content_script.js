@@ -1643,7 +1643,8 @@ console.log(nonRecursiveGlobalThis);
   }
   if (parsedCallbackURL[0] === "") {
     console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "No protocol was provided in the specified callback URL (" + callbackURL + "). Defaulting to \"http://\".");
+      "No protocol was provided in the specified callback URL (" + callbackURL + ").",
+      "Defaulting to \"http://\".");
     parsedCallbackURL[0] = "http://";
   }
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
