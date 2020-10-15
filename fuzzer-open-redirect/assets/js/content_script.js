@@ -10,8 +10,8 @@ let pendingURLs = [];
 let shuttingDown = false;
 
 const redirectURLs = [
-  "https://www.runescape.com",
-  "https://www.runescape.com/",
+  "https://github.com",
+  "https://github.com/",
   "https://www.runescape.com/splash",
   "https://www.runescape.com/splash?nothing"
 ];
@@ -21,13 +21,14 @@ const anchor = location.anchor;
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let callbackURL = "https://webhook.site/7ffb57df-8105-4fc7-ad3e-b73a586846cd";
+let callbackURL = "https://webhook.site/d74dabfe-d9ea-4964-8c04-70631c936266";
+let delayCloseTabs = 10000;
 let parsedCallbackURL = ["","","","","",""];
-let requestDelay = [1000, 1000];
+let requestDelay = [5000, 10000];
 let requestTimeout = 16000;
 let scanOutOfScopeOrigins = false;
 let scope = [
-  "*://developer.mozilla.org",
+  "*://stackoverflow.com",
 ];
 let threads = 2;
 
@@ -1413,22 +1414,17 @@ const injectURL = (targetURL, redirectURL) => {
  * (example output given "*://*.in.scope.*" is in the scope: true)
  */
 const isInScopeOrigin = origin => {
-console.log("checking if " + origin + " is in scope");
   for (let a = 0; a < scope.length; a++) {
-console.log(scope[a]);
     const regexpInScopeOrigin = new RegExp(
       "^" +
       scope[a]
         .replace(/([^*a-z0-9\]])/ig, "[$1]")
         .replace(/[*]/ig, "[a-z-]+"),
       "ig");
-console.log(regexpInScopeOrigin)
     if (origin.match(regexpInScopeOrigin)) {
-console.log("yes")
       return true;
     }
   }
-console.log("no")
   return false;
 }
 
@@ -1504,7 +1500,7 @@ const toFullURL = uri => {
 const loadURL = async url => {
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black", new Date().toLocaleTimeString(),
     "Fetching", url);
-  const popup = globalThis.open(url, "fuzzer-open-redirect", "menubar=no,status=no,scrollbars=no,width=200,height=400");
+  const popup = globalThis.open(url, "_blank");
 }
 
 /**
@@ -1549,6 +1545,7 @@ console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shado
 "Using chunk:");
 console.log(thisPendingURLChunk);
         for (let c = 0; c < thisPendingURLChunk.length; c++) {
+          if (shuttingDown) break;
           const thisURLCandidate = thisPendingURLChunk[c];
           loadURL(thisURLCandidate);
           pendingURLs.filter(url=>{
@@ -1648,7 +1645,7 @@ console.log(nonRecursiveGlobalThis);
     parsedCallbackURL[0] = "http://";
   }
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "Callback URL parsed: " + callbackURL);
+    "Callback URL parsed: " + parsedCallbackURL.join(""));
   for (let a = 0; a < redirectURLs.length; a++) {
     const thisRedirectURL = redirectURLs[a];
     const redirectHost = parseURL(thisRedirectURL)[1];
@@ -1666,30 +1663,36 @@ console.log(nonRecursiveGlobalThis);
     } 
   }
   if (
-       !isInScopeOrigin(globalThis.location.origin)
-    && !scanOutOfScopeOrigins
+       globalThis.opener
+    && (
+         isInScopeOrigin(globalThis.location.origin)
+      || !scanOutOfScopeOrigins
+    )
   ) {
+    await sleep(delayCloseTabs);
     self.close();
   }
-  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "Scanning for exploitable URIs.");
-  scanForExploitableURIsAndQueue();
-  if (globalThis.document) {
-    globalThis.document.addEventListener("DOMContentLoaded", async () => {
-      scanForExploitableURIsAndQueue();
-    });
-  }
-  globalThis.addEventListener("load", async () => {
+  if (isInScopeOrigin(globalThis.location.origin) || scanOutOfScopeOrigins) {
+    console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+      "Scanning for exploitable URIs.");
     scanForExploitableURIsAndQueue();
-    if (pendingURLs.length > 0) {
-      await openPendingURLs();
-      shuttingDown = true;
+    if (globalThis.document) {
+      globalThis.document.addEventListener("DOMContentLoaded", async () => {
+        scanForExploitableURIsAndQueue();
+      });
     }
-  });
-  while (!shuttingDown) {
-    await sleep(4000);
+    globalThis.addEventListener("load", async () => {
+      scanForExploitableURIsAndQueue();
+      if (pendingURLs.length > 0) {
+        await openPendingURLs();
+      }
+    });
   }
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
     "Fuzzer has finished.");
+  if (globalThis.opener) {
+    await sleep(delayCloseTabs);
+    self.close();
+  }
 })();
 
