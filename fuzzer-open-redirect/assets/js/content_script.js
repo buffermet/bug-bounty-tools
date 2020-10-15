@@ -21,8 +21,8 @@ const anchor = location.anchor;
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let callbackURLOpenRedirectTimestamps = "https://webhook.site/0f9d0bc4-6879-40cd-a880-9de7c7558df8";
-let callbackURLRequestTimestamps = "https://webhook.site/0f9d0bc4-6879-40cd-a880-9de7c7558df8";
+let callbackURLOpenRedirectTimestamps = "https://webhook.site/#!/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
+let callbackURLRequestTimestamps = "https://webhook.site/#!/effb4c0b-cb46-4bc9-8464-034c24761958";
 let delayCloseTabs = 10000;
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
@@ -214,7 +214,7 @@ const hexEncodeTwoUpperCase = str => {
   return encoded;
 }
 
-/**
+/*
  * Returns a hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
@@ -223,7 +223,7 @@ const hexEncodeThreeLowerCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
     if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
-      encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
+
     } else { 
       encoded = encoded + str.charAt(a);
     } 
@@ -466,16 +466,16 @@ const parseURL = url => {
     retval[2] = strippedURL.replace(/^(?:(?:(?:\w+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})))([:][1-9][0-9]{0,4}).*$/i, "$1");
   }
   // path
-  if (strippedURL.match(/^(?:(?:\w+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)?([/][^?#]*).*/i)) {
-    retval[3] = strippedURL.replace(/^(?:(?:\w+:)?\/\/)?[^/?#]*([/][^?#]*).*$/i, "$1");
+  if (strippedURL.match(/^(?:(?:\w+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)?([/][^?]*)(?:[#][^/]*?)?/i)) {
+    retval[3] = strippedURL.replace(/^(?:(?:\w+:)?\/\/)?[^/?#]*([/][^?]*)(?:[#][^/]*?)?/i, "$1");
   }
   // query
   if (strippedURL.match(/^.*?([?][^#]*).*/i)) {
     retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
   }
   // anchor
-  if (strippedURL.match(/^[^#]*([#].*)/i)) {
-    retval[5] = strippedURL.replace(/^[^#]*([#].*)/i, "$1");
+  if (strippedURL.match(/^[^#]*([#][^/]*$)/i)) {
+    retval[5] = strippedURL.replace(/^[^#]*([#][^/]*$)/i, "$1");
   }
   return retval;
 }
@@ -1515,6 +1515,8 @@ const loadURL = async url => {
       encodeURIComponent(timestamp + " - " + url);
   }
   callbackURL = callbackURL + parsedCallbackURLRequestTimestamps.slice(5);
+console.log(parsedCallbackURLRequestTimestamps);
+console.log(callbackURL);
   globalThis.open(callbackURL, "_blank")
   globalThis.open(url, "_blank");
 }
@@ -1651,35 +1653,40 @@ console.log(nonRecursiveGlobalThis);
   parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
   if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
     console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "No valid origin was provided in the specified callback URL for open redirects (" + callbackURLOpenRedirectTimestamps + ").");
+      "No valid origin was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
   if (parsedCallbackURLOpenRedirectTimestamps[0] === "") {
     console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-      "No protocol was provided in the specified callback URL for open redirects (" + callbackURLOpenRedirectTimestamps + ").",
+      "No protocol was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
     parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
   }
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "Open redirect callback URL parsed: " + parsedCallbackURLOpenRedirectTimestamps.join(""));
+    "Callback URL for open redirect timestamps is parsed: " +
+    parsedCallbackURLOpenRedirectTimestamps.join(""));
   parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
   if (parsedCallbackURLRequestTimestamps[1] === "") {
     console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "No valid origin was provided in the specified callback URL for timestamped requests (" + callbackURLOpenRedirectTimestamps + ").");
+      "No valid origin was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
   if (parsedCallbackURLRequestTimestamps[0] === "") {
     console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-      "No protocol was provided in the specified callback URL for timestamped requests (" + callbackURLOpenRedirectTimestamps + ").",
+      "No protocol was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
     parsedCallbackURLRequestTimestamps[0] = "http://";
   }
   console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    "Open redirect callback URL parsed: " + parsedCallbackURLOpenRedirectTimestamps.join(""));
+    "Callback URL for request timestamps is parsed: " +
+    parsedCallbackURLRequestTimestamps.join(""));
   if (
-    globalThis.location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
-      .slice(0,2)
-      .join("").toLowerCase()
+       globalThis.location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
+         .slice(0,2)
+         .join("").toLowerCase()
+    || globalThis.location.origin.toLowerCase() === parsedCallbackURLRequestTimestamps
+         .slice(0,2)
+         .join("").toLowerCase()
   ) {
     globalThis.addEventListener("load", self.close);
     return;
