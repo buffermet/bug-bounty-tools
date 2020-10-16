@@ -1425,7 +1425,8 @@ const isInScopeOrigin = origin => {
       "^" +
       scope[a]
         .replace(/([^*a-z0-9\]])/ig, "[$1]")
-        .replace(/[*]/ig, "[a-z-]+"),
+        .replace(/^([a-z0-9-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:"),
+        .replace(/[*]/ig, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"),
       "ig");
     if (origin.match(regexpInScopeOrigin)) {
       return true;
