@@ -4,7 +4,7 @@
 
 "use strict";
 
-globalThis.console && globalThis.console.clear = () => {};
+globalThis.console ? globalThis.console.clear = () => {} : "";
 
 let callbackURLOpenRedirectTimestamps = "https://webhook.site/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
 let callbackURLRequestTimestamps = "https://webhook.site/effb4c0b-cb46-4bc9-8464-034c24761958";
@@ -1425,7 +1425,7 @@ const isInScopeOrigin = origin => {
       "^" +
       scope[a]
         .replace(/([^*a-z0-9\]])/ig, "[$1]")
-        .replace(/^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:"),
+        .replace(/^([a-z0-9-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:")
         .replace(/[*]/ig, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"),
       "ig");
     if (origin.match(regexpInScopeOrigin)) {
