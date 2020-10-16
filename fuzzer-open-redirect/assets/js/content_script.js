@@ -1680,6 +1680,7 @@ const scanForExploitableURIsAndQueue = async () => {
          .slice(0,2)
          .join("").toLowerCase()
   ) {
+    setTimeout(self.close, timeoutCallback);
     globalThis.addEventListener("load", self.close);
     if (globalThis.document && globalThis.document.readyState === "complete") {
       self.close();
