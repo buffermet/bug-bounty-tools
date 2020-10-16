@@ -160,7 +160,7 @@ const getIntFromRange = (min, max) => {
 }
 
 /**
- * Returns a hex encoded string (type 1) using a given string.
+ * Returns a lowercase hex encoded string (type 1) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
  */
@@ -177,7 +177,7 @@ const hexEncodeOneLowerCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 1) using a given string.
+ * Returns an uppercase hex encoded string (type 1) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2f")
  */
@@ -194,7 +194,7 @@ const hexEncodeOneUpperCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 2) using a given string.
+ * Returns a lowercase hex encoded string (type 2) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
  */
@@ -207,7 +207,7 @@ const hexEncodeTwoLowerCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 2) using a given string.
+ * Returns an uppercase hex encoded string (type 2) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
  */
@@ -220,7 +220,7 @@ const hexEncodeTwoUpperCase = str => {
 }
 
 /*
- * Returns a hex encoded string (type 3) using a given string.
+ * Returns a lowercase hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
  */
@@ -237,7 +237,7 @@ const hexEncodeThreeLowerCase = str => {
 }
 
 /**
- * Returns a hex encoded string (type 3) using a given string.
+ * Returns an uppercase hex encoded string (type 3) using a given string.
  * (example input: "https://myredirectsite.com/")
  * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
  */
