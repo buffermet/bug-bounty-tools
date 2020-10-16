@@ -9,7 +9,6 @@ globalThis.console ? globalThis.console.clear = () => {} : "";
 let callbackURLOpenRedirectTimestamps = "https://webhook.site/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
 let callbackURLRequestTimestamps = "https://webhook.site/effb4c0b-cb46-4bc9-8464-034c24761958";
 let delayCloseTabs = 10000;
-let pendingURLs = [];
 let requestDelay = [5000, 10000];
 let scanOutOfScopeOrigins = false;
 let scanRecursively = false;
@@ -20,10 +19,10 @@ let threads = 2;
 let timeoutCallback = 32000;
 
 const redirectURLs = [
-  "http://runescape.com",
-  "http://runescape.com/",
-  "http://runescape.com/splash",
-  "http://runescape.com/splash?nothing"
+  "https://runescape.com",
+  "https://runescape.com/",
+  "https://runescape.com/splash",
+  "https://runescape.com/splash?nothing"
 ];
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -34,6 +33,7 @@ const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|
 
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
+let pendingURLs = [];
 let requests = [];
 let shuttingDown = false;
 
@@ -1644,6 +1644,7 @@ const scanForExploitableURIsAndQueue = async () => {
  * Init fuzzer.
  */
 (async () => {
+  /* Parse specified callback URLs for open redirects and requests. */
   parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
   if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
     console.error("%cfuzzer-open-redirect", consoleCSS,
@@ -1674,6 +1675,7 @@ const scanForExploitableURIsAndQueue = async () => {
   console.log("%cfuzzer-open-redirect", consoleCSS,
     "Callback URL for request timestamps is parsed: " +
     parsedCallbackURLRequestTimestamps.join(""));
+  /* Automatically close tab if this origin belongs to a specified callback URL. */
   if (
        globalThis.location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
          .slice(0,2)
@@ -1689,6 +1691,7 @@ const scanForExploitableURIsAndQueue = async () => {
     }
     return;
   }
+  /* If successfully exploited, send a timestamped callback for open redirects. */
   for (let a = 0; a < redirectURLs.length; a++) {
     const thisRedirectURL = redirectURLs[a];
     const redirectHost = parseURL(thisRedirectURL)[1];
@@ -1707,13 +1710,14 @@ const scanForExploitableURIsAndQueue = async () => {
       globalThis.location = callbackURL;
     } 
   }
+  /* Start fuzzer if this origin is in scope or close this tab if fuzzer opened it. */
   if (
        (globalThis.opener && isInScopeOrigin(globalThis.location.origin) && scanRecursively)
     || (globalThis.opener && scanOutOfScopeOrigins && scanRecursively)
     || (!globalThis.opener && isInScopeOrigin(globalThis.location.origin))
     || scanOutOfScopeOrigins
   ) {
-    /* If this origin is in scope, start fuzzer. */
+    /* This origin is in scope. */
     console.log("%cfuzzer-open-redirect", consoleCSS,
       "Scanning for exploitable URIs.");
     scanForExploitableURIsAndQueue();
@@ -1722,14 +1726,21 @@ const scanForExploitableURIsAndQueue = async () => {
         scanForExploitableURIsAndQueue();
       });
     }
-    globalThis.addEventListener("load", async () => {
+    if (globalThis.document && globalThis.document.readyState !== "complete") {
+      globalThis.addEventListener("load", async () => {
+        scanForExploitableURIsAndQueue();
+        if (pendingURLs.length > 0) {
+          await openPendingURLs();
+        }
+      });
+    } else {
       scanForExploitableURIsAndQueue();
       if (pendingURLs.length > 0) {
         await openPendingURLs();
       }
-    });
+    }
   } else {
-    /* If this origin is out of scope, close tab if fuzzer opened it. */
+    /* This origin is out of scope. */
     (async () => {
       if (globalThis.opener) {
         await sleep(delayCloseTabs);
