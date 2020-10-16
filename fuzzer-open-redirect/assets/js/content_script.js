@@ -6,28 +6,11 @@
 
 globalThis.console.clear = function() {}
 
-let pendingURLs = [];
-let shuttingDown = false;
-
-const redirectURLs = [
-  "https://github.com",
-  "https://github.com/",
-  "https://www.runescape.com/splash",
-  "https://www.runescape.com/splash?nothing"
-];
-
-const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const anchor = location.anchor;
-const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
-const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
-
-let callbackURLOpenRedirectTimestamps = "https://webhook.site/#!/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
-let callbackURLRequestTimestamps = "https://webhook.site/#!/effb4c0b-cb46-4bc9-8464-034c24761958";
+let callbackURLOpenRedirectTimestamps = "https://webhook.site/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
+let callbackURLRequestTimestamps = "https://webhook.site/effb4c0b-cb46-4bc9-8464-034c24761958";
 let delayCloseTabs = 10000;
-let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
-let parsedCallbackURLRequestTimestamps = ["","","","","",""];
+let pendingURLs = [];
 let requestDelay = [5000, 10000];
-let requests = [];
 let scanOutOfScopeOrigins = false;
 let scope = [
   "*://stackoverflow.com",
@@ -35,6 +18,27 @@ let scope = [
 let threads = 2;
 let timeoutCallback = 32000;
 
+const redirectURLs = [
+  "http://runescape.com",
+  "http://runescape.com/",
+  "http://runescape.com/splash",
+  "http://runescape.com/splash?nothing"
+];
+
+const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const anchor = location.anchor;
+const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
+const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
+const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
+
+let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
+let parsedCallbackURLRequestTimestamps = ["","","","","",""];
+let requests = [];
+let shuttingDown = false;
+
+/**
+ * Imported JSON.prune() script.
+ */
 (() => {
   var DEFAULT_MAX_DEPTH = 6;
   var DEFAULT_ARRAY_MAX_LENGTH = 50;
@@ -1502,9 +1506,8 @@ const toFullURL = uri => {
 const loadURL = async url => {
   const date = new Date();
   const timestamp = date.toLocaleDateString() + " " + date.toLocaleTimeString();
-  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-    timestamp,
-    "Fetching", url);
+  console.log("%cfuzzer-open-redirect", consoleCSS,
+    timestamp, "Fetching", url);
   let callbackURL = parsedCallbackURLRequestTimestamps.slice(0,4).join("");
   if (parsedCallbackURLRequestTimestamps[4] !== "") {
     callbackURL = callbackURL + parsedCallbackURLRequestTimestamps[4] +
@@ -1515,8 +1518,6 @@ const loadURL = async url => {
       encodeURIComponent(timestamp + " - " + url);
   }
   callbackURL = callbackURL + parsedCallbackURLRequestTimestamps.slice(5);
-console.log(parsedCallbackURLRequestTimestamps);
-console.log(callbackURL);
   globalThis.open(callbackURL, "_blank")
   globalThis.open(url, "_blank");
 }
@@ -1553,17 +1554,11 @@ const openPendingURLs = () => {
       return arr.indexOf(url) == index;
     });
     const chunkedPendingURLs = chunkURLArray(pendingURLs);
-console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-"Chunked URLs:");
-console.log(chunkedPendingURLs);
     for (let a = 0; a < threads; a++) {
       (async () => {
         const thisPendingURLChunk = chunkedPendingURLs[a];
-console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-"Using chunk:");
-console.log(thisPendingURLChunk);
         for (let c = 0; c < thisPendingURLChunk.length; c++) {
-          if (shuttingDown) break;
+          if (shuttingDown) return;
           const thisURLCandidate = thisPendingURLChunk[c];
           loadURL(thisURLCandidate);
           pendingURLs.filter(url=>{
@@ -1592,9 +1587,6 @@ const scanForExploitableURIsAndQueue = async () => {
     let discoveredURLs = document.documentElement.innerHTML
       .match(regexpSelectorURLWithURIParameterHTML) || [];
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
-console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
-  "JSON pruned DOM tree:"),
-console.log(nonRecursiveGlobalThis);
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
       if (globalThisStringValues[a].match(regexpSelectorURLWithURIParameterPlain)) {
@@ -1609,7 +1601,7 @@ console.log(nonRecursiveGlobalThis);
       }
     }
     if (discoveredURLs && discoveredURLs.length > 0) {
-      console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+      console.log("%cfuzzer-open-redirect", consoleCSS,
         "Scan finished.",
         "Found " + discoveredURLs.length + " potentially exploitable URI(s). Converting them to full URLs.");
       for (let a = 0; a < discoveredURLs.length; a++) {
@@ -1625,7 +1617,7 @@ console.log(nonRecursiveGlobalThis);
           filteredDiscoveredURLs.push(discoveredURLs[a]);
         }
       }
-      console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+      console.log("%cfuzzer-open-redirect", consoleCSS,
         "Discovered URLs that are potentially vulnerable and in scope:");
       console.log(filteredDiscoveredURLs);
       for (let a = 0; a < filteredDiscoveredURLs.length; a++) {
@@ -1639,7 +1631,7 @@ console.log(nonRecursiveGlobalThis);
         }
       }
     } else {
-      console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+      console.log("%cfuzzer-open-redirect", consoleCSS,
         "No exploitable URIs found.");
     }
     res();
@@ -1652,32 +1644,32 @@ console.log(nonRecursiveGlobalThis);
 (async () => {
   parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
   if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
-    console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    console.error("%cfuzzer-open-redirect", consoleCSS,
       "No valid origin was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
   if (parsedCallbackURLOpenRedirectTimestamps[0] === "") {
-    console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    console.warn("%cfuzzer-open-redirect", consoleCSS,
       "No protocol was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
     parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
   }
-  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+  console.log("%cfuzzer-open-redirect", consoleCSS,
     "Callback URL for open redirect timestamps is parsed: " +
     parsedCallbackURLOpenRedirectTimestamps.join(""));
   parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
   if (parsedCallbackURLRequestTimestamps[1] === "") {
-    console.error("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    console.error("%cfuzzer-open-redirect", consoleCSS,
       "No valid origin was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
   if (parsedCallbackURLRequestTimestamps[0] === "") {
-    console.warn("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    console.warn("%cfuzzer-open-redirect", consoleCSS,
       "No protocol was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
     parsedCallbackURLRequestTimestamps[0] = "http://";
   }
-  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+  console.log("%cfuzzer-open-redirect", consoleCSS,
     "Callback URL for request timestamps is parsed: " +
     parsedCallbackURLRequestTimestamps.join(""));
   if (
@@ -1689,6 +1681,9 @@ console.log(nonRecursiveGlobalThis);
          .join("").toLowerCase()
   ) {
     globalThis.addEventListener("load", self.close);
+    if (globalThis.document && globalThis.document.readyState === "complete") {
+      self.close();
+    }
     return;
   }
   for (let a = 0; a < redirectURLs.length; a++) {
@@ -1720,7 +1715,7 @@ console.log(nonRecursiveGlobalThis);
     self.close();
   }
   if (isInScopeOrigin(globalThis.location.origin) || scanOutOfScopeOrigins) {
-    console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+    console.log("%cfuzzer-open-redirect", consoleCSS,
       "Scanning for exploitable URIs.");
     scanForExploitableURIsAndQueue();
     if (globalThis.document) {
@@ -1735,7 +1730,7 @@ console.log(nonRecursiveGlobalThis);
       }
     });
   }
-  console.log("%cfuzzer-open-redirect", "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black",
+  console.log("%cfuzzer-open-redirect", consoleCSS,
     "Fuzzer has finished.");
   if (globalThis.opener) {
     await sleep(delayCloseTabs);
