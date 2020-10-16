@@ -12,6 +12,7 @@ let delayCloseTabs = 10000;
 let pendingURLs = [];
 let requestDelay = [5000, 10000];
 let scanOutOfScopeOrigins = false;
+let scanRecursively = false;
 let scope = [
   "*://stackoverflow.com",
 ];
@@ -1707,16 +1708,12 @@ const scanForExploitableURIsAndQueue = async () => {
     } 
   }
   if (
-       globalThis.opener
-    && (
-         isInScopeOrigin(globalThis.location.origin)
-      || !scanOutOfScopeOrigins
-    )
+       (globalThis.opener && isInScopeOrigin(globalThis.location.origin) && scanRecursively)
+    || (globalThis.opener && scanOutOfScopeOrigins && scanRecursively)
+    || (!globalThis.opener && isInScopeOrigin(globalThis.location.origin))
+    || scanOutOfScopeOrigins
   ) {
-    await sleep(delayCloseTabs);
-    self.close();
-  }
-  if (isInScopeOrigin(globalThis.location.origin) || scanOutOfScopeOrigins) {
+    /* If this origin is in scope, start fuzzer. */
     console.log("%cfuzzer-open-redirect", consoleCSS,
       "Scanning for exploitable URIs.");
     scanForExploitableURIsAndQueue();
@@ -1731,12 +1728,16 @@ const scanForExploitableURIsAndQueue = async () => {
         await openPendingURLs();
       }
     });
+  } else {
+    /* If this origin is out of scope, close tab if fuzzer opened it. */
+    (async () => {
+      if (globalThis.opener) {
+        await sleep(delayCloseTabs);
+        self.close();
+      }
+    })();
   }
   console.log("%cfuzzer-open-redirect", consoleCSS,
     "Fuzzer has finished.");
-  if (globalThis.opener) {
-    await sleep(delayCloseTabs);
-    self.close();
-  }
 })();
 
