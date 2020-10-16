@@ -1,3 +1,2 @@
-A recursive and multi-threaded open redirect URL scanner and fuzzer.
+A recursive, multi-threaded open redirect URL scanner.
 
-...

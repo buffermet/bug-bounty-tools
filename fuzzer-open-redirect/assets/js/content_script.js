@@ -4,7 +4,7 @@
 
 "use strict";
 
-globalThis.console.clear = function() {}
+globalThis.console && globalThis.console.clear = () => {};
 
 let callbackURLOpenRedirectTimestamps = "https://webhook.site/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
 let callbackURLRequestTimestamps = "https://webhook.site/effb4c0b-cb46-4bc9-8464-034c24761958";
