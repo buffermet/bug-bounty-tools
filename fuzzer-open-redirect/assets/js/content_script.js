@@ -1678,8 +1678,10 @@ console.log(message.data.URLs)
         && message.data.URLs
       ) {
         paused = true;
-        message.data.URLs.filter(url => {
-          return allDiscoveredURLs.indexOf(url) == -1
+        message.data.URLs = message.data.URLs.filter((url, index, arr) => {
+          return (
+               allDiscoveredURLs.indexOf(url) == -1
+            && index === arr.indexOf(url));
         });
         const chunkedPendingURLsCallback = chunkURLArray(message.data.URLs);
 console.log("new URLs in callback")
