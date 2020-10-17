@@ -1,20 +1,21 @@
 /**
- * A recursive, multi-threaded open redirect URL scanner.
+ * A recursive, multi-threaded open redirect URL scanner and fuzzer.
  */
 
 "use strict";
 
 globalThis.console ? globalThis.console.clear = () => {} : "";
 
-let callbackURLOpenRedirectTimestamps = "https://webhook.site/d91a1faa-7f5c-4d22-84ea-36dbcea9ee17";
-let callbackURLRequestTimestamps = "https://webhook.site/effb4c0b-cb46-4bc9-8464-034c24761958";
+let callbackURLOpenRedirectTimestamps = "https://webhook.site/1448a8ba-ce19-409d-9ae2-6c94de699ec7";
+let callbackURLRequestTimestamps = "https://webhook.site/e93f90dc-3086-432e-b720-04cd80b85b21";
 let delayCloseTabs = 10000;
-let requestDelay = [5000, 10000];
+let requestDelayRange = [5000, 10000];
 let scanOutOfScopeOrigins = false;
-let scanRecursively = false;
+let scanRecursively = true;
 let scope = [
   "*://stackoverflow.com",
 ];
+let session_id = "f028ut3jf4";
 let threads = 2;
 let timeoutCallback = 32000;
 
@@ -31,10 +32,16 @@ const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
+let allDiscoveredURLs = [];
+let chunkedPendingURLs = [];
+let discoveredURLs = [];
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
+let paused = false;
+let scanCount = 0;
 let pendingURLs = [];
 let requests = [];
+let scanning = false;
 let shuttingDown = false;
 
 /**
@@ -1520,6 +1527,9 @@ const loadURL = async url => {
       encodeURIComponent(timestamp + " - " + url);
   }
   callbackURL = callbackURL + parsedCallbackURLRequestTimestamps.slice(5);
+  while (paused) {
+    await sleep(4000);
+  }
   globalThis.open(callbackURL, "_blank")
   globalThis.open(url, "_blank");
 }
@@ -1552,21 +1562,26 @@ const stripAllTrailingWhitespaces = str => {
  */
 const openPendingURLs = () => {
   return new Promise(async(res) => {
+    while (scanCount != 0) {
+      await sleep(4000);
+    }
     pendingURLs.filter((url, index, arr) => {
       return arr.indexOf(url) == index;
     });
-    const chunkedPendingURLs = chunkURLArray(pendingURLs);
+    chunkedPendingURLs = chunkURLArray(pendingURLs);
     for (let a = 0; a < threads; a++) {
       (async () => {
         const thisPendingURLChunk = chunkedPendingURLs[a];
         for (let c = 0; c < thisPendingURLChunk.length; c++) {
           if (shuttingDown) return;
+          while (paused) {
+            await sleep(4000);
+          }
           const thisURLCandidate = thisPendingURLChunk[c];
           loadURL(thisURLCandidate);
-          pendingURLs.filter(url=>{
-            return url != thisURLCandidate;
-          });
-          await sleep(getIntFromRange(requestDelay[0], requestDelay[1]));
+          await sleep(getIntFromRange(
+            requestDelayRange[0],
+            requestDelayRange[1]));
         }
       })();
     }
@@ -1574,6 +1589,9 @@ const openPendingURLs = () => {
          !shuttingDown
       && pendingURLs.length != 0
     ) {
+      await sleep(4000);
+    }
+    while (paused) {
       await sleep(4000);
     }
     res();
@@ -1586,8 +1604,11 @@ const openPendingURLs = () => {
  */
 const scanForExploitableURIsAndQueue = async () => {
   return new Promise(async(res) => {
-    let discoveredURLs = document.documentElement.innerHTML
-      .match(regexpSelectorURLWithURIParameterHTML) || [];
+    scanning = true;
+    scanCount++;
+    discoveredURLs = discoveredURLs.concat(
+       document.documentElement.innerHTML
+         .match(regexpSelectorURLWithURIParameterHTML) || []);
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
@@ -1636,6 +1657,9 @@ const scanForExploitableURIsAndQueue = async () => {
       console.log("%cfuzzer-open-redirect", consoleCSS,
         "No exploitable URIs found.");
     }
+    allDiscoveredURLs = allDiscoveredURLs.concat(pendingURLs);
+    scanCount--;
+    scanning = false;
     res();
   });
 }
@@ -1644,6 +1668,29 @@ const scanForExploitableURIsAndQueue = async () => {
  * Init fuzzer.
  */
 (async () => {
+  /* Register message listeners if scanning recursively. */
+  if (scanRecursively) {
+    globalThis.addEventListener("message", message => {
+console.log("all URLs in callback")
+console.log(message.data.URLs)
+      if (
+           message.data.sessionID === session_id
+        && message.data.URLs
+      ) {
+        paused = true;
+        message.data.URLs.filter(url => {
+          return allDiscoveredURLs.indexOf(url) == -1
+        });
+        const chunkedPendingURLsCallback = chunkURLArray(message.data.URLs);
+console.log("new URLs in callback")
+console.log(chunkedPendingURLsCallback)
+        for (let a = 0; a < chunkedPendingURLsCallback.length; a++) {
+          chunkedPendingURLs[a].concat(chunkedPendingURLsCallback[a]);
+        }
+        paused = false;
+      }
+    });
+  }
   /* Parse specified callback URLs for open redirects and requests. */
   parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
   if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
@@ -1730,23 +1777,43 @@ const scanForExploitableURIsAndQueue = async () => {
       globalThis.addEventListener("load", async () => {
         scanForExploitableURIsAndQueue();
         if (pendingURLs.length > 0) {
-          await openPendingURLs();
+          if (globalThis.opener) {
+            globalThis.opener.postMessage({
+              sessionID: "f028ut3jf4",
+              URLs: discoveredURLs
+            });
+          } else {
+            await openPendingURLs();
+          }
         }
       });
     } else {
       scanForExploitableURIsAndQueue();
       if (pendingURLs.length > 0) {
-        await openPendingURLs();
+        if (globalThis.opener) {
+          globalThis.opener.postMessage({
+            sessionID: "f028ut3jf4",
+            URLs: discoveredURLs
+          });
+        } else {
+          await openPendingURLs();
+        }
       }
+    }
+    if (globalThis.opener) {
+      (async () => {
+        await sleep(delayCloseTabs);
+        self.close();
+      })();
     }
   } else {
     /* This origin is out of scope. */
-    (async () => {
-      if (globalThis.opener) {
+    if (globalThis.opener) {
+      (async () => {
         await sleep(delayCloseTabs);
         self.close();
-      }
-    })();
+      })();
+    }
   }
   console.log("%cfuzzer-open-redirect", consoleCSS,
     "Fuzzer has finished.");
