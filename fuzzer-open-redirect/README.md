@@ -4,9 +4,9 @@ A recursive, multi-threaded open redirect URL scanner and fuzzer.
 
 This works as a single script injection, but will be ported to an interactive browser extension with a GUI soon.
 
-Every time the scanner loads a potentially exploited URL, it sends a timestamped callback to your chosen URL requests.
+Every time the scanner loads a potentially exploited URL, it sends a timestamped callback to your chosen URL for requests.
 
-Every time the scanner detects a successful exploitation, it sends a timestamped callback to your chosen URL open redirects.
+Every time the scanner detects a successful exploitation, it sends a timestamped callback to your chosen URL for open redirects.
 
 CORS restrictions are evaded by making use of the `globalThis.location` setter rather than `XMLHttpRequest` or `fetch`.
 
