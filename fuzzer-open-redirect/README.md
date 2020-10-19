@@ -8,7 +8,7 @@ Every time the scanner loads a potentially exploited URL, it sends a timestamped
 
 Every time the scanner detects a successful exploitation, it sends a timestamped callback to your chosen URL for open redirects.
 
-CORS restrictions are evaded by making use of the `globalThis.location` setter rather than `XMLHttpRequest` or `fetch`.
+CORS restrictions are evaded by making use of the `globalThis.open` method and `globalThis.location` setter rather than `XMLHttpRequest` or `fetch`.
 
 Tabs opened by the scanner will automatically close when they've fulfilled their purpose, or timed out.
 
