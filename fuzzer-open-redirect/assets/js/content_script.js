@@ -9,13 +9,13 @@ globalThis.console ? globalThis.console.clear = () => {} : "";
 let callbackURLOpenRedirectTimestamps = "https://webhook.site/1448a8ba-ce19-409d-9ae2-6c94de699ec7";
 let callbackURLRequestTimestamps = "https://webhook.site/e93f90dc-3086-432e-b720-04cd80b85b21";
 let delayCloseTabs = 10000;
-let requestDelayRange = [5000, 10000];
+let delayRangeRequests = [5000, 10000];
 let scanOutOfScopeOrigins = false;
 let scanRecursively = true;
 let scope = [
   "*://stackoverflow.com",
 ];
-let session_id = "f028ut3jf4";
+let sessionID = "f028ut3jf4";
 let threads = 2;
 let timeoutCallback = 32000;
 
@@ -1580,8 +1580,8 @@ const openPendingURLs = () => {
           const thisURLCandidate = thisPendingURLChunk[c];
           loadURL(thisURLCandidate);
           await sleep(getIntFromRange(
-            requestDelayRange[0],
-            requestDelayRange[1]));
+            delayRangeRequests[0],
+            delayRangeRequests[1]));
         }
       })();
     }
@@ -1604,7 +1604,6 @@ const openPendingURLs = () => {
  */
 const scanForExploitableURIsAndQueue = async () => {
   return new Promise(async(res) => {
-    scanning = true;
     scanCount++;
     discoveredURLs = discoveredURLs.concat(
        document.documentElement.innerHTML
@@ -1659,7 +1658,6 @@ const scanForExploitableURIsAndQueue = async () => {
     }
     allDiscoveredURLs = allDiscoveredURLs.concat(pendingURLs);
     scanCount--;
-    scanning = false;
     res();
   });
 }
@@ -1671,21 +1669,18 @@ const scanForExploitableURIsAndQueue = async () => {
   /* Register message listeners if scanning recursively. */
   if (scanRecursively) {
     globalThis.addEventListener("message", message => {
-console.log("all URLs in callback")
-console.log(message.data.URLs)
       if (
            message.data.sessionID === session_id
-        && message.data.URLs
+        && message.data.discoveredURLs
       ) {
         paused = true;
-        message.data.URLs = message.data.URLs.filter((url, index, arr) => {
+        message.data.discoveredURLs = message.data.discoveredURLs.filter((url, index, arr) => {
           return (
                allDiscoveredURLs.indexOf(url) == -1
             && index === arr.indexOf(url));
         });
-        const chunkedPendingURLsCallback = chunkURLArray(message.data.URLs);
-console.log("new URLs in callback")
-console.log(chunkedPendingURLsCallback)
+        allDiscoveredURLs = allDiscoveredURLs.concat(message.data.discoveredURLs);
+        const chunkedPendingURLsCallback = chunkURLArray(message.data.discoveredURLs);
         for (let a = 0; a < chunkedPendingURLsCallback.length; a++) {
           chunkedPendingURLs[a].concat(chunkedPendingURLsCallback[a]);
         }
@@ -1728,10 +1723,12 @@ console.log(chunkedPendingURLsCallback)
   if (
        globalThis.location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
          .slice(0,2)
-         .join("").toLowerCase()
+         .join("")
+         .toLowerCase()
     || globalThis.location.origin.toLowerCase() === parsedCallbackURLRequestTimestamps
          .slice(0,2)
-         .join("").toLowerCase()
+         .join("")
+         .toLowerCase()
   ) {
     setTimeout(self.close, timeoutCallback);
     globalThis.addEventListener("load", self.close);
@@ -1776,13 +1773,14 @@ console.log(chunkedPendingURLsCallback)
       });
     }
     if (globalThis.document && globalThis.document.readyState !== "complete") {
+      /* Document has not finished loading. */
       globalThis.addEventListener("load", async () => {
         scanForExploitableURIsAndQueue();
         if (pendingURLs.length > 0) {
           if (globalThis.opener) {
             globalThis.opener.postMessage({
-              sessionID: "f028ut3jf4",
-              URLs: discoveredURLs
+              sessionID: sessionID,
+              discoveredURLs: discoveredURLs
             });
           } else {
             await openPendingURLs();
@@ -1790,12 +1788,13 @@ console.log(chunkedPendingURLsCallback)
         }
       });
     } else {
+      /* Document has finished loading. */
       scanForExploitableURIsAndQueue();
       if (pendingURLs.length > 0) {
         if (globalThis.opener) {
           globalThis.opener.postMessage({
-            sessionID: "f028ut3jf4",
-            URLs: discoveredURLs
+            sessionID: sessionID,
+            discoveredURLs: discoveredURLs
           });
         } else {
           await openPendingURLs();
@@ -1803,10 +1802,11 @@ console.log(chunkedPendingURLsCallback)
       }
     }
     if (globalThis.opener) {
-      (async () => {
-        await sleep(delayCloseTabs);
-        self.close();
-      })();
+      while (scanCount != 0 || pendingURLs.length > 0 || paused) {
+        await sleep(4000);
+      }
+      await sleep(delayCloseTabs);
+      self.close();
     }
   } else {
     /* This origin is out of scope. */
