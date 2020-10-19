@@ -466,20 +466,20 @@ const parseURL = url => {
   const strippedURL = stripAllTrailingWhitespaces(url);
   const retval = ["","","","","",""];
   // protocol
-  if (strippedURL.match(/^((?:\w+:)?\/\/).*$/i)) {
-    retval[0] = strippedURL.replace(/^((?:\w+:)?\/\/).*$/i, "$1");
+  if (strippedURL.match(/^((?:[a-z0-9.+-]+:)?\/\/).*$/i)) {
+    retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?\/\/).*$/i, "$1");
   }
   // host
-  if (strippedURL.match(/^(?:(?:(?:\w+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
-    retval[1] = strippedURL.replace(/^(?:(?:(?:\w+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i, "$1");
+  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
+    retval[1] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i, "$1");
   }
   // port
-  if (strippedURL.match(/^(?:(?:(?:\w+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})))([:][1-9][0-9]{0,4}).*/i)) {
-    retval[2] = strippedURL.replace(/^(?:(?:(?:\w+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})))([:][1-9][0-9]{0,4}).*$/i, "$1");
+  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})))([:][1-9][0-9]{0,4}).*/i)) {
+    retval[2] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})))([:][1-9][0-9]{0,4}).*$/i, "$1");
   }
   // path
-  if (strippedURL.match(/^(?:(?:\w+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)?([/][^?]*)(?:[#][^/]*?)?/i)) {
-    retval[3] = strippedURL.replace(/^(?:(?:\w+:)?\/\/)?[^/?#]*([/][^?]*)(?:[#][^/]*?)?/i, "$1");
+  if (strippedURL.match(/^(?:(?:[a-z0-9.+-]+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))(?:[:][1-9][0-9]{0,4})?)?([/][^?]*)(?:[#][^/]*?)?/i)) {
+    retval[3] = strippedURL.replace(/^(?:(?:[a-z0-9.+-]+:)?\/\/)?[^/?#]*([/][^?]*)(?:[#][^/]*?)?/i, "$1");
   }
   // query
   if (strippedURL.match(/^.*?([?][^#]*).*/i)) {
@@ -1402,16 +1402,20 @@ const getURLVariants = url => {
  * (example output: "//www.google.com/q=%2F%2Fmysite%2Ecom%2F")
  */
 const injectURL = (targetURL, redirectURL) => {
+console.log("injecting", targetURL, "with", redirectURL)
   const parsedURL = parseURL(targetURL);
   const query = parsedURL[4];
-  let injectedQuery = query;
+  let injectedQuery = "";
   const parameters = query.split("&");
   for (let a = 0; a < parameters.length; a++) {
-    const parameterName = parameters[a].replace(/([^=]*)=.*/, "$1");
+    const parameterName = parameters[a].replace(/([^=]*?)=.*/, "$1");
     const parameterValue = parameters[a].replace(/.*?=(.*)\s*/, "$1");
     if (parameterValue.match(/^(?:http|[/]|%2f)/i)) {
       const replacedParameter = parameterName + "=" + redirectURL;
-      injectedQuery = injectedQuery.replace(parameters[a], replacedParameter);
+console.log("injected", parameters[a], "to get", replacedParameter)
+      injectedQuery = injectedQuery + replacedParameter;
+    } else {
+      injectedQuery = injectedQuery + parameters[a];
     }
   }
   return parsedURL[0] +
@@ -1730,17 +1734,16 @@ const scanForExploitableURIsAndQueue = async () => {
          .join("")
          .toLowerCase()
   ) {
-    setTimeout(self.close, timeoutCallback);
-    globalThis.addEventListener("load", self.close);
+    setTimeout(globalThis.close, timeoutCallback);
+    globalThis.addEventListener("load", globalThis.close);
     if (globalThis.document && globalThis.document.readyState === "complete") {
-      self.close();
+      globalThis.close();
     }
     return;
   }
   /* If successfully exploited, send a timestamped callback for open redirects. */
   for (let a = 0; a < redirectURLs.length; a++) {
-    const thisRedirectURL = redirectURLs[a];
-    const redirectHost = parseURL(thisRedirectURL)[1];
+    const redirectHost = parseURL(redirectURLs[a])[1];
     if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
       const date = new Date();
       const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
@@ -1806,14 +1809,14 @@ const scanForExploitableURIsAndQueue = async () => {
         await sleep(4000);
       }
       await sleep(delayCloseTabs);
-      self.close();
+      globalThis.close();
     }
   } else {
     /* This origin is out of scope. */
     if (globalThis.opener) {
       (async () => {
         await sleep(delayCloseTabs);
-        self.close();
+        globalThis.close();
       })();
     }
   }
