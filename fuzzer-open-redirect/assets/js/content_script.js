@@ -6,8 +6,8 @@
 
 globalThis.console ? globalThis.console.clear = () => {} : "";
 
-let callbackURLOpenRedirectTimestamps = "https://webhook.site/1448a8ba-ce19-409d-9ae2-6c94de699ec7";
-let callbackURLRequestTimestamps = "https://webhook.site/e93f90dc-3086-432e-b720-04cd80b85b21";
+let callbackURLOpenRedirectTimestamps = "https://webhook.site/4d0e09eb-e06f-488f-bc54-372a624fbd11";
+let callbackURLRequestTimestamps = "https://webhook.site/2ee1811c-bccb-4949-b9a0-149b8233d05a";
 let delayCloseTabs = 10000;
 let delayRangeRequests = [5000, 10000];
 let scanOutOfScopeOrigins = false;
@@ -1670,7 +1670,7 @@ const scanForExploitableURIsAndQueue = async () => {
   if (scanRecursively) {
     globalThis.addEventListener("message", message => {
       if (
-           message.data.sessionID === session_id
+           message.data.sessionID === sessionID
         && message.data.discoveredURLs
       ) {
         paused = true;
