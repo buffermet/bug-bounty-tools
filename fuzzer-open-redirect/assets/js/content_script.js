@@ -6,8 +6,8 @@
 
 globalThis.console ? globalThis.console.clear = () => {} : "";
 
-let callbackURLOpenRedirectTimestamps = "https://webhook.site/4d0e09eb-e06f-488f-bc54-372a624fbd11";
-let callbackURLRequestTimestamps = "https://webhook.site/2ee1811c-bccb-4949-b9a0-149b8233d05a";
+let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
+let callbackURLRequestTimestamps = "http://0.0.0.0:4343";
 let delayCloseTabs = 10000;
 let delayRangeRequests = [5000, 10000];
 let scanOutOfScopeOrigins = false;
@@ -1498,35 +1498,37 @@ const chunkURLArray = urls => {
  * Returns the full URL based on a given URI that was found in the current document.
  */
 const toFullURL = uri => {
+  const parsedURL = parseURL(uri);
+console.log(parsedURL);
   if (
-       !uri.match(/^(?:http[s]?[:])?[/][/]/i)
-    && !uri.match(/^[^/]+/i)
-    && !uri.match(/^[/][^?#]*/i)
-    && !uri.match(/^[?].*/i)
-    && uri.match(/^[#].*/i)
+       parsedURL[0] === "" /* protocol */
+    && parsedURL[1] === "" /* host */
+    && parsedURL[3] === "" /* path */
+    && parsedURL[4] === "" /* query */
+    && parsedURL[5] !== "" /* anchor */
   ) {
-    return location.origin + location.pathname + location.query + uri;
+    return location.origin +
+      location.pathname +
+      (location.query ? location.query : "") +
+      uri;
   }
   if (
-       !uri.match(/^(?:http[s]?[:])?[/][/]/i)
-    && !uri.match(/^[^/]+/i)
-    && !uri.match(/^[/][^?#]*/i)
-    && uri.match(/^[?].*/i)
+       parsedURL[0] === "" /* protocol */
+    && parsedURL[1] === "" /* host */
+    && parsedURL[3] === "" /* path */
+    && parsedURL[4] !== "" /* query */
   ) {
+    return location.origin +
+      location.pathname +
+      uri;
     return location.origin + location.pathname + uri;
   }
   if (
-       !uri.match(/^(?:http[s]?[:])?[/][/]/i)
-    && !uri.match(/^[^/]+/i)
-    && uri.match(/^[/](?:[^/]|$)/i)
+       parsedURL[0] === "" /* protocol */
+    && parsedURL[1] === "" /* host */
+    && parsedURL[3] !== "" /* path */
   ) {
     return location.origin + uri;
-  }
-  if (
-       !uri.match(/^(?:http[s]?[:])?[/][/]/i)
-    && uri.match(/^[^/]+/i)
-  ) {
-    return location.origin + "/" +  uri;
   }
   return uri;
 }
