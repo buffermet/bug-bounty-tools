@@ -1810,6 +1810,7 @@ const scanForExploitableURIsAndQueue = async () => {
               sessionID: sessionID,
               discoveredURLs: discoveredURLs
             });
+            pendingURLs = [];
           } else {
             await openPendingURLs();
           }
@@ -1824,6 +1825,7 @@ const scanForExploitableURIsAndQueue = async () => {
             sessionID: sessionID,
             discoveredURLs: discoveredURLs
           });
+          pendingURLs = [];
         } else {
           await openPendingURLs();
         }
