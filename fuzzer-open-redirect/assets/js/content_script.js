@@ -33,6 +33,7 @@ const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63}))?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
 let allDiscoveredURLs = [];
+let arrayPermutations = [];
 let chunkedPendingURLs = [];
 let discoveredURLs = [];
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
@@ -164,6 +165,16 @@ let shuttingDown = false;
  */
 const getIntFromRange = (min, max) => {
   return parseInt(min + (Math.random() * (max - min)));
+}
+
+/**
+ * Appends all possible permutations of a given array to arrayPermutations.
+ */
+const getArrayPermutations = (prefix, arr) => {
+  for (var i = 0; i < arr.length; i++) {
+    arrayPermutations.push(prefix.concat(arr[i]));
+    getArrayPermutations(prefix.concat(arr[i]), arr.slice(i + 1));
+  }
 }
 
 /**
@@ -482,7 +493,7 @@ const parseURL = url => {
     retval[3] = strippedURL.replace(/^(?:(?:[a-z0-9.+-]+:)?\/\/)?[^/?#]*([/][^?]*)(?:[#][^/]*?)?/i, "$1");
   }
   // query
-  if (strippedURL.match(/^.*?([?][^#]*).*/i)) {
+  if (strippedURL.match(/^.*?([?][^#]*).*$/i)) {
     retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
   }
   // anchor
@@ -1393,37 +1404,44 @@ const getURLVariants = url => {
 }
 
 /**
- * Replaces every URI found in query parameters of a given URL. Returns an array of new
- * URLs that contains variations in the query of your specified redirect URL.
+ * Returns an array of all injected permutations of a given URL.
  * (example input: (
  *   "//www.google.com/q=http%3A%2F%2Fgmail%2Ecom%2F",
  *   %2F%2Fmysite%2Ecom%2F",
  * ))
  * (example output: "//www.google.com/q=%2F%2Fmysite%2Ecom%2F")
  */
-const injectURL = (targetURL, redirectURL) => {
-console.log("injecting", targetURL, "with", redirectURL)
-  const parsedURL = parseURL(targetURL);
-  const query = parsedURL[4];
-  let injectedQuery = "";
-  const parameters = query.split("&");
-  for (let a = 0; a < parameters.length; a++) {
-    const parameterName = parameters[a].replace(/([^=]*?)=.*/, "$1");
-    const parameterValue = parameters[a].replace(/.*?=(.*)\s*/, "$1");
-    if (parameterValue.match(/^(?:http|[/]|%2f)/i)) {
-      const replacedParameter = parameterName + "=" + redirectURL;
-console.log("injected", parameters[a], "to get", replacedParameter)
-      injectedQuery = injectedQuery + replacedParameter;
-    } else {
-      injectedQuery = injectedQuery + parameters[a];
-    }
+const getInjectedURLPermutations = (targetURL, redirectURL) => {
+  const regexp = new RegExp("=(?:http[^&]*|[/][^&]*|%2f[^&]*)", "ig");
+  let regexpMatches = [];
+  let match;
+  while (match = regexp.exec(targetURL)) {
+    regexpMatches.push({match: match[0], index: match.index});
   }
-  return parsedURL[0] +
-    parsedURL[1] +
-    parsedURL[2] +
-    parsedURL[3] +
-    injectedQuery +
-    parsedURL[5];
+  arrayPermutations = [];
+  getArrayPermutations([], regexpMatches);
+  let injectedURLs = [];
+  for (let a = 0; a < arrayPermutations.length; a++) {
+    let matchSets = arrayPermutations[a];
+    let injectedURL = targetURL;
+    for (let b = 0; b < matchSets.length; b++) {
+      const matchSet = matchSets[b];
+      const lengthLeadingMatches = matchSets.slice(0, b)
+        .map(set => { return set.match }).join("").length;
+      const url_ = injectedURL.slice(
+        0,
+        matchSet.index
+          + (b * (redirectURL.length + 1))
+          - lengthLeadingMatches);
+      const _url = injectedURL.slice(
+        matchSet.index
+          + ((b * (redirectURL.length + 1)) - lengthLeadingMatches)
+          + (matchSet.match.length));
+      injectedURL = url_ + "=" + redirectURL + _url;
+    }
+    injectedURLs.push(injectedURL);
+  }
+  return injectedURLs;
 }
 
 /**
@@ -1569,10 +1587,11 @@ const openPendingURLs = () => {
     while (scanCount != 0) {
       await sleep(4000);
     }
-    pendingURLs.filter((url, index, arr) => {
+    pendingURLs = pendingURLs.filter((url, index, arr) => {
       return arr.indexOf(url) == index;
     });
     chunkedPendingURLs = chunkURLArray(pendingURLs);
+console.log(chunkedPendingURLs);
     for (let a = 0; a < threads; a++) {
       (async () => {
         const thisPendingURLChunk = chunkedPendingURLs[a];
@@ -1651,8 +1670,10 @@ const scanForExploitableURIsAndQueue = async () => {
         for (let b = 0; b < redirectURLs.length; b++) {
           const redirectURLVariants = getURLVariants(redirectURLs[b]);
           for (let c = 0; c < redirectURLVariants.length; c++) {
-            const injectedURL = injectURL(thisURLCandidate, redirectURLVariants[c]);
-            pendingURLs.push(injectedURL);
+            const injectedURLPermutations = getInjectedURLPermutations(
+              thisURLCandidate,
+              redirectURLVariants[c]);
+            pendingURLs = pendingURLs.concat(injectedURLPermutations);
           }
         }
       }
