@@ -1498,7 +1498,6 @@ const chunkURLArray = urls => {
  */
 const toFullURL = uri => {
   const parsedURL = parseURL(uri);
-console.log(parsedURL);
   if (
        parsedURL[0] === "" /* protocol */
     && parsedURL[1] === "" /* host */
@@ -1592,7 +1591,8 @@ const openPendingURLs = () => {
       return arr.indexOf(url) == index;
     });
     chunkedPendingURLs = chunkURLArray(pendingURLs);
-console.log(chunkedPendingURLs);
+    console.log("%copen-redirect-fuzzer", consoleCSS,
+      "Chunked URL queue:", chunkedPendingURLs);
     for (let a = 0; a < threads; a++) {
       (async () => {
         const thisPendingURLChunk = chunkedPendingURLs[a];
