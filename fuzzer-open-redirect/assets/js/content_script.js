@@ -31,7 +31,7 @@ const anchor = location.anchor;
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
-
+const regexpSelectorEscapableURICharacters = /[A-Za-z0-9_.!~*'()-]/ig;
 let arrayPermutations = [];
 let chunkedPendingURLs = [];
 let discoveredURLs = [];
@@ -170,10 +170,27 @@ const getIntFromRange = (min, max) => {
  * Appends all possible permutations of a given array to arrayPermutations.
  */
 const getArrayPermutations = (prefix, arr) => {
-  for (var i = 0; i < arr.length; i++) {
-    arrayPermutations.push(prefix.concat(arr[i]));
-    getArrayPermutations(prefix.concat(arr[i]), arr.slice(i + 1));
+  for (let a = 0; a < arr.length; a++) {
+    arrayPermutations.push(prefix.concat(arr[a]));
+    getArrayPermutations(prefix.concat(arr[a]), arr.slice(a + 1));
   }
+}
+
+/**
+ *  Returns a string exactly like globalThis.encodeURIComponent does, with lowercase hex
+ *  encoding.
+ */
+const encodeURIComponentLowerCase = str => {
+  let encoded = "";
+  let encodedBuffer = new Array(str.length);
+  for (let a = 0; a < str.length; a++) {
+    if (!str.charAt(a).match(regexpSelectorEscapableURICharacters)) {
+      encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
+    } else {
+      encodedBuffer[a] = str.charAt(a);
+    }
+  } 
+  return encodedBuffer.join("");
 }
 
 /**
@@ -184,7 +201,7 @@ const getArrayPermutations = (prefix, arr) => {
 const hexEncodeOneLowerCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
+    if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
       encoded = encoded + "%" + str.charCodeAt(a).toString(16).toLowerCase();
     } else {
       encoded = encoded + str.charAt(a);
@@ -201,11 +218,11 @@ const hexEncodeOneLowerCase = str => {
 const hexEncodeOneUpperCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
+    if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
       encoded = encoded + "%" + str.charCodeAt(a).toString(16).toUpperCase();
-    } else { 
+    } else {
       encoded = encoded + str.charAt(a);
-    } 
+    }
   }
   return encoded;
 }
@@ -244,7 +261,7 @@ const hexEncodeTwoUpperCase = str => {
 const hexEncodeThreeLowerCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
+    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
 
     } else { 
       encoded = encoded + str.charAt(a);
@@ -261,7 +278,7 @@ const hexEncodeThreeLowerCase = str => {
 const hexEncodeThreeUpperCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
+    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
       encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
     } else {
       encoded = encoded + str.charAt(a);
@@ -304,7 +321,7 @@ const hexEncodeFourUpperCase = str => {
 const hexEncodeFiveLowerCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
+    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
       encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
     } else {
       encoded = encoded + str.charAt(a);
@@ -321,7 +338,7 @@ const hexEncodeFiveLowerCase = str => {
 const hexEncodeFiveUpperCase = str => {
   let encoded = "";
   for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) == -1) {
+    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
       encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
     } else {
       encoded = encoded + str.charAt(a);
@@ -460,7 +477,7 @@ const unescapeHTML = str => {
 }
 
 /**
- * Returns an array containing the protocol, host, port, path, query and anchor of a
+ * Returns an array containing the protocol, host, port, path, search and anchor of a
  * given URL if found.
  * (example input: "/path/to/file?v=4.4.2#hash")
  * (example output: [
@@ -491,7 +508,7 @@ const parseURL = url => {
   if (strippedURL.match(/^(?:(?:[a-z0-9.+-]+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)?([/][^?]*)(?:[#][^/]*?)?/i)) {
     retval[3] = strippedURL.replace(/^(?:(?:[a-z0-9.+-]+:)?\/\/)?[^/?#]*([/][^?]*)(?:[#][^/]*?)?/i, "$1");
   }
-  // query
+  // search
   if (strippedURL.match(/^.*?([?][^#]*).*$/i)) {
     retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
   }
@@ -1502,19 +1519,19 @@ const toFullURL = uri => {
        parsedURL[0] === "" /* protocol */
     && parsedURL[1] === "" /* host */
     && parsedURL[3] === "" /* path */
-    && parsedURL[4] === "" /* query */
+    && parsedURL[4] === "" /* search */
     && parsedURL[5] !== "" /* anchor */
   ) {
     return location.origin +
       location.pathname +
-      (location.query ? location.query : "") +
+      (location.search ? location.search : "") +
       uri;
   }
   if (
        parsedURL[0] === "" /* protocol */
     && parsedURL[1] === "" /* host */
     && parsedURL[3] === "" /* path */
-    && parsedURL[4] !== "" /* query */
+    && parsedURL[4] !== "" /* search */
   ) {
     return location.origin +
       location.pathname +
@@ -1642,7 +1659,7 @@ const scanForExploitableURIsAndQueue = async () => {
         if (
              parsedURL[1] != "" /* host */
           || parsedURL[3] != "" /* path */
-          || parsedURL[4] != "" /* query */
+          || parsedURL[4] != "" /* search */
         ) {
           discoveredURLs.push(toFullURL(globalThisStringValues[a]));
         }
@@ -1700,7 +1717,6 @@ const scanForExploitableURIsAndQueue = async () => {
            message.data.sessionID === sessionID
         && message.data.discoveredURLs
       ) {
-        paused = true;
         message.data.discoveredURLs = message.data.discoveredURLs
           .filter((url, index, arr) => {
             return (
@@ -1713,7 +1729,6 @@ const scanForExploitableURIsAndQueue = async () => {
         for (let a = 0; a < chunkedPendingURLsCallback.length; a++) {
           chunkedPendingURLs[a].concat(chunkedPendingURLsCallback[a]);
         }
-        paused = false;
       }
     });
   }
