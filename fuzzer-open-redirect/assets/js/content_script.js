@@ -1595,14 +1595,16 @@ const openPendingURLs = () => {
       "Chunked URL queue:", chunkedPendingURLs);
     for (let a = 0; a < threads; a++) {
       (async () => {
-        const thisPendingURLChunk = chunkedPendingURLs[a];
-        for (let c = 0; c < thisPendingURLChunk.length; c++) {
+        for (let c = 0; c < chunkedPendingURLs[a].length; c++) {
           if (shuttingDown) return;
           while (paused) {
             await sleep(4000);
           }
-          const thisURLCandidate = thisPendingURLChunk[c];
+          const thisURLCandidate = chunkedPendingURLs[a][c];
           loadURL(thisURLCandidate);
+          chunkedPendingURLs[a] = chunkedPendingURLs[a].filter((url, index, arr) => {
+            return url != thisURLCandidate;
+          });
           await sleep(getIntFromRange(
             delayRangeRequests[0],
             delayRangeRequests[1]));
@@ -1623,7 +1625,7 @@ const openPendingURLs = () => {
 }
 
 /**
- * Starts scanning an array of potential open redirect URLs that is chunked to the specified
+ * Starts scanning an array of potentially vulnerable URLs that is chunked to the specified
  * amount of threads.
  */
 const scanForExploitableURIsAndQueue = async () => {
@@ -1703,7 +1705,8 @@ const scanForExploitableURIsAndQueue = async () => {
           .filter((url, index, arr) => {
             return (
                  index === arr.indexOf(url)
-              && discoveredURLs.indexOf(url) == -1);
+              && discoveredURLs.indexOf(url) === -1
+              && pendingURLs.indexOf(url) === -1);
           });
         discoveredURLs = discoveredURLs.concat(message.data.discoveredURLs);
         const chunkedPendingURLsCallback = chunkURLArray(message.data.discoveredURLs);
