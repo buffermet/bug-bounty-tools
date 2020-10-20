@@ -32,7 +32,6 @@ const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 
-let allDiscoveredURLs = [];
 let arrayPermutations = [];
 let chunkedPendingURLs = [];
 let discoveredURLs = [];
@@ -1683,7 +1682,6 @@ const scanForExploitableURIsAndQueue = async () => {
       console.log("%cfuzzer-open-redirect", consoleCSS,
         "No exploitable URIs found.");
     }
-    allDiscoveredURLs = allDiscoveredURLs.concat(pendingURLs);
     scanCount--;
     res();
   });
@@ -1701,12 +1699,13 @@ const scanForExploitableURIsAndQueue = async () => {
         && message.data.discoveredURLs
       ) {
         paused = true;
-        message.data.discoveredURLs = message.data.discoveredURLs.filter((url, index, arr) => {
-          return (
-               allDiscoveredURLs.indexOf(url) == -1
-            && index === arr.indexOf(url));
-        });
-        allDiscoveredURLs = allDiscoveredURLs.concat(message.data.discoveredURLs);
+        message.data.discoveredURLs = message.data.discoveredURLs
+          .filter((url, index, arr) => {
+            return (
+                 index === arr.indexOf(url)
+              && discoveredURLs.indexOf(url) == -1);
+          });
+        discoveredURLs = discoveredURLs.concat(message.data.discoveredURLs);
         const chunkedPendingURLsCallback = chunkURLArray(message.data.discoveredURLs);
         for (let a = 0; a < chunkedPendingURLsCallback.length; a++) {
           chunkedPendingURLs[a].concat(chunkedPendingURLsCallback[a]);
