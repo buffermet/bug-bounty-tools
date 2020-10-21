@@ -8,15 +8,15 @@ globalThis.console ? globalThis.console.clear = () => {} : "";
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayCloseTabs = 10000;
-let delayRangeRequests = [5000, 10000];
+let delayCloseTabs = 5000;
+let delayRangeRequests = [4000, 20000];
 let scanOutOfScopeOrigins = false;
 let scanRecursively = true;
 let scope = [
   "*://stackoverflow.com",
 ];
 let sessionID = "f028ut3jf4";
-let threads = 2;
+let threads = 4;
 let timeoutCallback = 32000;
 
 const redirectURLs = [
@@ -1444,32 +1444,32 @@ const getURLVariants = url => {
     encodeURIComponentLowerCase(parsedURL[4]) +
     encodeURIComponentLowerCase(parsedURL[5]));
   urls[136] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase("https://")) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5]))); 
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase("https://")) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
   urls[137] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase("http://")) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5]))); 
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase("http://")) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
   urls[138] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase("//")) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5]))); 
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase("//")) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
   urls[139] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) + 
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5]))); 
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
+    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
   return urls;
 }
 
@@ -1779,7 +1779,22 @@ const scanForExploitableURIsAndQueue = async () => {
               && pendingURLs.indexOf(url) === -1);
           });
         discoveredURLs = discoveredURLs.concat(message.data.discoveredURLs);
-        const chunkedPendingURLsCallback = chunkURLArray(message.data.discoveredURLs);
+        let pendingURLsCallback = [];
+        message.data.discoveredURLs.forEach(url => {
+          for (let a = 0; a < redirectURLs.length; a++) {
+            const redirectURLVariants = getURLVariants(redirectURLs[a]);
+            for (let b = 0; b < redirectURLVariants.length; b++) {
+              const injectedURLPermutations = getInjectedURLPermutations(
+                url,
+                redirectURLVariants[b]);
+              pendingURLsCallback = pendingURLsCallback.concat(injectedURLPermutations);
+            }
+          }
+        });
+        pendingURLsCallback = pendingURLsCallback.filter((url, index, arr) => {
+          return pendingURLs.indexOf(url) === -1;
+        });
+        const chunkedPendingURLsCallback = chunkURLArray(pendingURLsCallback);
         for (let a = 0; a < chunkedPendingURLsCallback.length; a++) {
           chunkedPendingURLs[a].concat(chunkedPendingURLsCallback[a]);
         }
