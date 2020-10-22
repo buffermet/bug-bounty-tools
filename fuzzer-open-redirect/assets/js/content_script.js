@@ -9,7 +9,23 @@ globalThis.console ? globalThis.console.clear = () => {} : "";
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let delayCloseTabs = 5000;
-let delayRangeRequests = [4000, 20000];
+let delayRangeRequests = [4000, 30000];
+let hexEncodingTypes = [
+  [0],
+  [1],
+  [2],
+  [3],
+  [4],
+  [5],
+  [6],
+  [7],
+  [8],
+  [9],
+  [10],
+  [11],
+  [12],
+  [13]
+];
 let scanOutOfScopeOrigins = false;
 let scanRecursively = true;
 let scope = [
@@ -31,7 +47,7 @@ const anchor = location.anchor;
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
-const regexpSelectorEscapableURICharacters = /[A-Za-z0-9_.!~*'()-]/ig;
+const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 
 let allInjectedURLs = [];
 let arrayPermutations = [];
@@ -128,7 +144,7 @@ let shuttingDown = false;
           try {
             v = str(k, value, depthDecr-1, arrayMaxLength);
             if (v) partial.push(quote(k) + ':' + v);
-          } catch(e) {}               
+          } catch(e) {}
         });
         return '{' + partial.join(',') + '}';
     }
@@ -161,6 +177,196 @@ let shuttingDown = false;
 })();
 
 /**
+ * An object that contains all the various methods to encode a given URI parameter string.
+ */
+const encodeMethods = {
+  0: encodeURIComponent,
+  1: str => {
+    /**
+     *  Returns a string exactly like globalThis.encodeURIComponent does, with lowercase hex
+     *  encoding.
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (str.charAt(a).match(regexpSelectorEscapableURICharacters)) {
+        encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  2: str => {
+    /**
+     * Returns a lowercase hex encoded string (type 1) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
+        encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  3: str => {
+    /**
+     * Returns an uppercase hex encoded string (type 1) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
+        encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toUpperCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  4: str => {
+    /**
+     * Returns a lowercase hex encoded string (type 2) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
+    }
+    return encodedBuffer.join("");
+  },
+  5: str => {
+    /**
+     * Returns an uppercase hex encoded string (type 2) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toUpperCase();
+    }
+    return encodedBuffer.join("");
+  },
+  6: str => {
+    /**
+     * Returns a lowercase hex encoded string (type 3) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
+        encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  7: str => {
+    /**
+     * Returns an uppercase hex encoded string (type 3) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
+        encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  8: str => {
+    /**
+     * Returns a lowercase hex encoded string (type 4) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
+    }
+    return encodedBuffer.join("");
+  },
+  9: str => {
+    /**
+     * Returns an uppercase hex encoded string (type 4) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
+    }
+    return encodedBuffer.join("");
+  },
+  10: str => {
+    /**
+     * Returns a lowercase hex encoded string (type 5) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
+        encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  11: str => {
+    /**
+     * Returns an uppercase hex encoded string (type 5) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
+        encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  12: str => {
+    /**
+     * Returns a lowercase hex encoded string (type 6) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
+    }
+    return encodedBuffer.join("");
+  },
+  13: str => {
+    /**
+     * Returns an uppercase hex encoded string (type 6) using a given string.
+     * (example input: "https://myredirectsite.com/")
+     * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
+    }
+    return encodedBuffer.join("");
+  }
+}
+
+/**
  * Returns an integer value between a minimum and maximum range of milliseconds.
  */
 const getIntFromRange = (min, max) => {
@@ -175,203 +381,6 @@ const getArrayPermutations = (prefix, arr) => {
     arrayPermutations.push(prefix.concat(arr[a]));
     getArrayPermutations(prefix.concat(arr[a]), arr.slice(a + 1));
   }
-}
-
-/**
- *  Returns a string exactly like globalThis.encodeURIComponent does, with lowercase hex
- *  encoding.
- */
-const encodeURIComponentLowerCase = str => {
-  let encoded = "";
-  let encodedBuffer = new Array(str.length);
-  for (let a = 0; a < str.length; a++) {
-    if (!str.charAt(a).match(regexpSelectorEscapableURICharacters)) {
-      encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
-    } else {
-      encodedBuffer[a] = str.charAt(a);
-    }
-  } 
-  return encodedBuffer.join("");
-}
-
-/**
- * Returns a lowercase hex encoded string (type 1) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
- */
-const hexEncodeOneLowerCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
-      encoded = encoded + "%" + str.charCodeAt(a).toString(16).toLowerCase();
-    } else {
-      encoded = encoded + str.charAt(a);
-    }
-  } 
-  return encoded;
-}
-
-/**
- * Returns an uppercase hex encoded string (type 1) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2f")
- */
-const hexEncodeOneUpperCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
-      encoded = encoded + "%" + str.charCodeAt(a).toString(16).toUpperCase();
-    } else {
-      encoded = encoded + str.charAt(a);
-    }
-  }
-  return encoded;
-}
-
-/**
- * Returns a lowercase hex encoded string (type 2) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
- */
-const hexEncodeTwoLowerCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    encoded = encoded + "%" + str.charCodeAt(a).toString(16).toLowerCase();
-  }
-  return encoded;
-}
-
-/**
- * Returns an uppercase hex encoded string (type 2) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
- */
-const hexEncodeTwoUpperCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    encoded = encoded + "%" + str.charCodeAt(a).toString(16).toUpperCase();
-  }
-  return encoded;
-}
-
-/*
- * Returns a lowercase hex encoded string (type 3) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
- */
-const hexEncodeThreeLowerCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-
-    } else { 
-      encoded = encoded + str.charAt(a);
-    } 
-  }
-  return encoded;
-}
-
-/**
- * Returns an uppercase hex encoded string (type 3) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
- */
-const hexEncodeThreeUpperCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-      encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
-    } else {
-      encoded = encoded + str.charAt(a);
-    }
-  }
-  return encoded;
-}
-
-/**
- * Returns a lowercase hex encoded string (type 4) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
- */
-const hexEncodeFourLowerCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
-  }
-  return encoded;
-}
-
-/**
- * Returns an uppercase hex encoded string (type 4) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
- */
-const hexEncodeFourUpperCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    encoded = encoded + "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
-  }
-  return encoded;
-}
-
-/**
- * Returns a lowercase hex encoded string (type 5) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
- */
-const hexEncodeFiveLowerCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-      encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
-    } else {
-      encoded = encoded + str.charAt(a);
-    }
-  } 
-  return encoded;
-}
-
-/**
- * Returns an uppercase hex encoded string (type 5) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
- */
-const hexEncodeFiveUpperCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-      encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
-    } else {
-      encoded = encoded + str.charAt(a);
-    } 
-  }
-  return encoded;
-}
-
-/**
- * Returns a lowercase hex encoded string (type 6) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
- */
-const hexEncodeSixLowerCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
-  }
-  return encoded;
-}
-
-/**
- * Returns an uppercase hex encoded string (type 6) using a given string.
- * (example input: "https://myredirectsite.com/")
- * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
- */
-const hexEncodeSixUpperCase = str => {
-  let encoded = "";
-  for (let a = 0; a < str.length; a++) {
-    encoded = encoded + "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
-  }
-  return encoded;
 }
 
 /**
@@ -521,957 +530,31 @@ const parseURL = url => {
 }
 
 /**
- * Returns an array of 140 URLs that could lead to the same address as a given URL.
+ * Returns an array of URLs that could lead to the same address as a given URL based on
+ * the specified hexEncodingTypes value.
  */
 const getURLVariants = url => {
   const parsedURL = parseURL(url);
-  const urls = new Array(140);
-  urls[0] = (
-    "https://" +
-    parsedURL[1] +
-    parsedURL[2] +
-    parsedURL[3] +
-    parsedURL[4] +
-    parsedURL[5]);
-  urls[1] = (
-    "http://" +
-    parsedURL[1] +
-    parsedURL[2] +
-    parsedURL[3] +
-    parsedURL[4] +
-    parsedURL[5]);
-  urls[2] = (
-    "//" +
-    parsedURL[1] +
-    parsedURL[2] +
-    parsedURL[3] +
-    parsedURL[4] +
-    parsedURL[5]);
-  urls[3] = (
-    parsedURL[1] +
-    parsedURL[2] +
-    parsedURL[3] +
-    parsedURL[4] +
-    parsedURL[5]);
-  urls[4] = (
-    encodeURIComponent("https://") +
-    encodeURIComponent(parsedURL[1]) +
-    encodeURIComponent(parsedURL[2]) +
-    encodeURIComponent(parsedURL[3]) +
-    encodeURIComponent(parsedURL[4]) +
-    encodeURIComponent(parsedURL[5]));
-  urls[5] = (
-    encodeURIComponent("http://") +
-    encodeURIComponent(parsedURL[1]) +
-    encodeURIComponent(parsedURL[2]) +
-    encodeURIComponent(parsedURL[3]) +
-    encodeURIComponent(parsedURL[4]) +
-    encodeURIComponent(parsedURL[5]));
-  urls[6] = (
-    encodeURIComponent("//") +
-    encodeURIComponent(parsedURL[1]) +
-    encodeURIComponent(parsedURL[2]) +
-    encodeURIComponent(parsedURL[3]) +
-    encodeURIComponent(parsedURL[4]) +
-    encodeURIComponent(parsedURL[5]));
-  urls[7] = (
-    encodeURIComponent(parsedURL[1]) +
-    encodeURIComponent(parsedURL[2]) +
-    encodeURIComponent(parsedURL[3]) +
-    encodeURIComponent(parsedURL[4]) +
-    encodeURIComponent(parsedURL[5]));
-  urls[8] = (
-    encodeURIComponent(encodeURIComponent("https://")) +
-    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[9] = (
-    encodeURIComponent(encodeURIComponent("http://")) +
-    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[10] = (
-    encodeURIComponent(encodeURIComponent("//")) +
-    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[11] = (
-    encodeURIComponent(encodeURIComponent(parsedURL[1])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[2])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[3])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[4])) +
-    encodeURIComponent(encodeURIComponent(parsedURL[5])));
-  urls[12] = (
-    hexEncodeOneLowerCase("https://") +
-    hexEncodeOneLowerCase(parsedURL[1]) +
-    hexEncodeOneLowerCase(parsedURL[2]) +
-    hexEncodeOneLowerCase(parsedURL[3]) +
-    hexEncodeOneLowerCase(parsedURL[4]) +
-    hexEncodeOneLowerCase(parsedURL[5]));
-  urls[13] = (
-    hexEncodeOneLowerCase("http://") +
-    hexEncodeOneLowerCase(parsedURL[1]) +
-    hexEncodeOneLowerCase(parsedURL[2]) +
-    hexEncodeOneLowerCase(parsedURL[3]) +
-    hexEncodeOneLowerCase(parsedURL[4]) +
-    hexEncodeOneLowerCase(parsedURL[5]));
-  urls[14] = (
-    hexEncodeOneLowerCase("//") +
-    hexEncodeOneLowerCase(parsedURL[1]) +
-    hexEncodeOneLowerCase(parsedURL[2]) +
-    hexEncodeOneLowerCase(parsedURL[3]) +
-    hexEncodeOneLowerCase(parsedURL[4]) +
-    hexEncodeOneLowerCase(parsedURL[5]));
-  urls[15] = (
-    hexEncodeOneLowerCase(parsedURL[1]) +
-    hexEncodeOneLowerCase(parsedURL[2]) +
-    hexEncodeOneLowerCase(parsedURL[3]) +
-    hexEncodeOneLowerCase(parsedURL[4]) +
-    hexEncodeOneLowerCase(parsedURL[5]));
-  urls[16] = (
-    hexEncodeOneLowerCase(encodeURIComponent("https://")) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[17] = (
-    hexEncodeOneLowerCase(encodeURIComponent("http://")) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[18] = (
-    hexEncodeOneLowerCase(encodeURIComponent("//")) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[19] = (
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[20] = (
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[21] = (
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[22] = (
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[23] = (
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[24] = (
-    hexEncodeTwoLowerCase("https://") +
-    hexEncodeTwoLowerCase(parsedURL[1]) +
-    hexEncodeTwoLowerCase(parsedURL[2]) +
-    hexEncodeTwoLowerCase(parsedURL[3]) +
-    hexEncodeTwoLowerCase(parsedURL[4]) +
-    hexEncodeTwoLowerCase(parsedURL[5]));
-  urls[25] = (
-    hexEncodeTwoLowerCase("http://") +
-    hexEncodeTwoLowerCase(parsedURL[1]) +
-    hexEncodeTwoLowerCase(parsedURL[2]) +
-    hexEncodeTwoLowerCase(parsedURL[3]) +
-    hexEncodeTwoLowerCase(parsedURL[4]) +
-    hexEncodeTwoLowerCase(parsedURL[5]));
-  urls[26] = (
-    hexEncodeTwoLowerCase("//") +
-    hexEncodeTwoLowerCase(parsedURL[1]) +
-    hexEncodeTwoLowerCase(parsedURL[2]) +
-    hexEncodeTwoLowerCase(parsedURL[3]) +
-    hexEncodeTwoLowerCase(parsedURL[4]) +
-    hexEncodeTwoLowerCase(parsedURL[5]));
-  urls[27] = (
-    hexEncodeTwoLowerCase(parsedURL[1]) +
-    hexEncodeTwoLowerCase(parsedURL[2]) +
-    hexEncodeTwoLowerCase(parsedURL[3]) +
-    hexEncodeTwoLowerCase(parsedURL[4]) +
-    hexEncodeTwoLowerCase(parsedURL[5]));
-  urls[28] = (
-    hexEncodeTwoLowerCase(encodeURIComponent("https://")) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[29] = (
-    hexEncodeTwoLowerCase(encodeURIComponent("http://")) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[30] = (
-    hexEncodeTwoLowerCase(encodeURIComponent("//")) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[31] = (
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[32] = (
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[33] = (
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[34] = (
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[35] = (
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[36] = (
-    hexEncodeThreeLowerCase("https://") +
-    hexEncodeThreeLowerCase(parsedURL[1]) +
-    hexEncodeThreeLowerCase(parsedURL[2]) +
-    hexEncodeThreeLowerCase(parsedURL[3]) +
-    hexEncodeThreeLowerCase(parsedURL[4]) +
-    hexEncodeThreeLowerCase(parsedURL[5]));
-  urls[37] = (
-    hexEncodeThreeLowerCase("http://") +
-    hexEncodeThreeLowerCase(parsedURL[1]) +
-    hexEncodeThreeLowerCase(parsedURL[2]) +
-    hexEncodeThreeLowerCase(parsedURL[3]) +
-    hexEncodeThreeLowerCase(parsedURL[4]) +
-    hexEncodeThreeLowerCase(parsedURL[5]));
-  urls[38] = (
-    hexEncodeThreeLowerCase("//") +
-    hexEncodeThreeLowerCase(parsedURL[1]) +
-    hexEncodeThreeLowerCase(parsedURL[2]) +
-    hexEncodeThreeLowerCase(parsedURL[3]) +
-    hexEncodeThreeLowerCase(parsedURL[4]) +
-    hexEncodeThreeLowerCase(parsedURL[5]));
-  urls[39] = (
-    hexEncodeThreeLowerCase(parsedURL[1]) +
-    hexEncodeThreeLowerCase(parsedURL[2]) +
-    hexEncodeThreeLowerCase(parsedURL[3]) +
-    hexEncodeThreeLowerCase(parsedURL[4]) +
-    hexEncodeThreeLowerCase(parsedURL[5]));
-  urls[40] = (
-    hexEncodeThreeLowerCase(encodeURIComponent("https://")) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[41] = (
-    hexEncodeThreeLowerCase(encodeURIComponent("http://")) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[42] = (
-    hexEncodeThreeLowerCase(encodeURIComponent("//")) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[43] = (
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[44] = (
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[45] = (
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[46] = (
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[47] = (
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[48] = (
-    hexEncodeFourLowerCase("https://") +
-    hexEncodeFourLowerCase(parsedURL[1]) +
-    hexEncodeFourLowerCase(parsedURL[2]) +
-    hexEncodeFourLowerCase(parsedURL[3]) +
-    hexEncodeFourLowerCase(parsedURL[4]) +
-    hexEncodeFourLowerCase(parsedURL[5]));
-  urls[49] = (
-    hexEncodeFourLowerCase("http://") +
-    hexEncodeFourLowerCase(parsedURL[1]) +
-    hexEncodeFourLowerCase(parsedURL[2]) +
-    hexEncodeFourLowerCase(parsedURL[3]) +
-    hexEncodeFourLowerCase(parsedURL[4]) +
-    hexEncodeFourLowerCase(parsedURL[5]));
-  urls[50] = (
-    hexEncodeFourLowerCase("//") +
-    hexEncodeFourLowerCase(parsedURL[1]) +
-    hexEncodeFourLowerCase(parsedURL[2]) +
-    hexEncodeFourLowerCase(parsedURL[3]) +
-    hexEncodeFourLowerCase(parsedURL[4]) +
-    hexEncodeFourLowerCase(parsedURL[5]));
-  urls[51] = (
-    hexEncodeFourLowerCase(parsedURL[1]) +
-    hexEncodeFourLowerCase(parsedURL[2]) +
-    hexEncodeFourLowerCase(parsedURL[3]) +
-    hexEncodeFourLowerCase(parsedURL[4]) +
-    hexEncodeFourLowerCase(parsedURL[5]));
-  urls[52] = (
-    hexEncodeFourLowerCase(encodeURIComponent("https://")) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[53] = (
-    hexEncodeFourLowerCase(encodeURIComponent("http://")) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[54] = (
-    hexEncodeFourLowerCase(encodeURIComponent("//")) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[55] = (
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[56] = (
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[57] = (
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[58] = (
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[59] = (
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[60] = (
-    hexEncodeFiveLowerCase("https://") +
-    hexEncodeFiveLowerCase(parsedURL[1]) +
-    hexEncodeFiveLowerCase(parsedURL[2]) +
-    hexEncodeFiveLowerCase(parsedURL[3]) +
-    hexEncodeFiveLowerCase(parsedURL[4]) +
-    hexEncodeFiveLowerCase(parsedURL[5]));
-  urls[61] = (
-    hexEncodeFiveLowerCase("http://") +
-    hexEncodeFiveLowerCase(parsedURL[1]) +
-    hexEncodeFiveLowerCase(parsedURL[2]) +
-    hexEncodeFiveLowerCase(parsedURL[3]) +
-    hexEncodeFiveLowerCase(parsedURL[4]) +
-    hexEncodeFiveLowerCase(parsedURL[5]));
-  urls[62] = (
-    hexEncodeFiveLowerCase("//") +
-    hexEncodeFiveLowerCase(parsedURL[1]) +
-    hexEncodeFiveLowerCase(parsedURL[2]) +
-    hexEncodeFiveLowerCase(parsedURL[3]) +
-    hexEncodeFiveLowerCase(parsedURL[4]) +
-    hexEncodeFiveLowerCase(parsedURL[5]));
-  urls[63] = (
-    hexEncodeFiveLowerCase(parsedURL[1]) +
-    hexEncodeFiveLowerCase(parsedURL[2]) +
-    hexEncodeFiveLowerCase(parsedURL[3]) +
-    hexEncodeFiveLowerCase(parsedURL[4]) +
-    hexEncodeFiveLowerCase(parsedURL[5]));
-  urls[64] = (
-    hexEncodeFiveLowerCase(encodeURIComponent("https://")) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[65] = (
-    hexEncodeFiveLowerCase(encodeURIComponent("http://")) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[66] = (
-    hexEncodeFiveLowerCase(encodeURIComponent("//")) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[67] = (
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveLowerCase(encodeURIComponent(parsedURL[5])));
-  urls[68] = (
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[69] = (
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[70] = (
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[71] = (
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveLowerCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[72] = (
-    hexEncodeOneUpperCase("https://") +
-    hexEncodeOneUpperCase(parsedURL[1]) +
-    hexEncodeOneUpperCase(parsedURL[2]) +
-    hexEncodeOneUpperCase(parsedURL[3]) +
-    hexEncodeOneUpperCase(parsedURL[4]) +
-    hexEncodeOneUpperCase(parsedURL[5]));
-  urls[73] = (
-    hexEncodeOneUpperCase("http://") +
-    hexEncodeOneUpperCase(parsedURL[1]) +
-    hexEncodeOneUpperCase(parsedURL[2]) +
-    hexEncodeOneUpperCase(parsedURL[3]) +
-    hexEncodeOneUpperCase(parsedURL[4]) +
-    hexEncodeOneUpperCase(parsedURL[5]));
-  urls[74] = (
-    hexEncodeOneUpperCase("//") +
-    hexEncodeOneUpperCase(parsedURL[1]) +
-    hexEncodeOneUpperCase(parsedURL[2]) +
-    hexEncodeOneUpperCase(parsedURL[3]) +
-    hexEncodeOneUpperCase(parsedURL[4]) +
-    hexEncodeOneUpperCase(parsedURL[5]));
-  urls[75] = (
-    hexEncodeOneUpperCase(parsedURL[1]) +
-    hexEncodeOneUpperCase(parsedURL[2]) +
-    hexEncodeOneUpperCase(parsedURL[3]) +
-    hexEncodeOneUpperCase(parsedURL[4]) +
-    hexEncodeOneUpperCase(parsedURL[5]));
-  urls[76] = (
-    hexEncodeOneUpperCase(encodeURIComponent("https://")) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[77] = (
-    hexEncodeOneUpperCase(encodeURIComponent("http://")) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[78] = (
-    hexEncodeOneUpperCase(encodeURIComponent("//")) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[79] = (
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeOneUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[80] = (
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[81] = (
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[82] = (
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[83] = (
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeOneUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[84] = (
-    hexEncodeTwoUpperCase("https://") +
-    hexEncodeTwoUpperCase(parsedURL[1]) +
-    hexEncodeTwoUpperCase(parsedURL[2]) +
-    hexEncodeTwoUpperCase(parsedURL[3]) +
-    hexEncodeTwoUpperCase(parsedURL[4]) +
-    hexEncodeTwoUpperCase(parsedURL[5]));
-  urls[85] = (
-    hexEncodeTwoUpperCase("http://") +
-    hexEncodeTwoUpperCase(parsedURL[1]) +
-    hexEncodeTwoUpperCase(parsedURL[2]) +
-    hexEncodeTwoUpperCase(parsedURL[3]) +
-    hexEncodeTwoUpperCase(parsedURL[4]) +
-    hexEncodeTwoUpperCase(parsedURL[5]));
-  urls[86] = (
-    hexEncodeTwoUpperCase("//") +
-    hexEncodeTwoUpperCase(parsedURL[1]) +
-    hexEncodeTwoUpperCase(parsedURL[2]) +
-    hexEncodeTwoUpperCase(parsedURL[3]) +
-    hexEncodeTwoUpperCase(parsedURL[4]) +
-    hexEncodeTwoUpperCase(parsedURL[5]));
-  urls[87] = (
-    hexEncodeTwoUpperCase(parsedURL[1]) +
-    hexEncodeTwoUpperCase(parsedURL[2]) +
-    hexEncodeTwoUpperCase(parsedURL[3]) +
-    hexEncodeTwoUpperCase(parsedURL[4]) +
-    hexEncodeTwoUpperCase(parsedURL[5]));
-  urls[88] = (
-    hexEncodeTwoUpperCase(encodeURIComponent("https://")) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[89] = (
-    hexEncodeTwoUpperCase(encodeURIComponent("http://")) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[90] = (
-    hexEncodeTwoUpperCase(encodeURIComponent("//")) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[91] = (
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeTwoUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[92] = (
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[93] = (
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[94] = (
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[95] = (
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeTwoUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[96] = (
-    hexEncodeThreeUpperCase("https://") +
-    hexEncodeThreeUpperCase(parsedURL[1]) +
-    hexEncodeThreeUpperCase(parsedURL[2]) +
-    hexEncodeThreeUpperCase(parsedURL[3]) +
-    hexEncodeThreeUpperCase(parsedURL[4]) +
-    hexEncodeThreeUpperCase(parsedURL[5]));
-  urls[97] = (
-    hexEncodeThreeUpperCase("http://") +
-    hexEncodeThreeUpperCase(parsedURL[1]) +
-    hexEncodeThreeUpperCase(parsedURL[2]) +
-    hexEncodeThreeUpperCase(parsedURL[3]) +
-    hexEncodeThreeUpperCase(parsedURL[4]) +
-    hexEncodeThreeUpperCase(parsedURL[5]));
-  urls[98] = (
-    hexEncodeThreeUpperCase("//") +
-    hexEncodeThreeUpperCase(parsedURL[1]) +
-    hexEncodeThreeUpperCase(parsedURL[2]) +
-    hexEncodeThreeUpperCase(parsedURL[3]) +
-    hexEncodeThreeUpperCase(parsedURL[4]) +
-    hexEncodeThreeUpperCase(parsedURL[5]));
-  urls[99] = (
-    hexEncodeThreeUpperCase(parsedURL[1]) +
-    hexEncodeThreeUpperCase(parsedURL[2]) +
-    hexEncodeThreeUpperCase(parsedURL[3]) +
-    hexEncodeThreeUpperCase(parsedURL[4]) +
-    hexEncodeThreeUpperCase(parsedURL[5]));
-  urls[100] = (
-    hexEncodeThreeUpperCase(encodeURIComponent("https://")) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[101] = (
-    hexEncodeThreeUpperCase(encodeURIComponent("http://")) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[102] = (
-    hexEncodeThreeUpperCase(encodeURIComponent("//")) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[103] = (
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeThreeUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[104] = (
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[105] = (
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[106] = (
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[107] = (
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeThreeUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[108] = (
-    hexEncodeFourUpperCase("https://") +
-    hexEncodeFourUpperCase(parsedURL[1]) +
-    hexEncodeFourUpperCase(parsedURL[2]) +
-    hexEncodeFourUpperCase(parsedURL[3]) +
-    hexEncodeFourUpperCase(parsedURL[4]) +
-    hexEncodeFourUpperCase(parsedURL[5]));
-  urls[109] = (
-    hexEncodeFourUpperCase("http://") +
-    hexEncodeFourUpperCase(parsedURL[1]) +
-    hexEncodeFourUpperCase(parsedURL[2]) +
-    hexEncodeFourUpperCase(parsedURL[3]) +
-    hexEncodeFourUpperCase(parsedURL[4]) +
-    hexEncodeFourUpperCase(parsedURL[5]));
-  urls[110] = (
-    hexEncodeFourUpperCase("//") +
-    hexEncodeFourUpperCase(parsedURL[1]) +
-    hexEncodeFourUpperCase(parsedURL[2]) +
-    hexEncodeFourUpperCase(parsedURL[3]) +
-    hexEncodeFourUpperCase(parsedURL[4]) +
-    hexEncodeFourUpperCase(parsedURL[5]));
-  urls[111] = (
-    hexEncodeFourUpperCase(parsedURL[1]) +
-    hexEncodeFourUpperCase(parsedURL[2]) +
-    hexEncodeFourUpperCase(parsedURL[3]) +
-    hexEncodeFourUpperCase(parsedURL[4]) +
-    hexEncodeFourUpperCase(parsedURL[5]));
-  urls[112] = (
-    hexEncodeFourUpperCase(encodeURIComponent("https://")) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[113] = (
-    hexEncodeFourUpperCase(encodeURIComponent("http://")) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[114] = (
-    hexEncodeFourUpperCase(encodeURIComponent("//")) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[115] = (
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFourUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[116] = (
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[117] = (
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[118] = (
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[119] = (
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFourUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[120] = (
-    hexEncodeFiveUpperCase("https://") +
-    hexEncodeFiveUpperCase(parsedURL[1]) +
-    hexEncodeFiveUpperCase(parsedURL[2]) +
-    hexEncodeFiveUpperCase(parsedURL[3]) +
-    hexEncodeFiveUpperCase(parsedURL[4]) +
-    hexEncodeFiveUpperCase(parsedURL[5]));
-  urls[121] = (
-    hexEncodeFiveUpperCase("http://") +
-    hexEncodeFiveUpperCase(parsedURL[1]) +
-    hexEncodeFiveUpperCase(parsedURL[2]) +
-    hexEncodeFiveUpperCase(parsedURL[3]) +
-    hexEncodeFiveUpperCase(parsedURL[4]) +
-    hexEncodeFiveUpperCase(parsedURL[5]));
-  urls[122] = (
-    hexEncodeFiveUpperCase("//") +
-    hexEncodeFiveUpperCase(parsedURL[1]) +
-    hexEncodeFiveUpperCase(parsedURL[2]) +
-    hexEncodeFiveUpperCase(parsedURL[3]) +
-    hexEncodeFiveUpperCase(parsedURL[4]) +
-    hexEncodeFiveUpperCase(parsedURL[5]));
-  urls[123] = (
-    hexEncodeFiveUpperCase(parsedURL[1]) +
-    hexEncodeFiveUpperCase(parsedURL[2]) +
-    hexEncodeFiveUpperCase(parsedURL[3]) +
-    hexEncodeFiveUpperCase(parsedURL[4]) +
-    hexEncodeFiveUpperCase(parsedURL[5]));
-  urls[124] = (
-    hexEncodeFiveUpperCase(encodeURIComponent("https://")) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[125] = (
-    hexEncodeFiveUpperCase(encodeURIComponent("http://")) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[126] = (
-    hexEncodeFiveUpperCase(encodeURIComponent("//")) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[127] = (
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[1])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[2])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[3])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[4])) +
-    hexEncodeFiveUpperCase(encodeURIComponent(parsedURL[5])));
-  urls[128] = (
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent("https://"))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[129] = (
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent("http://"))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[130] = (
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent("//"))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[131] = (
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[1]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[2]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[3]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[4]))) +
-    hexEncodeFiveUpperCase(encodeURIComponent(encodeURIComponent(parsedURL[5]))));
-  urls[132] = (
-    encodeURIComponentLowerCase("https://") +
-    encodeURIComponentLowerCase(parsedURL[1]) +
-    encodeURIComponentLowerCase(parsedURL[2]) +
-    encodeURIComponentLowerCase(parsedURL[3]) +
-    encodeURIComponentLowerCase(parsedURL[4]) +
-    encodeURIComponentLowerCase(parsedURL[5]));
-  urls[133] = (
-    encodeURIComponentLowerCase("http://") +
-    encodeURIComponentLowerCase(parsedURL[1]) +
-    encodeURIComponentLowerCase(parsedURL[2]) +
-    encodeURIComponentLowerCase(parsedURL[3]) +
-    encodeURIComponentLowerCase(parsedURL[4]) +
-    encodeURIComponentLowerCase(parsedURL[5]));
-  urls[134] = (
-    encodeURIComponentLowerCase("//") +
-    encodeURIComponentLowerCase(parsedURL[1]) +
-    encodeURIComponentLowerCase(parsedURL[2]) +
-    encodeURIComponentLowerCase(parsedURL[3]) +
-    encodeURIComponentLowerCase(parsedURL[4]) +
-    encodeURIComponentLowerCase(parsedURL[5]));
-  urls[135] = (
-    encodeURIComponentLowerCase(parsedURL[1]) +
-    encodeURIComponentLowerCase(parsedURL[2]) +
-    encodeURIComponentLowerCase(parsedURL[3]) +
-    encodeURIComponentLowerCase(parsedURL[4]) +
-    encodeURIComponentLowerCase(parsedURL[5]));
-  urls[136] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase("https://")) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
-  urls[137] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase("http://")) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
-  urls[138] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase("//")) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
-  urls[139] = (
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[1])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[2])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[3])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[4])) +
-    encodeURIComponentLowerCase(encodeURIComponentLowerCase(parsedURL[5])));
-  return urls;
+  const protocolVariants = [
+    "https://" + parsedURL.slice(1).join(""),
+    "http://" + parsedURL.slice(1).join(""),
+    "//" + parsedURL.slice(1).join(""),
+    parsedURL.slice(1).join("")
+  ];
+  let URLVariants = [].concat(protocolVariants);
+  for (let a = 0; a < hexEncodingTypes.length; a++) {
+    const hexEncodingTypeSet = hexEncodingTypes[a];
+    let encodedURLs = [];
+    for (let b = 0; b < protocolVariants.length; b++) {
+      let URLVariant = protocolVariants[b];
+      for (let c = 0; c < hexEncodingTypeSet.length; c++) {
+        URLVariant = encodeMethods[hexEncodingTypeSet](URLVariant);
+      }
+      encodedURLs.push(URLVariant);
+    }
+    URLVariants = URLVariants.concat(encodedURLs);
+  }
+  return URLVariants;
 }
 
 /**
@@ -1869,7 +952,7 @@ const scanForExploitableURIsAndQueue = async () => {
       }
       callbackURL = callbackURL + parsedCallbackURLOpenRedirectTimestamps.slice(5);
       globalThis.location = callbackURL;
-    } 
+    }
   }
   /* Start fuzzer if this origin is in scope or close this tab if fuzzer opened it. */
   if (
