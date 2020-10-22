@@ -35,7 +35,7 @@ $ encodeMethods[0]("?url=//mysite.com")
 
 ### 1. (One)
 
-This is the same method of encoding as `globalThis.encodeURIComponent` in uppercase.
+This is the same method of encoding as `globalThis.encodeURIComponent` in lowercase.
 
 ```js
 str => {
