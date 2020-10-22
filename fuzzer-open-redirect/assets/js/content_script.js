@@ -16,7 +16,7 @@ let scope = [
   "*://stackoverflow.com",
 ];
 let sessionID = "f028ut3jf4";
-let threads = 4;
+let threads = 2;
 let timeoutCallback = 32000;
 
 const redirectURLs = [
@@ -32,15 +32,16 @@ const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,
 const regexpSelectorURLWithURIParameterHTML = /["'](?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*['"]/ig;
 const regexpSelectorURLWithURIParameterPlain = /(?:http[s]?(?:[:]|%3a)(?:(?:[/]|%2f){2})?)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})?(?:[^'"()=&?\[\]\{\}<>]+)?[?][^"']+[=](?:http|[/]|%2f)[^"'()\[\]\{\}]*/ig;
 const regexpSelectorEscapableURICharacters = /[A-Za-z0-9_.!~*'()-]/ig;
+
+let allInjectedURLs = [];
 let arrayPermutations = [];
 let chunkedPendingURLs = [];
 let discoveredURLs = [];
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let paused = false;
-let scanCount = 0;
 let pendingURLs = [];
-let requests = [];
+let scanCount = 0;
 let scanning = false;
 let shuttingDown = false;
 
@@ -1587,9 +1588,6 @@ const toFullURL = uri => {
     && parsedURL[3] === "" /* path */
     && parsedURL[4] !== "" /* search */
   ) {
-    return location.origin +
-      location.pathname +
-      uri;
     return location.origin + location.pathname + uri;
   }
   if (
@@ -1673,8 +1671,11 @@ const openPendingURLs = () => {
           }
           const thisURLCandidate = chunkedPendingURLs[a][c];
           loadURL(thisURLCandidate);
-          chunkedPendingURLs[a] = chunkedPendingURLs[a].filter((url, index, arr) => {
-            return url != thisURLCandidate;
+          chunkedPendingURLs[a] = chunkedPendingURLs[a].filter(pendingURL => {
+            return pendingURL != thisURLCandidate;
+          });
+          pendingURLs = pendingURLs.filter(pendingURL => {
+            return pendingURL != thisURLCandidate;
           });
           await sleep(getIntFromRange(
             delayRangeRequests[0],
@@ -1748,6 +1749,7 @@ const scanForExploitableURIsAndQueue = async () => {
               thisURLCandidate,
               redirectURLVariants[c]);
             pendingURLs = pendingURLs.concat(injectedURLPermutations);
+            allInjectedURLs = allInjectedURLs.concat(injectedURLPermutations);
           }
         }
       }
@@ -1775,11 +1777,10 @@ const scanForExploitableURIsAndQueue = async () => {
           .filter((url, index, arr) => {
             return (
                  index === arr.indexOf(url)
-              && discoveredURLs.indexOf(url) === -1
-              && pendingURLs.indexOf(url) === -1);
+              && discoveredURLs.indexOf(url) === -1);
           });
         discoveredURLs = discoveredURLs.concat(message.data.discoveredURLs);
-        let pendingURLsCallback = [];
+        let injectedURLsCallback = [];
         message.data.discoveredURLs.forEach(url => {
           for (let a = 0; a < redirectURLs.length; a++) {
             const redirectURLVariants = getURLVariants(redirectURLs[a]);
@@ -1787,16 +1788,18 @@ const scanForExploitableURIsAndQueue = async () => {
               const injectedURLPermutations = getInjectedURLPermutations(
                 url,
                 redirectURLVariants[b]);
-              pendingURLsCallback = pendingURLsCallback.concat(injectedURLPermutations);
+              injectedURLsCallback = injectedURLsCallback.concat(injectedURLPermutations);
             }
           }
         });
-        pendingURLsCallback = pendingURLsCallback.filter((url, index, arr) => {
-          return pendingURLs.indexOf(url) === -1;
+        injectedURLsCallback = injectedURLsCallback.filter((url, index, arr) => {
+          return allInjectedURLs.indexOf(url) === -1;
         });
-        const chunkedPendingURLsCallback = chunkURLArray(pendingURLsCallback);
-        for (let a = 0; a < chunkedPendingURLsCallback.length; a++) {
-          chunkedPendingURLs[a].concat(chunkedPendingURLsCallback[a]);
+        pendingURLs = pendingURLs.concat(injectedURLsCallback);
+        allInjectedURLs = allInjectedURLs.concat(injectedURLsCallback);
+        const chunkedInjectedURLsCallback = chunkURLArray(injectedURLsCallback);
+        for (let a = 0; a < chunkedInjectedURLsCallback.length; a++) {
+          chunkedPendingURLs[a].concat(chunkedInjectedURLsCallback[a]);
         }
       }
     });
@@ -1890,6 +1893,9 @@ const scanForExploitableURIsAndQueue = async () => {
         scanForExploitableURIsAndQueue();
         if (pendingURLs.length > 0) {
           if (globalThis.opener) {
+            while (scanCount > 0) {
+              await sleep(4000);
+            }
             globalThis.opener.postMessage({
               sessionID: sessionID,
               discoveredURLs: discoveredURLs
