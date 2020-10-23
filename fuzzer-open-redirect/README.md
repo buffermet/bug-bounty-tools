@@ -62,7 +62,7 @@ $ encodeMethods[4]("//mysite.com")
 ### 5. (Five)
 
 ```console
-encodeMethods[5]("//mysite.com")
+$ encodeMethods[5]("//mysite.com")
 "%2F%2F%6D%79%73%69%74%65%2E%63%6F%6D"
 ```
 
