@@ -33,13 +33,13 @@ let scope = [
 ];
 let sessionID = "f028ut3jf4";
 let threads = 2;
-let timeoutCallback = 32000;
+let timeoutCallback = 8000;
 
 const redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
   "https://runescape.com/splash",
-  "https://runescape.com/splash?nothing"
+  "https://runescape.com/splash?ing"
 ];
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -704,7 +704,7 @@ const loadURL = async url => {
   while (paused) {
     await sleep(4000);
   }
-  globalThis.open(callbackURL, "_blank")
+  globalThis.open(callbackURL, "_blank");
   globalThis.open(url, "_blank");
 }
 
@@ -996,7 +996,7 @@ const scanForExploitableURIsAndQueue = async () => {
         if (globalThis.opener) {
           globalThis.opener.postMessage({
             sessionID: sessionID,
-            discoveredURLs: discoveredURLs
+            discoveredURLs: discoveredURLs,
           });
           pendingURLs = [];
         } else {
