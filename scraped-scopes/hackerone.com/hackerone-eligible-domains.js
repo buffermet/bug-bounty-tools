@@ -1,9 +1,11 @@
 /**
- * These are scraped from the entire program directory at hackerone.com, please note that
- * some programs have a custom scope which the crawler skipped.
+ * These are scraped from the entire program directory at hackerone.com.
+ *
+ * Please note that some programs have a custom scope which the crawler skipped, and some strings
+ * contain a wildcard, protocol and/or path.
  */
 
-let hackerone_eligible_domains = [
+let HACKERONE_ELIGIBLE_DOMAINS_AND_URIS = [
   "*.oppo.com",
   "*.oppo.cn",
   "*.opposhop.cn",
@@ -89,10 +91,20 @@ let hackerone_eligible_domains = [
   "alert.logitech.com",
   "*.lukwerks.com",
   "*.cognitiveperformer.com",
-  "cloud.enjin.io,kovan.cloud.enjin.io",
+  "cloud.enjin.io",
+  "kovan.cloud.enjin.io",
   "beam.enjin.io",
-  "enjinx.io,enjinx.cn,api.enjinx.io,api.enjinx.cn,*.api.enjinx.io,*.api.enjinx.cn",
-  "assets.enjin.io,cdn.enjin.io,cdn.enjin.cn,cdn.enjinx.io,cdn.enjinx.cn",
+  "enjinx.io",
+  "enjinx.cn",
+  "api.enjinx.io",
+  "api.enjinx.cn",
+  "*.api.enjinx.io",
+  "*.api.enjinx.cn",
+  "assets.enjin.io",
+  "cdn.enjin.io",
+  "cdn.enjin.cn",
+  "cdn.enjinx.io",
+  "cdn.enjinx.cn",
   "kovan.faucet.enjin.io",
   "www.figma.com",
   "api.figma.com",
@@ -141,7 +153,8 @@ let hackerone_eligible_domains = [
   "*.ct0.app",
   "api.courier.com",
   "www.courier.com",
-  "magisto.com,www.magisto.com",
+  "magisto.com",
+  "www.magisto.com",
   "*.magisto.com",
   "staging.magisto.com",
   "applause1.magisto.com",
@@ -647,11 +660,15 @@ let hackerone_eligible_domains = [
   "www.files.com",
   "*.wordpress.org",
   "api.wordpress.org",
-  "*.buddypress.org,bbpress.org,profiles.wordpress.org",
+  "*.buddypress.org",
+  "bbpress.org",
+  "profiles.wordpress.org",
   "*.wordcamp.org",
   "planet.wordpress.org",
   "doaction.org",
-  "codex.wordpress.org,codex.bbpress.org,codex.buddypress.org",
+  "codex.wordpress.org",
+  "codex.bbpress.org",
+  "codex.buddypress.org",
   "mercantile.wordpress.org",
   "lists.wordpress.org",
   "wordpressfoundation.org",
