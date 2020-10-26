@@ -1,4 +1,4 @@
-let hackerone_eligible_directory = [
+let HACKERONE_ELIGIBLE_DIRECTORY = [
   {
     "program": "OPPO",
     "url": "https://hackerone.com/oppo",
