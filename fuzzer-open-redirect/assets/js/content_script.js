@@ -523,8 +523,8 @@ const parseURL = url => {
     retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
   }
   // anchor
-  if (strippedURL.match(/^[^#]*([#][^/]*$)/i)) {
-    retval[5] = strippedURL.replace(/^[^#]*([#][^/]*$)/i, "$1");
+  if (strippedURL.match(/^[^#]*([#].*)$/i)) {
+    retval[5] = strippedURL.replace(/^[^#]*([#].*)$/i, "$1");
   }
   return retval;
 }
