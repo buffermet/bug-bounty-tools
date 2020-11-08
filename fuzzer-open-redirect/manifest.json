@@ -25,7 +25,7 @@
   ],
   "incognito": "spanning",
   "background": {
-    "scripts": ["assets/js/hook.js"]
+    "scripts": ["assets/js/background_script.js"]
   },
   "content_scripts": [
     {
