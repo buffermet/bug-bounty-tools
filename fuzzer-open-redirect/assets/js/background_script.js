@@ -4,9 +4,9 @@
 
 /* User configurable. */
 let crawlerScripts = [];
-let delayCycleTabFocus = 1000;
-let delayRangeRequests = [4000, 30000];
-let delayRetryCallbackRequest = 10000;
+let delayForceWakeTabsThread = 1000;
+let delayRangeFuzzerThread = [4000, 30000];
+let delayPendingRetryURLsThread = 10000;
 let delayURLDiscoveryThread = 4000;
 let hexEncodingTypes = [
   [0],
@@ -49,11 +49,13 @@ let arrayPermutations = [];
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let chunkedPendingURLs = [];
+let crawledURLs = [];
 let crawlingTabs = [];
 let discoveredExploitableURLs = [];
 let discoveredURLs = [];
-let pendingRetryURLs = [];
+let pendingRetryURLs = {};
 let pendingRequests = [];
+let pendingScanURLs = [];
 let programs = [];
 let streamingInjectedURLsBuffer = false;
 
@@ -61,7 +63,7 @@ let streamingInjectedURLsBuffer = false;
  * Chunks a given array to a length of a given amount.
  */
 const chunkArray = (urls, amountOfChunks) => {
-  const chunkSize = Math.ceil(urls.length / threads);
+  const chunkSize = Math.ceil(urls.length / amountOfChunks);
   const chunks = [];
   for (let a = 0; a < amountOfChunks; a++) {
     chunks[a] = urls.slice(chunkSize * a, (chunkSize * a) + chunkSize);
@@ -70,10 +72,10 @@ const chunkArray = (urls, amountOfChunks) => {
 }
 
 /**
- * An object that contains all the various methods to encode a given URI parameter string.
+ * An integer mapped collection of methods to encode a given URI parameter string.
  */
 const encodeMethods = {
-  0: encodeURIComponent,
+  0: globalThis.encodeURIComponent,
   1: str => {
     /**
      *  Returns a string exactly like globalThis.encodeURIComponent does, with lowercase hex
@@ -256,7 +258,31 @@ const encodeMethods = {
       encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
     }
     return encodedBuffer.join("");
-  }
+  },
+  14: str => {
+    /**
+     *  Replaces full stops with ideographic full stops.
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      if (str.charAt(a) === ".") {
+        encodedBuffer[a] = "。";
+      } else {
+        encodedBuffer[a] = str.charAt(a);
+      }
+    }
+    return encodedBuffer.join("");
+  },
+  15: str => {
+    /**
+     *  Returns a given string with null bytes between each character.
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = str.charAt(a);
+    }
+    return encodedBuffer.join("\x00");
+  },
 }
 
 /**
@@ -366,8 +392,8 @@ const getURLVariants = url => {
 const openURLInNewTab = async url => {
   return new Promise((res, err) => {
     setTimeout(() => {
-      if (pendingRetryURLs.indexOf(url) === -1) {
-        pendingRetryURLs.push(url);
+      if (!pendingRetryURLs[url]) {
+        pendingRetryURLs[url] = {attempts: 0};
       }
       err("Request timed out.");
     }, timeoutRequests);
@@ -470,6 +496,13 @@ const registerMessageListeners = () => {
         }
         allInjectedURLsBuffer = allInjectedURLsBuffer.concat(injectedURLs);
       }
+      if (
+           message.discoveredURLs
+        && message.discoveredURLs.length !== 0
+      ) {
+        
+      }
+
     }
   });
 }
@@ -481,9 +514,14 @@ const registerWebRequestListeners = () => {
   chrome.webRequest.onErrorOccurred.addListener(
     details => {
       if (details.type === "main_frame") {
-        if (pendingRetryURLs.indexOf(details.url) === -1) {
-          pendingRetryURLs.push(details.url);
+        /* we may need to check scope except where cross origin redirection occurs. */
+        if (!pendingRetryURLs[details.url]) {
+          pendingRetryURLs[details.url] = {
+            
+          };
           chrome.tabs.remove(details.tabId);
+        } else {
+
         }
       }
     },
@@ -492,19 +530,9 @@ const registerWebRequestListeners = () => {
   );
   chrome.webRequest.onHeadersReceived.addListener(
     details => {
-      details.responseHeaders.forEach(header => {
-        if (header.name.toLowerCase() === "content-type") {
-          if (
-               header.value.toLowerCase().indexOf("text/html") !== -1
-            || header.value.toLowerCase().indexOf("image/svg+xml") !== -1
-          ) {
-
-          }
-        }
-      });
-      return {
-        responseHeaders: details.responseHeaders
-      };
+      if (crawledURLs.indexOf(details.url) === -1) {
+        crawledURLs.push(details.url);
+      }
     },
     {"urls": ["<all_urls>"]},
     ["blocking", "extraHeaders", "responseHeaders"]
@@ -521,16 +549,17 @@ const sleep = ms => {
 }
 
 /**
- * Starts crawling an indefinite amount of potentially vulnerable URLs.
+ * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
  */
-const startCrawlerThread = async () => {
-  const chunkedInjectedURLs = chunkArray(allInjectedURLs, threads);
-  for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+const startFuzzerThread = async () => {
+  for (let a = 0; a < (threads / 2); a++) {
     (async () => {
-      
-      await sleep(getIntFromRange(
-        delayRangeRequests[0],
-        delayRangeRequests[1]));
+      while (true) {
+//        openURLInNewTab(chunkedPendingURLs[a]);
+        await sleep(getIntFromRange(
+          delayRangeFuzzerThread[0],
+          delayRangeFuzzerThread[1]));
+      }
     })();
   }
 }
@@ -545,7 +574,7 @@ const startForceWakeTabsThread = async () => {
         active: true,
         selected: true,
       });
-      await sleep(delayCycleTabFocus);
+      await sleep(delayForceWakeTabsThread);
     }
     startForceWakeTabsThread();
   });
@@ -555,21 +584,30 @@ const startForceWakeTabsThread = async () => {
  * Tries to request pending URLs that timed out (for ??????????).
  */
 const startPendingRetryURLsThread = async () => {
-  while (true) {
-    pendingRetryURLs.forEach(url => {
-      if (
-            parseURL(url).slice(0, 2)
-        === parseURL(callbackURLOpenRedirectTimestamps).slice(0, 2)
-      ) {
-        loadURL(url).then(() => {
-          pendingRetryURLs = pendingRetryURLs.filter(_url => {
-            return url !== _url;
-          });
-        });
-      }
-    });
-    await sleep(delayRetryCallbackRequest);
-  }
+//  while (true) {
+//    pendingRetryURLs.forEach(url => {
+//      if (
+//            parseURL(url).slice(0, 2)
+//        === parseURL(callbackURLOpenRedirectTimestamps).slice(0, 2)
+//      ) {
+//        openURLInNewTab(url).then(() => {
+//          pendingRetryURLs = pendingRetryURLs.filter(_url => {
+//            return url !== _url;
+//          });
+//        });
+//      }
+//    });
+//    await sleep(delayPendingRetryURLsThread);
+//  }
+}
+
+/**
+ * Starts scanning an indefinite amount of URLs that are in scope.
+ */
+const startScannerThread = async () => {
+
+  await sleep(delayScannerThread);
+  startScannerThread();
 }
 
 /**
@@ -599,6 +637,7 @@ const startURLDiscoveryThread = async () => {
  * (example output: "https://example.com/")
  */
 const trimWhitespaces = str => {
+console.log('trimming', str)
   return str.replace(/^\s*(.*)\s*$/g, "$1");
 }
 
@@ -611,6 +650,6 @@ const trimWhitespaces = str => {
 //  startForceWakeTabsThread();
   startPendingRetryURLsThread();
   startURLDiscoveryThread();
-  startCrawlerThread();
+  startFuzzerThread();
 })();
 

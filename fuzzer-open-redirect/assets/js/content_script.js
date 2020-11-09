@@ -427,8 +427,7 @@ const scanForExploitableURIs = async () => {
       discoveredExploitableURLs = discoveredExploitableURLs.concat(
         _discoveredExploitableURLs);
       console.log("%cfuzzer-open-redirect", consoleCSS,
-        "Discovered URLs that are potentially vulnerable and in scope:");
-      console.log(_discoveredExploitableURLs);
+        "Discovered " + _discoveredExploitableURLs.length + " new URL(s) that are potentially vulnerable and in scope.");
     } else {
       console.log("%cfuzzer-open-redirect", consoleCSS,
         "No exploitable, in-scope URIs found.");
@@ -481,8 +480,7 @@ const scanForURIs = async () => {
       discoveredURLs = discoveredURLs.concat(
         _discoveredURLs);
       console.log("%cfuzzer-open-redirect", consoleCSS,
-        "Discovered URLs that are in scope:");
-      console.log(_discoveredURLs);
+        "Discovered " + _discoveredURLs.length +  " new URL(s) that are in scope.");
     } else {
       console.log("%cfuzzer-open-redirect", consoleCSS,
         "No in-scope URIs found.");
