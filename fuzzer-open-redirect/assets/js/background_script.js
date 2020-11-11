@@ -5,9 +5,9 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [8000, 20000];
-let delayRangeScannerThread = [8000, 20000];
-let delayRangePendingRetryURLsThread = [8000, 20000];
+let delayRangeFuzzerThread = [8000, 30000];
+let delayRangeScannerThread = [8000, 30000];
+let delayRangePendingRetryURLsThread = [8000, 30000];
 let hexEncodingTypes = [
   [0],
   [0,0],
@@ -37,9 +37,9 @@ let hexEncodingTypes = [
 let sessionID = "8230ufjio";
 let threadCountFuzzer = 2;
 let threadCountScanner = 2;
-let timeoutCallback = 8000;
-let timeoutCloseTabs = 8000;
-let timeoutRequests = 8000;
+let timeoutCallback = 16000;
+let timeoutCloseTabs = 16000;
+let timeoutRequests = 16000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let pendingRetryURLAttempts = 6;
@@ -550,9 +550,9 @@ const registerMessageListeners = () => {
         ) {
           fuzzerTabs = fuzzerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
-              try {
-                chrome.tabs.remove(sender.tab.id)
-              } catch(ignore) {}
+              chrome.tabs.get(sender.tab.id, _tab => {
+                chrome.tabs.remove(_tab.id);
+              });
               return false;
             } else {
               return true;
@@ -560,9 +560,9 @@ const registerMessageListeners = () => {
           });
           scannerTabs = scannerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
-              try {
-                chrome.tabs.remove(sender.tab.id)
-              } catch(ignore) {}
+              chrome.tabs.get(sender.tab.id, _tab => {
+                chrome.tabs.remove(_tab.id);
+              });
               return false;
             } else {
               return true;
@@ -594,8 +594,10 @@ const registerMessageListeners = () => {
               }
             }
           }
-          _injectedURLs = _injectedURLs.filter(url => {
-            return injectedURLs.indexOf(url) === -1;
+          _injectedURLs = _injectedURLs.filter((url, index, arr) => {
+            return (
+                 arr.indexOf(url) === index
+              && injectedURLs.indexOf(url) === -1);
           });
           injectedURLs = injectedURLs.concat(_injectedURLs);
           const chunkedURLs = chunkArray(
@@ -770,7 +772,7 @@ const trimWhitespaces = str => {
   await registerMessageListeners();
   await registerWebRequestListeners();
   await openFuzzerAndScannerWindows();
-  startForceWakeTabsThread();
+//  startForceWakeTabsThread();
   startPendingRetryURLsThread();
   startScannerThread();
   startFuzzerThread();
