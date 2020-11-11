@@ -533,7 +533,6 @@ const parseURL = url => {
  */
 const registerMessageListeners = () => {
   chrome.runtime.onMessage.addListener(async (message, sender, callback) => {
-console.log(message, sender)
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -557,7 +556,7 @@ console.log(message, sender)
               return true;
             }
           });
-          scannerTabs = fuzzerTabs.filter((tab, index, arr) => {
+          scannerTabs = scannerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
               chrome.tabs.remove(sender.tab.id)
               return false;
@@ -672,17 +671,17 @@ const sleep = ms => {
  * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
  */
 const startFuzzerThread = async () => {
-  for (let a = 0; a < chunkedInjectedURLs.length; a++) {
-    const URL = chunkedInjectedURLs[a][0];
-    if (URL && URL !== "") {
-      chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
-      openURLInNewFuzzerTab(URL);
+  while (true) {
+    for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+      const URL = chunkedInjectedURLs[a][0];
+      if (URL && URL !== "") {
+        chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
+        openURLInNewFuzzerTab(URL);
+      }
     }
-    setTimeout(
-      startFuzzerThread,
-      getIntFromRange(
-        delayRangeFuzzerThread[0],
-        delayRangeFuzzerThread[1]));
+    await sleep(getIntFromRange(
+      delayRangeFuzzerThread[0],
+      delayRangeFuzzerThread[1]));
   }
 }
 
@@ -727,17 +726,17 @@ const startPendingRetryURLsThread = async () => {
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
 const startScannerThread = async () => {
-  for (let a = 0; a < chunkedScannableURLs.length; a++) {
-    const URL = chunkedScannableURLs[a][0];
-    if (URL && URL !== "") {
-      chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
-      openURLInNewScannerTab(URL);
+  while (true) {
+    for (let a = 0; a < chunkedScannableURLs.length; a++) {
+      const URL = chunkedScannableURLs[a][0];
+      if (URL && URL !== "") {
+        chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
+        openURLInNewScannerTab(URL);
+      }
     }
-    setTimeout(
-      startScannerThread,
-      getIntFromRange(
-        delayRangeScannerThread[0],
-        delayRangeScannerThread[1]));
+    await sleep(getIntFromRange(
+      delayRangeScannerThread[0],
+      delayRangeScannerThread[1]));
   }
 }
 
