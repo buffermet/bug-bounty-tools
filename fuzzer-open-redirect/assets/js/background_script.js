@@ -5,9 +5,9 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [4000, 20000];
-let delayRangeScannerThread = [4000, 20000];
-let delayRangePendingRetryURLsThread = [4000, 20000];
+let delayRangeFuzzerThread = [8000, 20000];
+let delayRangeScannerThread = [8000, 20000];
+let delayRangePendingRetryURLsThread = [8000, 20000];
 let hexEncodingTypes = [
   [0],
   [0,0],
@@ -533,7 +533,7 @@ const parseURL = url => {
  */
 const registerMessageListeners = () => {
   chrome.runtime.onMessage.addListener(async (message, sender, callback) => {
-console.log(message)
+console.log(message, sender)
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -672,17 +672,17 @@ const sleep = ms => {
  * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
  */
 const startFuzzerThread = async () => {
-  while (!isFuzzerThreadPaused) {
-    if (chunkedInjectedURLs.length !== 0) {
-      for (let a = 0; a < chunkedInjectedURLs.length; a++) {
-        const URL = chunkedInjectedURLs[a][0];
-        chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
-        openURLInNewFuzzerTab(URL);
-      }
+  for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+    const URL = chunkedInjectedURLs[a][0];
+    if (URL && URL !== "") {
+      chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
+      openURLInNewFuzzerTab(URL);
     }
-    await sleep(getIntFromRange(
-      delayRangeFuzzerThread[0],
-      delayRangeFuzzerThread[1]));
+    setTimeout(
+      startFuzzerThread,
+      getIntFromRange(
+        delayRangeFuzzerThread[0],
+        delayRangeFuzzerThread[1]));
   }
 }
 
@@ -727,19 +727,17 @@ const startPendingRetryURLsThread = async () => {
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
 const startScannerThread = async () => {
-  while (true) {
-    if (!isScannerThreadPaused) {
-      if (chunkedScannableURLs.length !== 0) {
-        for (let a = 0; a < chunkedScannableURLs.length; a++) {
-          const URL = chunkedScannableURLs[a][0];
-          chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
-          openURLInNewScannerTab(URL);
-        }
-      }
+  for (let a = 0; a < chunkedScannableURLs.length; a++) {
+    const URL = chunkedScannableURLs[a][0];
+    if (URL && URL !== "") {
+      chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
+      openURLInNewScannerTab(URL);
     }
-    await sleep(getIntFromRange(
-      delayRangeScannerThread[0],
-      delayRangeScannerThread[1]));
+    setTimeout(
+      startScannerThread,
+      getIntFromRange(
+        delayRangeScannerThread[0],
+        delayRangeScannerThread[1]));
   }
 }
 
@@ -769,5 +767,7 @@ const trimWhitespaces = str => {
   startPendingRetryURLsThread();
   startScannerThread();
   startFuzzerThread();
+
+  openURLInNewScannerTab("https://stackoverflow.com/");
 })();
 
