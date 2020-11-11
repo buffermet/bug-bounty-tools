@@ -5,16 +5,18 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [4000, 30000];
-let delayPendingRetryURLsThread = 10000;
-let delayURLDiscoveryThread = 4000;
+let delayRangeFuzzerThread = [4000, 20000];
+let delayRangeScannerThread = [4000, 20000];
+let delayRangePendingRetryURLsThread = [4000, 20000];
 let hexEncodingTypes = [
   [0],
   [0,0],
+  [0,4],
   [1],
   [2],
   [3],
   [4],
+  [4,0],
   [4,4],
   [5],
   [6],
@@ -25,12 +27,21 @@ let hexEncodingTypes = [
   [11],
   [12],
   [13],
+  [14],
+  [14,0],
+  [14,4],
+  [15],
+  [15,0],
+  [15,4],
 ];
 let sessionID = "8230ufjio";
-let threads = 4;
+let threadCountFuzzer = 2;
+let threadCountScanner = 2;
 let timeoutCallback = 8000;
 let timeoutCloseTabs = 8000;
 let timeoutRequests = 8000;
+let isFuzzerThreadPaused = false;
+let isScannerThreadPaused = false;
 let pendingRetryURLAttempts = 6;
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -39,25 +50,27 @@ const redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
   "https://runescape.com/splash",
-  "https://runescape.com/splash?ing"
+  "https://runescape.com/splash?ing",
+  "data:text/html,<script>location = 'https://runescape.com/'</script>",
+  "javascript:location = 'https://runescape.com/'",
 ];
 const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 
-let allInjectedURLs = [];
-let allInjectedURLsBuffer = [];
 let arrayPermutations = [];
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let chunkedPendingURLs = [];
-let crawledURLs = [];
-let crawlingTabs = [];
-let discoveredExploitableURLs = [];
-let discoveredURLs = [];
+let chunkedInjectedURLs = [];
+let chunkedScannableURLs = [];
+let exploitableURLs = [];
+let fuzzerTabs = [];
+let fuzzerWindow;
+let injectedURLs = [];
 let pendingRetryURLs = {};
-let pendingRequests = [];
-let pendingScanURLs = [];
 let programs = [];
-let streamingInjectedURLsBuffer = false;
+let scannerTabs = [];
+let scannerWindow;
+let scannableURLs = [];
+let visitedURLs = [];
 
 /**
  * Chunks a given array to a length of a given amount.
@@ -325,7 +338,7 @@ const getInjectedURLPermutations = (targetURL, redirectURL) => {
     regexpMatches.push({match: match[0], index: match.index});
   }
   getArrayPermutations([], regexpMatches);
-  let injectedURLs = [];
+  _injectedURLs = [];
   for (let a = 0; a < arrayPermutations.length; a++) {
     let matchSets = arrayPermutations[a];
     let injectedURL = targetURL;
@@ -344,10 +357,10 @@ const getInjectedURLPermutations = (targetURL, redirectURL) => {
           + (matchSet.match.length));
       injectedURL = url_ + "=" + redirectURL + _url;
     }
-    injectedURLs.push(injectedURL);
+    _injectedURLs.push(injectedURL);
   }
   arrayPermutations = [];
-  return injectedURLs;
+  return _injectedURLs;
 }
 
 /**
@@ -363,13 +376,19 @@ const getIntFromRange = (min, max) => {
  */
 const getURLVariants = url => {
   const parsedURL = parseURL(url);
-  const slicedURL = parsedURL.slice(1).join("");
-  const protocolVariants = [
-    "https://" + slicedURL,
-     "http://" + slicedURL,
-          "//" + slicedURL,
-                 slicedURL
-  ];
+  let protocolVariants = [];
+  if (
+       parsedURL[0].toLowerCase() === "data:"
+    || parsedURL[0].toLowerCase() === "javascript:"
+  ) {
+    protocolVariants.push(parsedURL.join(""));
+  } else {
+    const slicedURL = parsedURL.slice(1).join("");
+    protocolVariants.push("https://" + slicedURL);
+    protocolVariants.push( "http://" + slicedURL);
+    protocolVariants.push(      "//" + slicedURL);
+    protocolVariants.push(             slicedURL);
+  }
   let URLVariants = protocolVariants;
   for (let a = 0; a < hexEncodingTypes.length; a++) {
     const hexEncodingTypeSet = hexEncodingTypes[a];
@@ -387,28 +406,75 @@ const getURLVariants = url => {
 }
 
 /**
- * Opens a given URL in a new tab.
+ * Opens a given URL in a new fuzzer tab.
  */
-const openURLInNewTab = async url => {
+const openURLInNewFuzzerTab = async url => {
   return new Promise((res, err) => {
     setTimeout(() => {
       if (!pendingRetryURLs[url]) {
         pendingRetryURLs[url] = {attempts: 0};
       }
-      err("Request timed out.");
+      err("Opening tab timed out.");
     }, timeoutRequests);
     chrome.tabs.create({url: url}, async tab => {
-      pendingRequests.push({
+      fuzzerTabs.push({
         state: "loading",
-        tabId: tab.id,
+        id: tab.id,
       });
-      crawlingTabs.push(tab);
+      chrome.tabs.move(
+        [tab.id],
+        {
+          index: 0,
+          windowId: fuzzerWindow.id,
+        });
       // execute crawlerScripts
-//      while (false) {
-        await sleep(6000);
-//      }
       res(tab);
     });
+  });
+}
+
+/**
+ * Opens a given URL in a new scanner tab.
+ */
+const openURLInNewScannerTab = async url => {
+  return new Promise((res, err) => {
+    setTimeout(() => {
+      if (!pendingRetryURLs[url]) {
+        pendingRetryURLs[url] = {attempts: 0};
+      }
+      err("Opening tab timed out.");
+    }, timeoutRequests);
+    chrome.tabs.create({url: url}, async tab => {
+      scannerTabs.push({
+        state: "loading",
+        id: tab.id,
+      });
+      chrome.tabs.move(
+        [tab.id],
+        {
+          index: 0,
+          windowId: scannerWindow.id,
+        });
+      // execute crawlerScripts
+      res(tab);
+    });
+  });
+}
+
+const openFuzzerAndScannerWindows = async () => {
+  return new Promise((res, err) => {
+    setTimeout(() => {
+      err("openFuzzerAndScannerWindows() timed out.")
+    }, timeoutRequests);
+    /* Open fuzzer window. */
+    chrome.windows.create({}, frame => {
+      fuzzerWindow = frame;
+    });
+    /* Open scanner window. */
+    chrome.windows.create({}, frame => {
+      scannerWindow = frame;
+    });
+    res();
   });
 }
 
@@ -429,8 +495,15 @@ const parseURL = url => {
   const strippedURL = trimWhitespaces(url);
   const retval = ["","","","","",""];
   /* protocol */
-  if (strippedURL.match(/^((?:[a-z0-9.+-]+:)?\/\/).*$/i)) {
-    retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?\/\/).*$/i, "$1");
+  if (strippedURL.match(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i)) {
+    retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i, "$1");
+  }
+  if (retval[0].toLowerCase() === "javascript:" || retval[0].toLowerCase() === "data:") {
+
+    /* ALSO PARSE DATA URLS */
+
+    retval[3] = url.slice(retval[0].length);
+    return retval;
   }
   /* host */
   if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
@@ -460,49 +533,96 @@ const parseURL = url => {
  */
 const registerMessageListeners = () => {
   chrome.runtime.onMessage.addListener(async (message, sender, callback) => {
+console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
     ) {
       if (message.timestamp) {
-        loadURL(callbackURLOpenRedirectTimestamps);
+        console.log("---------------------------", timestamp);
+        console.log("---------------------------", timestamp);
+        console.log("---------------------------", timestamp);
+        console.log("---------------------------", timestamp);
+      }
+      if (message.message) {
+        if (
+            message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
+          || message.message === "FRAME_READYSTATE_COMPLETE"
+        ) {
+          fuzzerTabs = fuzzerTabs.filter((tab, index, arr) => {
+            if (tab.id === sender.tab.id) {
+              chrome.tabs.remove(sender.tab.id)
+              return false;
+            } else {
+              return true;
+            }
+          });
+          scannerTabs = fuzzerTabs.filter((tab, index, arr) => {
+            if (tab.id === sender.tab.id) {
+              chrome.tabs.remove(sender.tab.id)
+              return false;
+            } else {
+              return true;
+            }
+          });
+        }
       }
       if (
-           message.discoveredExploitableURLs
-        && message.discoveredExploitableURLs.length !== 0
+           message.exploitableURLs
+        && message.exploitableURLs.length !== 0
       ) {
-        while (streamingInjectedURLsBuffer) {
-          await sleep(1000);
-        }
-        const filteredDiscoveredURLs = message.discoveredExploitableURLs
-          .filter((url, index, arr) => {
-            return (
-                 arr.indexOf(url) === index
-              && discoveredExploitableURLs.indexOf(url) === -1);
-          });
-        discoveredExploitableURLs = discoveredExploitableURLs.concat(
-          filteredDiscoveredURLs);
-        let injectedURLs = [];
-        for (let a = 0; a < redirectURLs.length; a++) {
-          const redirectURLVariants = getURLVariants(redirectURLs[a]);
-          for (let b = 0; b < redirectURLVariants.length; b++) {
-            for (let c = 0; c < filteredDiscoveredURLs.length; c++) {
-              injectedURLs = injectedURLs.concat(
-                getInjectedURLPermutations(
-                  filteredDiscoveredURLs[c],
-                  redirectURLVariants[b]));
+        (async () => {
+          const filteredURLs = message.exploitableURLs
+            .filter((url, index, arr) => {
+              return (
+                   arr.indexOf(url) === index
+                && exploitableURLs.indexOf(url) === -1);
+            });
+          exploitableURLs = exploitableURLs.concat(filteredURLs);
+          let _injectedURLs = [];
+          for (let a = 0; a < redirectURLs.length; a++) {
+            const redirectURLVariants = getURLVariants(redirectURLs[a]);
+            for (let b = 0; b < redirectURLVariants.length; b++) {
+              for (let c = 0; c < exploitableURLs.length; c++) {
+                _injectedURLs = _injectedURLs.concat(
+                  getInjectedURLPermutations(
+                    exploitableURLs[c],
+                    redirectURLVariants[b]));
+              }
             }
           }
-        }
-        allInjectedURLsBuffer = allInjectedURLsBuffer.concat(injectedURLs);
+          _injectedURLs = _injectedURLs.filter(url => {
+            return injectedURLs.indexOf(url) === -1;
+          });
+          injectedURLs = injectedURLs.concat(_injectedURLs);
+          const chunkedURLs = chunkArray(
+            _injectedURLs,
+            threadCountFuzzer);
+          for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+            chunkedInjectedURLs[a] = chunkedInjectedURLs[a].concat(chunkedURLs[a]);
+          }
+        })();
       }
       if (
-           message.discoveredURLs
-        && message.discoveredURLs.length !== 0
+           message.scannableURLs
+        && message.scannableURLs.length !== 0
       ) {
-        
+        (async () => {
+          const filteredURLs = message.scannableURLs
+            .filter((url, index, arr) => {
+              return (
+                   arr.indexOf(url) === index
+                && scannableURLs.indexOf(url) === -1);
+            });
+          scannableURLs = scannableURLs.concat(filteredURLs);
+          const chunkedURLs = chunkArray(
+            filteredURLs,
+            threadCountScanner);
+          for (let a = 0; a < chunkedURLs.length; a++) {
+            chunkedScannableURLs[a] = chunkedScannableURLs[a].concat(chunkedURLs[a]);
+          }
+        })();
       }
-
     }
   });
 }
@@ -516,10 +636,10 @@ const registerWebRequestListeners = () => {
       if (details.type === "main_frame") {
         /* we may need to check scope except where cross origin redirection occurs. */
         if (!pendingRetryURLs[details.url]) {
-          pendingRetryURLs[details.url] = {
+//          pendingRetryURLs[details.url] = {
             
-          };
-          chrome.tabs.remove(details.tabId);
+//          };
+//          chrome.tabs.remove(details.tabId);
         } else {
 
         }
@@ -530,8 +650,8 @@ const registerWebRequestListeners = () => {
   );
   chrome.webRequest.onHeadersReceived.addListener(
     details => {
-      if (crawledURLs.indexOf(details.url) === -1) {
-        crawledURLs.push(details.url);
+      if (visitedURLs.indexOf(details.url) === -1) {
+        visitedURLs.push(details.url);
       }
     },
     {"urls": ["<all_urls>"]},
@@ -552,15 +672,17 @@ const sleep = ms => {
  * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
  */
 const startFuzzerThread = async () => {
-  for (let a = 0; a < (threads / 2); a++) {
-    (async () => {
-      while (true) {
-//        openURLInNewTab(chunkedPendingURLs[a]);
-        await sleep(getIntFromRange(
-          delayRangeFuzzerThread[0],
-          delayRangeFuzzerThread[1]));
+  while (!isFuzzerThreadPaused) {
+    if (chunkedInjectedURLs.length !== 0) {
+      for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+        const URL = chunkedInjectedURLs[a][0];
+        chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
+        openURLInNewFuzzerTab(URL);
       }
-    })();
+    }
+    await sleep(getIntFromRange(
+      delayRangeFuzzerThread[0],
+      delayRangeFuzzerThread[1]));
   }
 }
 
@@ -605,30 +727,20 @@ const startPendingRetryURLsThread = async () => {
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
 const startScannerThread = async () => {
-
-  await sleep(delayScannerThread);
-  startScannerThread();
-}
-
-/**
- * Filters newly discovered URLs and adds them as pending URLs indefinitely.
- */
-const startURLDiscoveryThread = async () => {
-  streamingInjectedURLsBuffer = true;
-  const newInjectedURLs = allInjectedURLsBuffer.filter(url => {
-    return allInjectedURLs.indexOf(url) === -1;
-  });
-  allInjectedURLsBuffer = [];
-  allInjectedURLs = allInjectedURLs.concat(newInjectedURLs);
-  const chunkedInjectedURLsBuffer = chunkArray(
-    newInjectedURLs,
-    chunkedPendingURLs.length);
-  for (let a = 0; a < chunkedPendingURLs.length; a++) {
-    chunkedPendingURLs[a] = chunkedPendingURLs[a].concat(chunkedInjectedURLsBuffer[a]);
+  while (true) {
+    if (!isScannerThreadPaused) {
+      if (chunkedScannableURLs.length !== 0) {
+        for (let a = 0; a < chunkedScannableURLs.length; a++) {
+          const URL = chunkedScannableURLs[a][0];
+          chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
+          openURLInNewScannerTab(URL);
+        }
+      }
+    }
+    await sleep(getIntFromRange(
+      delayRangeScannerThread[0],
+      delayRangeScannerThread[1]));
   }
-  streamingInjectedURLsBuffer = false;
-  await sleep(delayURLDiscoveryThread);
-  startURLDiscoveryThread();
 }
 
 /**
@@ -637,7 +749,6 @@ const startURLDiscoveryThread = async () => {
  * (example output: "https://example.com/")
  */
 const trimWhitespaces = str => {
-console.log('trimming', str)
   return str.replace(/^\s*(.*)\s*$/g, "$1");
 }
 
@@ -645,11 +756,18 @@ console.log('trimming', str)
  * Init background script.
  */
 (async () => {
+  for (let a = 0; a < threadCountFuzzer; a++) {
+    chunkedInjectedURLs[a] = [];
+  }
+  for (let a = 0; a < threadCountScanner; a++) {
+    chunkedScannableURLs[a] = [];
+  }
   await registerMessageListeners();
   await registerWebRequestListeners();
-//  startForceWakeTabsThread();
+  await openFuzzerAndScannerWindows();
+  startForceWakeTabsThread();
   startPendingRetryURLsThread();
-  startURLDiscoveryThread();
+  startScannerThread();
   startFuzzerThread();
 })();
 

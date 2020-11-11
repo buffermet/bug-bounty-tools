@@ -5,6 +5,12 @@
 "use strict";
 
 globalThis.console ? globalThis.console.clear = () => {} : "";
+globalThis.alert = msg => {
+  chrome.runtime.sendMessage({
+    sessionID: "8230ufjio",
+    message: "TEST",
+  });
+};
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
@@ -13,19 +19,12 @@ let redirectURLs = [
   "https://runescape.com/",
   "https://runescape.com/splash",
   "https://runescape.com/splash?ing",
-  "data:text/html,<script>location = 'https://runescape.com/'</script>",
-  "javascript:location = 'https://runescape.com/'",
+  "data:text/html,<script>alert()</script>",
+  "javascript:alert()",
 ];
 let scanOutOfScopeOrigins = false;
 let scope = [
   "*://stackoverflow.com",
-  "*://stackexchange.com",
-  "*://stackapps.com",
-  "*://stackauth.com",
-  "*://superuser.com",
-  "*://serverfault.com",
-  "*://askubuntu.com",
-  "*://mathoverflow.net",
 ];
 let sessionID = "8230ufjio";
 let timeoutCloseTabs = 16000;
@@ -447,8 +446,8 @@ const scanForExploitableURIs = async () => {
 }
 
 /**
- * Scans this document's source and DOM tree for URIs that are in scope and returns them
- * in an array of URLs.
+ * Scans this document's source and DOM tree for URLs that are in scope and returns them
+ * in an array.
  */
 const scanForURIs = async () => {
   return new Promise(async res => {
@@ -458,7 +457,7 @@ const scanForURIs = async () => {
     let HTMLMatches = document.documentElement.outerHTML
       .match(regexpSelectorURIHTML) || [];
     HTMLMatches = HTMLMatches.map(match => {
-      return match.replace(/^ (?:src|href)=["']?(.*?)["']?[ />]$/g, "$1");
+      return match.replace(/^ =["']?(.*)["']?[ />]$/g, "$1");
     });
     URLs = URLs.concat(HTMLMatches);
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
@@ -473,6 +472,7 @@ const scanForURIs = async () => {
       URLs = URLs.map(url => {
         return toFullURL(unescapeHTML(url));
       })
+console.log(HTMLMatches)
       URLs = URLs.filter((url, index, arr) => {
         if (
              arr.indexOf(url) === index
@@ -582,20 +582,15 @@ const scanForURIs = async () => {
   }
   /* If successfully exploited, send a timestamped callback for open redirects. */
   for (let a = 0; a < redirectURLs.length; a++) {
-    const parsedURL = parseURL(redirectURLs[a]);
-    if (
-         !parsedURL[0].toLowerCase() === "data:"
-      && !parsedURL[0].toLowerCase() === "javascript:"
-    ) {
-      const redirectHost = parsedURL[1];
-      if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
-        const date = new Date();
-        const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-        chrome.runtime.sendMessage({
-          timestamp: timestamp,
-          sessionID: sessionID,
-        });
-      }
+    const redirectHost = parseURL(redirectURLs[a])[1];
+    if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
+      const date = new Date();
+      const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+      chrome.runtime.sendMessage({
+        exploitableURLs: exploitableURLs,
+        timestamp: timestamp,
+        sessionID: sessionID,
+      });
     }
   }
   /* Start scanning document for redirect URLs. */
@@ -623,17 +618,7 @@ const scanForURIs = async () => {
     globalThis.document.addEventListener(
       "DOMContentLoaded",
       scanForURIs);
-    globalThis.document.addEventListener("DOMContentLoaded", async () => {
-      chrome.runtime.sendMessage({
-        sessionID: sessionID,
-        message: "FRAME_READYSTATE_INTERACTIVE",
-      });
-    })
   } else {
-    chrome.runtime.sendMessage({
-      sessionID: sessionID,
-      message: "FRAME_READYSTATE_INTERACTIVE",
-    });
     if (globalThis.document.readyState !== "complete") {
       /* Document has not finished loading. */
       globalThis.addEventListener("load", async () => {
@@ -647,22 +632,6 @@ const scanForURIs = async () => {
           scannableURLs: scannableURLs,
           sessionID: sessionID,
         });
-        setTimeout(async () => {
-          await scanForExploitableURIs();
-          await scanForURIs();
-          while (scanCount !== 0) {
-            await sleep(1000);
-          }
-          chrome.runtime.sendMessage({
-            exploitableURLs: exploitableURLs,
-            scannableURLs: scannableURLs,
-            sessionID: sessionID,
-          });
-          chrome.runtime.sendMessage({
-            sessionID: sessionID,
-            message: "FRAME_READYSTATE_COMPLETE",
-          });
-        }, 2000);
       });
     } else {
       /* Document has finished loading. */
@@ -686,10 +655,6 @@ const scanForURIs = async () => {
           exploitableURLs: exploitableURLs,
           scannableURLs: scannableURLs,
           sessionID: sessionID,
-        });
-        chrome.runtime.sendMessage({
-          sessionID: sessionID,
-          message: "FRAME_READYSTATE_COMPLETE",
         });
       }, 2000);
     }
