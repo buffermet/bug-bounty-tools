@@ -550,7 +550,9 @@ const registerMessageListeners = () => {
         ) {
           fuzzerTabs = fuzzerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
-              chrome.tabs.remove(sender.tab.id)
+              try {
+                chrome.tabs.remove(sender.tab.id)
+              } catch(ignore) {}
               return false;
             } else {
               return true;
@@ -558,7 +560,9 @@ const registerMessageListeners = () => {
           });
           scannerTabs = scannerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
-              chrome.tabs.remove(sender.tab.id)
+              try {
+                chrome.tabs.remove(sender.tab.id)
+              } catch(ignore) {}
               return false;
             } else {
               return true;
@@ -671,17 +675,19 @@ const sleep = ms => {
  * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
  */
 const startFuzzerThread = async () => {
-  while (true) {
-    for (let a = 0; a < chunkedInjectedURLs.length; a++) {
-      const URL = chunkedInjectedURLs[a][0];
-      if (URL && URL !== "") {
-        chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
-        openURLInNewFuzzerTab(URL);
+  for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+    (async () => {
+      while (true) {
+        const URL = chunkedInjectedURLs[a][0];
+        if (URL && URL !== "") {
+          chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
+          openURLInNewFuzzerTab(URL);
+        }
+        await sleep(getIntFromRange(
+          delayRangeFuzzerThread[0],
+          delayRangeFuzzerThread[1]));
       }
-    }
-    await sleep(getIntFromRange(
-      delayRangeFuzzerThread[0],
-      delayRangeFuzzerThread[1]));
+    })();
   }
 }
 
@@ -726,17 +732,19 @@ const startPendingRetryURLsThread = async () => {
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
 const startScannerThread = async () => {
-  while (true) {
-    for (let a = 0; a < chunkedScannableURLs.length; a++) {
-      const URL = chunkedScannableURLs[a][0];
-      if (URL && URL !== "") {
-        chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
-        openURLInNewScannerTab(URL);
+  for (let a = 0; a < chunkedScannableURLs.length; a++) {
+    (async () => {
+      while (true) {
+        const URL = chunkedScannableURLs[a][0];
+        if (URL && URL !== "") {
+          chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
+          openURLInNewScannerTab(URL);
+        }
+        await sleep(getIntFromRange(
+          delayRangeScannerThread[0],
+          delayRangeScannerThread[1]));
       }
-    }
-    await sleep(getIntFromRange(
-      delayRangeScannerThread[0],
-      delayRangeScannerThread[1]));
+    })();
   }
 }
 
