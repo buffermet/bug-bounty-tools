@@ -5,11 +5,11 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [8000, 30000];
+let delayRangeFuzzerThread = [8000, 20000];
 let delayRangeScannerThread = [8000, 10000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayURLInjectionThread = 30000;
-let hexEncodingTypes = [
+let encodingTypes = [
   [0],
   [0,0],
   [0,4],
@@ -45,7 +45,7 @@ let hexEncodingTypes = [
   [18,4],
 ];
 let sessionID = "8230ufjio";
-let threadCountFuzzer = 4;
+let threadCountFuzzer = 3;
 let threadCountScanner = 1;
 let timeoutCallback = 16000;
 let timeoutCloseTabs = 16000;
@@ -61,8 +61,22 @@ const redirectURLs = [
   "https://runescape.com/",
   "https://runescape.com/splash",
   "https://runescape.com/splash?ing",
-  "data:text/html,<script>location = 'https://runescape.com/'</script>",
-  "javascript:location = 'https://runescape.com/'",
+  "http://runescape.com",
+  "http://runescape.com/",
+  "http://runescape.com/splash",
+  "http://runescape.com/splash?ing",
+  "//runescape.com",
+  "//runescape.com/",
+  "//runescape.com/splash",
+  "//runescape.com/splash?ing",
+  "runescape.com",
+  "runescape.com/",
+  "runescape.com/splash",
+  "runescape.com/splash?ing",
+  "data:text/html,<script>location='https://runescape.com/'</script>",
+  "data:text/html,<script>location='//runescape.com/'</script>",
+  "javascript:location='https://runescape.com/'",
+  "javascript:location='//runescape.com/'",
 ];
 const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 
@@ -414,36 +428,21 @@ const getIntFromRange = (min, max) => {
 };
 
 /**
- * Returns an array of URLs that could lead to the same address as a given URL based on
- * the specified hexEncodingTypes value.
+ * Returns an array of URLs that are encoded as per the specified encodingTypes value.
  */
 const getURLVariants = url => {
-  const parsedURL = parseURL(url);
-  let protocolVariants = [];
-  if (
-       parsedURL[0].toLowerCase() === "data:"
-    || parsedURL[0].toLowerCase() === "javascript:"
-  ) {
-    protocolVariants.push(parsedURL.join(""));
-  } else {
-    const slicedURL = parsedURL.slice(1).join("");
-    protocolVariants.push("https://" + slicedURL);
-    protocolVariants.push( "http://" + slicedURL);
-    protocolVariants.push(      "//" + slicedURL);
-    protocolVariants.push(             slicedURL);
+  if (url === "") {
+    console.error("Empty string parameter passed through getURLVariants().");
+    return [];
   }
-  let URLVariants = protocolVariants;
-  for (let a = 0; a < hexEncodingTypes.length; a++) {
-    const hexEncodingTypeSet = hexEncodingTypes[a];
-    let encodedURLs = [];
-    for (let b = 0; b < protocolVariants.length; b++) {
-      let URLVariant = protocolVariants[b];
-      for (let c = 0; c < hexEncodingTypeSet.length; c++) {
-        URLVariant = encodeMethods[hexEncodingTypeSet[c]](URLVariant);
-      }
-      encodedURLs.push(URLVariant);
+  let URLVariants = [];
+  for (let a = 0; a < encodingTypes.length; a++) {
+    let URLVariant = url;
+    const encodingTypeSet = encodingTypes[a];
+    for (let b = 0; b < encodingTypeSet.length; b++) {
+      URLVariant = encodeMethods[encodingTypeSet[b]](URLVariant);
     }
-    URLVariants = URLVariants.concat(encodedURLs);
+    URLVariants.push(URLVariant);
   }
   return URLVariants;
 };
