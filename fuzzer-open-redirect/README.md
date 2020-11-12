@@ -2,21 +2,13 @@ A recursive, multi-threaded open redirect URL scanner and fuzzer.
 
 ### Description
 
-This works as a single script injection, but will be ported to an interactive browser extension with a GUI soon.
+This is now an unpacked Chrome extension that you can install manually. GUI = WIP. Configure scope in the content and background scripts for now.
 
 Every time the scanner loads a potentially exploited URL, it sends a timestamped callback to your chosen URL for requests.
 
 Every time the scanner detects a successful exploitation, it sends a timestamped callback to your chosen URL for open redirects.
 
-CORS restrictions are evaded by making use of the `globalThis.open` method and `globalThis.location` setter rather than `XMLHttpRequest` or `fetch`.
-
-Tabs opened by the scanner will automatically close when they've fulfilled their purpose, or timed out.
-
-### How to use
-
-1. Configure your scope in the script.
-2. Make your browser inject the script in all pages.
-3. Visit a page that is in your scope to start the scanner.
+Tabs opened by the extension will automatically close when they've fulfilled their purpose, or timed out.
 
 ### Encoding methods
 
@@ -122,3 +114,37 @@ $ encodeMethods[13]("//mysite.com")
 "\x2F\x2F\x6D\x79\x73\x69\x74\x65\x2E\x63\x6F\x6D"
 ```
 
+### 14. (Fourteen)
+
+```console
+$ encodeMethods[14]("//mysite.com")
+"//mysite。com"
+```
+
+### 15. (Fifteen)
+
+```console
+$ encodeMethods[15]("//mysite.com")
+"/\x00/\x00m\x00y\x00s\x00i\x00t\x00e\x00.\x00c\x00o\x00m"
+```
+
+### 16. (Sixteen)
+
+```console
+$ encodeMethods[16]("//mysite.com")
+"/%00/%00m%00y%00s%00i%00t%00e%00.%00c%00o%00m"
+```
+
+### 17. (Seventeen)
+
+```console
+$ encodeMethods[14]("//mysite.com")
+"/\\u0000/\\u0000m\\u0000y\\u0000s\\u0000i\\u0000t\\u0000e\\u0000.\\u0000c\\u0000o\\u0000m"
+```
+
+### 18. (Eighteen)
+
+```console
+$ encodeMethods[14]("//mysite.com")
+"/\\x00/\\x00m\\x00y\\x00s\\x00i\\x00t\\x00e\\x00.\\x00c\\x00o\\x00m"
+```
