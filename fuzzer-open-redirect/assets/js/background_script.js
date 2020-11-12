@@ -36,7 +36,7 @@ let hexEncodingTypes = [
 ];
 let sessionID = "8230ufjio";
 let threadCountFuzzer = 2;
-let threadCountScanner = 2;
+let threadCountScanner = 1;
 let timeoutCallback = 16000;
 let timeoutCloseTabs = 16000;
 let timeoutRequests = 16000;
@@ -533,6 +533,7 @@ const parseURL = url => {
  */
 const registerMessageListeners = () => {
   chrome.runtime.onMessage.addListener(async (message, sender, callback) => {
+console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -575,12 +576,9 @@ const registerMessageListeners = () => {
         && message.exploitableURLs.length !== 0
       ) {
         (async () => {
-          const filteredURLs = message.exploitableURLs
-            .filter((url, index, arr) => {
-              return (
-                   arr.indexOf(url) === index
-                && exploitableURLs.indexOf(url) === -1);
-            });
+          const filteredURLs = message.exploitableURLs.filter(url => {
+            return exploitableURLs.indexOf(url) === -1;
+          });
           exploitableURLs = exploitableURLs.concat(filteredURLs);
           let _injectedURLs = [];
           for (let a = 0; a < redirectURLs.length; a++) {
@@ -613,12 +611,9 @@ const registerMessageListeners = () => {
         && message.scannableURLs.length !== 0
       ) {
         (async () => {
-          const filteredURLs = message.scannableURLs
-            .filter((url, index, arr) => {
-              return (
-                   arr.indexOf(url) === index
-                && scannableURLs.indexOf(url) === -1);
-            });
+          const filteredURLs = message.scannableURLs.filter(url => {
+            return scannableURLs.indexOf(url) === -1;
+          });
           scannableURLs = scannableURLs.concat(filteredURLs);
           const chunkedURLs = chunkArray(
             filteredURLs,
@@ -697,16 +692,23 @@ const startFuzzerThread = async () => {
  * Force-wakes all tabs indefinitely.
  */
 const startForceWakeTabsThread = async () => {
-  chrome.tabs.query({}, async tabs => {
-    for (let a = 0; a < tabs.length; a++) {
-      chrome.tabs.update(tabs[a].id, {
+  while (true) {
+    for (let a = 0; a < fuzzerTabs.length; a++) {
+      chrome.tabs.update(fuzzerTabs[a].id, {
         active: true,
         selected: true,
       });
       await sleep(delayForceWakeTabsThread);
     }
-    startForceWakeTabsThread();
-  });
+    for (let a = 0; a < scannerTabs.length; a++) {
+      chrome.tabs.update(scannerTabs[a].id, {
+        active: true,
+        selected: true,
+      });
+      await sleep(delayForceWakeTabsThread);
+    }
+    await sleep(delayForceWakeTabsThread);
+  }
 }
 
 /**
@@ -772,7 +774,7 @@ const trimWhitespaces = str => {
   await registerMessageListeners();
   await registerWebRequestListeners();
   await openFuzzerAndScannerWindows();
-//  startForceWakeTabsThread();
+  startForceWakeTabsThread();
   startPendingRetryURLsThread();
   startScannerThread();
   startFuzzerThread();
