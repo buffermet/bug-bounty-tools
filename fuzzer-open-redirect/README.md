@@ -10,11 +10,17 @@ Every time the scanner detects a successful exploitation, it sends a timestamped
 
 Tabs opened by the extension will automatically close when they've fulfilled their purpose, or timed out.
 
+<p align=center>
+  <img width="100%" src="https://user-images.githubusercontent.com/29265684/98942116-45d6ca00-2539-11eb-9e8b-72b81b388f6b.png" />
+  <br>
+  <span>You will have 4 queues with all the injected permutations of<br>redirect URLs when fuzzing on 4 threads.</span>
+</p>
+
 ### Encoding methods
 
 ### 0. (Zero)
 
-This is a commonly used method to hex encode a URI parameter in modern browsers.
+This is the same as `globalThis.encodeURIComponent` which is a commonly used method to hex encode a URI parameter value in modern browsers.
 
 ```console
 $ encodeMethods[0]("//mysite.com")
@@ -125,7 +131,7 @@ $ encodeMethods[14]("//mysite.com")
 
 ```console
 $ encodeMethods[15]("//mysite.com")
-"/\\x00/\\x00m\\x00y\\x00s\\x00i\\x00t\\x00e\\x00.\\x00c\\x00o\\x00m"
+"/\x00/\x00m\x00y\x00s\x00i\x00t\x00e\x00.\x00c\x00o\x00m"
 ```
 
 ### 16. (Sixteen)
@@ -148,4 +154,3 @@ $ encodeMethods[14]("//mysite.com")
 $ encodeMethods[14]("//mysite.com")
 "/\\x00/\\x00m\\x00y\\x00s\\x00i\\x00t\\x00e\\x00.\\x00c\\x00o\\x00m"
 ```
-
