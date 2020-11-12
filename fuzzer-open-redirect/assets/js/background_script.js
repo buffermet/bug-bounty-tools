@@ -8,6 +8,7 @@ let delayForceWakeTabsThread = 1000;
 let delayRangeFuzzerThread = [8000, 30000];
 let delayRangeScannerThread = [8000, 30000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
+let delayURLInjectionThread = 20000;
 let hexEncodingTypes = [
   [0],
   [0,0],
@@ -62,6 +63,7 @@ let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let chunkedInjectedURLs = [];
 let chunkedScannableURLs = [];
 let exploitableURLs = [];
+let exploitableURLsBuffer = [];
 let fuzzerTabs = [];
 let fuzzerWindow;
 let injectedURLs = [];
@@ -82,7 +84,7 @@ const chunkArray = (urls, amountOfChunks) => {
     chunks[a] = urls.slice(chunkSize * a, (chunkSize * a) + chunkSize);
   }
   return chunks;
-}
+};
 
 /**
  * An integer mapped collection of methods to encode a given URI parameter string.
@@ -296,7 +298,7 @@ const encodeMethods = {
     }
     return encodedBuffer.join("\x00");
   },
-}
+};
 
 /**
  * Returns an array of all string values that were found in a given object.
@@ -311,7 +313,7 @@ const getAllStringValues = obj => {
     }
   });
   return strings;
-}
+};
 
 /**
  * Appends all possible permutations of a given array to arrayPermutations.
@@ -321,7 +323,7 @@ const getArrayPermutations = (prefix, arr) => {
     arrayPermutations.push(prefix.concat(arr[a]));
     getArrayPermutations(prefix.concat(arr[a]), arr.slice(a + 1));
   }
-}
+};
 
 /**
  * Returns an array of all injected permutations of a given URL.
@@ -361,14 +363,14 @@ const getInjectedURLPermutations = (targetURL, redirectURL) => {
   }
   arrayPermutations = [];
   return _injectedURLs;
-}
+};
 
 /**
  * Returns an integer value between a minimum and maximum range of milliseconds.
  */
 const getIntFromRange = (min, max) => {
   return parseInt(min + (Math.random() * (max - min)));
-}
+};
 
 /**
  * Returns an array of URLs that could lead to the same address as a given URL based on
@@ -403,7 +405,7 @@ const getURLVariants = url => {
     URLVariants = URLVariants.concat(encodedURLs);
   }
   return URLVariants;
-}
+};
 
 /**
  * Opens a given URL in a new fuzzer tab.
@@ -431,7 +433,7 @@ const openURLInNewFuzzerTab = async url => {
       res(tab);
     });
   });
-}
+};
 
 /**
  * Opens a given URL in a new scanner tab.
@@ -459,8 +461,11 @@ const openURLInNewScannerTab = async url => {
       res(tab);
     });
   });
-}
+};
 
+/**
+ * Opens new windows for fuzzing and scanning.
+ */
 const openFuzzerAndScannerWindows = async () => {
   return new Promise((res, err) => {
     setTimeout(() => {
@@ -476,7 +481,7 @@ const openFuzzerAndScannerWindows = async () => {
     });
     res();
   });
-}
+};
 
 /**
  * Returns an array containing the protocol, host, port, path, search and anchor of a
@@ -526,7 +531,7 @@ const parseURL = url => {
     retval[5] = strippedURL.replace(/^[^#]*?([#].*)/i, "$1");
   }
   return retval;
-}
+};
 
 /**
  * Register message listeners.
@@ -577,33 +582,9 @@ console.log(message)
       ) {
         (async () => {
           const filteredURLs = message.exploitableURLs.filter(url => {
-            return exploitableURLs.indexOf(url) === -1;
+            return exploitableURLsBuffer.indexOf(url) === -1;
           });
-          exploitableURLs = exploitableURLs.concat(filteredURLs);
-          let _injectedURLs = [];
-          for (let a = 0; a < redirectURLs.length; a++) {
-            const redirectURLVariants = getURLVariants(redirectURLs[a]);
-            for (let b = 0; b < redirectURLVariants.length; b++) {
-              for (let c = 0; c < exploitableURLs.length; c++) {
-                _injectedURLs = _injectedURLs.concat(
-                  getInjectedURLPermutations(
-                    exploitableURLs[c],
-                    redirectURLVariants[b]));
-              }
-            }
-          }
-          _injectedURLs = _injectedURLs.filter((url, index, arr) => {
-            return (
-                 arr.indexOf(url) === index
-              && injectedURLs.indexOf(url) === -1);
-          });
-          injectedURLs = injectedURLs.concat(_injectedURLs);
-          const chunkedURLs = chunkArray(
-            _injectedURLs,
-            threadCountFuzzer);
-          for (let a = 0; a < chunkedInjectedURLs.length; a++) {
-            chunkedInjectedURLs[a] = chunkedInjectedURLs[a].concat(chunkedURLs[a]);
-          }
+          exploitableURLsBuffer = exploitableURLsBuffer.concat(filteredURLs);
         })();
       }
       if (
@@ -625,7 +606,7 @@ console.log(message)
       }
     }
   });
-}
+};
 
 /**
  * Registers webRequest listeners.
@@ -657,7 +638,7 @@ const registerWebRequestListeners = () => {
     {"urls": ["<all_urls>"]},
     ["blocking", "extraHeaders", "responseHeaders"]
   )
-}
+};
 
 /**
  * Sleeps an awaited promise value for the given amount of milliseconds.
@@ -666,7 +647,7 @@ const sleep = ms => {
   return new Promise(res=>{
     setTimeout(res, ms);
   });
-}
+};
 
 /**
  * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
@@ -686,7 +667,7 @@ const startFuzzerThread = async () => {
       }
     })();
   }
-}
+};
 
 /**
  * Force-wakes all tabs indefinitely.
@@ -709,7 +690,7 @@ const startForceWakeTabsThread = async () => {
     }
     await sleep(delayForceWakeTabsThread);
   }
-}
+};
 
 /**
  * Tries to request pending URLs that timed out (for ??????????).
@@ -730,7 +711,7 @@ const startPendingRetryURLsThread = async () => {
 //    });
 //    await sleep(delayPendingRetryURLsThread);
 //  }
-}
+};
 
 /**
  * Starts scanning an indefinite amount of URLs that are in scope.
@@ -750,7 +731,46 @@ const startScannerThread = async () => {
       }
     })();
   }
-}
+};
+
+/**
+ * Starts creating injected permutations of an indefinite amount of exploitable URLs.
+ */
+const startURLInjectionThread = async () => {
+  while (true) {
+    if (exploitableURLsBuffer.length !== 0) {
+      let _injectedURLs = [];
+      if (exploitableURLs.indexOf(exploitableURLsBuffer[0]) === -1) {
+        for (let a = 0; a < redirectURLs.length; a++) {
+          const redirectURLVariants = getURLVariants(redirectURLs[a]);
+          for (let b = 0; b < redirectURLVariants.length; b++) {
+            _injectedURLs = _injectedURLs.concat(
+              getInjectedURLPermutations(
+                exploitableURLsBuffer[0],
+                redirectURLVariants[b]));
+          }
+        }
+        exploitableURLs.push(exploitableURLsBuffer[0]);
+      }
+      exploitableURLsBuffer = exploitableURLsBuffer.slice(1);
+      if (_injectedURLs.length !== 0) {
+        _injectedURLs = _injectedURLs.filter((url, index, arr) => {
+          return (
+               arr.indexOf(url) === index
+            && injectedURLs.indexOf(url) === -1);
+        });
+        injectedURLs = injectedURLs.concat(_injectedURLs);
+        const chunkedURLs = chunkArray(
+          _injectedURLs,
+          threadCountFuzzer);
+        for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+          chunkedInjectedURLs[a] = chunkedInjectedURLs[a].concat(chunkedURLs[a]);
+        }
+      }
+    }
+    await sleep(delayURLInjectionThread);
+  }
+};
 
 /**
  * Trims all leading and trailing whitespaces off a given string.
@@ -759,7 +779,7 @@ const startScannerThread = async () => {
  */
 const trimWhitespaces = str => {
   return str.replace(/^\s*(.*)\s*$/g, "$1");
-}
+};
 
 /**
  * Init background script.
@@ -778,6 +798,7 @@ const trimWhitespaces = str => {
   startPendingRetryURLsThread();
   startScannerThread();
   startFuzzerThread();
+  startURLInjectionThread();
 
   openURLInNewScannerTab("https://stackoverflow.com/");
 })();
