@@ -59,7 +59,7 @@ let scanCount = 0;
     for (var k in obj) callback(k);
   };
   var forEachProperty = function(obj, callback, excluded) {
-    if (obj==null) return;
+    if (obj == null) return;
     excluded = excluded || {};
     Object.getOwnPropertyNames(obj).forEach(function(k){
       if (!excluded[k]) {
@@ -109,7 +109,7 @@ let scanCount = 0;
         if (!value) {
           return 'null';
         }
-        if (depthDecr<=0 || seen.indexOf(value)!==-1) {
+        if (depthDecr <= 0 || seen.indexOf(value) !== -1) {
           return '"-pruned-"';
         }
         seen.push(value);

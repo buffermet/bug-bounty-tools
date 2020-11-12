@@ -6,7 +6,7 @@
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
 let delayRangeFuzzerThread = [8000, 30000];
-let delayRangeScannerThread = [8000, 30000];
+let delayRangeScannerThread = [8000, 10000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayURLInjectionThread = 30000;
 let hexEncodingTypes = [
@@ -76,6 +76,8 @@ let exploitableURLsBuffer = [];
 let fuzzerTabs = [];
 let fuzzerWindow;
 let injectedURLs = [];
+let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
+let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let pendingRetryURLs = {};
 let programs = [];
 let scannerTabs = [];
@@ -451,23 +453,49 @@ const getURLVariants = url => {
  */
 const openURLInNewFuzzerTab = async url => {
   return new Promise((res, err) => {
-    setTimeout(() => {
-      if (!pendingRetryURLs[url]) {
-        pendingRetryURLs[url] = {attempts: 0};
-      }
-      err("Opening tab timed out.");
-    }, timeoutRequests);
-    chrome.tabs.create({url: url}, async tab => {
+    let callbackURL;
+    const date = new Date();
+    const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+    if (parsedCallbackURLRequestTimestamps[4] !== "") {
+      callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 5).join("") +
+        "&timestamp=" + encodeURIComponent(timestamp) +
+        "&url=" + encodeURIComponent(url) +
+        parsedCallbackURLRequestTimestamps[5];
+    } else {
+      callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 4).join("") +
+        "?timestamp=" + encodeURIComponent(timestamp) +
+        "&url=" + encodeURIComponent(url) +
+        parsedCallbackURLOpenRedirectTimestamps[5];
+    }
+    chrome.tabs.create({url: callbackURL}, async tab => {
+      setTimeout(() => {
+        removeTab(tab.id);
+        // add to callback retry URLs
+      }, timeoutCallback);
       fuzzerTabs.push({
         state: "loading",
         id: tab.id,
       });
-      chrome.tabs.move(
-        [tab.id],
-        {
-          index: 0,
-          windowId: fuzzerWindow.id,
-        });
+      chrome.tabs.move([tab.id], {
+        index: 0,
+        windowId: fuzzerWindow.id,
+      });
+    });
+    chrome.tabs.create({url: url}, async tab => {
+      setTimeout(() => {
+        if (!pendingRetryURLs[url]) {
+          pendingRetryURLs[url] = {attempts: 0};
+        }
+        err("Opening tab timed out.");
+      }, timeoutRequests);
+      fuzzerTabs.push({
+        state: "loading",
+        id: tab.id,
+      });
+      chrome.tabs.move([tab.id], {
+        index: 0,
+        windowId: fuzzerWindow.id,
+      });
       // execute crawlerScripts
       res(tab);
     });
@@ -490,12 +518,10 @@ const openURLInNewScannerTab = async url => {
         state: "loading",
         id: tab.id,
       });
-      chrome.tabs.move(
-        [tab.id],
-        {
-          index: 0,
-          windowId: scannerWindow.id,
-        });
+      chrome.tabs.move([tab.id], {
+        index: 0,
+        windowId: scannerWindow.id,
+      });
       // execute crawlerScripts
       res(tab);
     });
@@ -521,6 +547,43 @@ const openFuzzerAndScannerWindows = async () => {
     res();
   });
 };
+
+const parseCallbackURLs = async () => {
+  return new Promise((res, err) => {
+    /* Parse specified callback URLs for open redirects and requests. */
+    parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
+    if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
+      console.error("%cfuzzer-open-redirect", consoleCSS,
+        "No valid origin was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").");
+      err();
+    }
+    if (parsedCallbackURLOpenRedirectTimestamps[0] === "") {
+      console.warn("%cfuzzer-open-redirect", consoleCSS,
+        "No protocol was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").",
+        "Defaulting to \"http://\".");
+      parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
+    }
+    console.log("%cfuzzer-open-redirect", consoleCSS,
+      "Callback URL for open redirect timestamps is parsed: " +
+      parsedCallbackURLOpenRedirectTimestamps.join(""));
+    parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
+    if (parsedCallbackURLRequestTimestamps[1] === "") {
+      console.error("%cfuzzer-open-redirect", consoleCSS,
+        "No valid origin was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").");
+      err();
+    }
+    if (parsedCallbackURLRequestTimestamps[0] === "") {
+      console.warn("%cfuzzer-open-redirect", consoleCSS,
+        "No protocol was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").",
+        "Defaulting to \"http://\".");
+      parsedCallbackURLRequestTimestamps[0] = "http://";
+    }
+    console.log("%cfuzzer-open-redirect", consoleCSS,
+      "Callback URL for request timestamps is parsed: " +
+      parsedCallbackURLRequestTimestamps.join(""));
+    res();
+  });
+}
 
 /**
  * Returns an array containing the protocol, host, port, path, search and anchor of a
@@ -577,16 +640,40 @@ const parseURL = url => {
  */
 const registerMessageListeners = () => {
   chrome.runtime.onMessage.addListener(async (message, sender, callback) => {
-console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
     ) {
       if (message.timestamp) {
-        console.log("---------------------------", timestamp);
-        console.log("---------------------------", timestamp);
-        console.log("---------------------------", timestamp);
-        console.log("---------------------------", timestamp);
+        let callbackURL;
+        const date = new Date();
+        const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+        if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
+          callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
+            "&timestamp=" + encodeURIComponent(timestamp) +
+            "&url=" + encodeURIComponent(url) +
+            parsedCallbackURLOpenRedirectTimestamps[5];
+        } else {
+          callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
+            "?timestamp=" + encodeURIComponent(timestamp) +
+            "&url=" + encodeURIComponent(url) +
+            parsedCallbackURLOpenRedirectTimestamps[5];
+        }
+        chrome.tabs.create({url: callbackURL}, async tab => {
+          setTimeout(() => {
+            removeTab(tab.id);
+            // add to callback retry URLs
+          }, timeoutCallback);
+          fuzzerTabs.push({
+            state: "loading",
+            id: tab.id,
+          });
+          chrome.tabs.move([tab.id], {
+            index: 0,
+            windowId: fuzzerWindow.id,
+          });
+        });
+        console.log("Open redirect found at ", timestamp);
       }
       if (message.message) {
         if (
@@ -595,9 +682,7 @@ console.log(message)
         ) {
           fuzzerTabs = fuzzerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
-              chrome.tabs.get(sender.tab.id, _tab => {
-                chrome.tabs.remove(_tab.id);
-              });
+              removeTab(tab.id);
               return false;
             } else {
               return true;
@@ -605,9 +690,7 @@ console.log(message)
           });
           scannerTabs = scannerTabs.filter((tab, index, arr) => {
             if (tab.id === sender.tab.id) {
-              chrome.tabs.get(sender.tab.id, _tab => {
-                chrome.tabs.remove(_tab.id);
-              });
+              removeTab(tab.id);
               return false;
             } else {
               return true;
@@ -659,7 +742,7 @@ const registerWebRequestListeners = () => {
 //          pendingRetryURLs[details.url] = {
             
 //          };
-//          chrome.tabs.remove(details.tabId);
+//          removeTab(details.tabId);
         } else {
 
         }
@@ -677,6 +760,21 @@ const registerWebRequestListeners = () => {
     {"urls": ["<all_urls>"]},
     ["blocking", "extraHeaders", "responseHeaders"]
   )
+};
+
+/**
+ * Returns a promise to remove a tab
+ */
+const removeTab = async id => {
+  return new Promise((res, err) => {
+    chrome.tabs.get(id, async () => {
+      if (!chrome.runtime.lastError) {
+        chrome.tabs.remove(id);
+      } else {
+        err("Tab with ID " + id + " does not exist.");
+      }
+    });
+  });
 };
 
 /**
@@ -823,7 +921,7 @@ const trimWhitespaces = str => {
 /**
  * Init background script.
  */
-(async () => {
+parseCallbackURLs().then(async () => {
   for (let a = 0; a < threadCountFuzzer; a++) {
     chunkedInjectedURLs[a] = [];
   }
@@ -840,5 +938,5 @@ const trimWhitespaces = str => {
   startURLInjectionThread();
 
   openURLInNewScannerTab("https://stackoverflow.com/");
-})();
+});
 
