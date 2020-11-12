@@ -62,56 +62,56 @@ $ encodeMethods[5]("//mysite.com")
 
 ```console
 $ encodeMethods[6]("//mysite.com")
-"\u002f\u002fmysite\u002ecom"
+"\\u002f\\u002fmysite\\u002ecom"
 ```
 
 ### 7. (Seven)
 
 ```console
 $ encodeMethods[7]("//mysite.com")
-"\u002F\u002Fmysite\u002Ecom"
+"\\u002F\\u002Fmysite\\u002Ecom"
 ```
 
 ### 8. (Eight)
 
 ```console
 $ encodeMethods[8]("//mysite.com")
-"\u002f\u002f\u006d\u0079\u0073\u0069\u0074\u0065\u002e\u0063\u006f\u006d"
+"\\u002f\\u002f\\u006d\\u0079\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d"
 ```
 
 ### 9. (Nine)
 
 ```console
 $ encodeMethods[9]("//mysite.com")
-"\u002F\u002F\u006D\u0079\u0073\u0069\u0074\u0065\u002E\u0063\u006F\u006D"
+"\\u002F\\u002F\\u006D\\u0079\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D"
 ```
 
 ### 10. (Ten)
 
 ```console
 $ encodeMethods[10]("//mysite.com")
-"\x2f\x2fmysite\x2ecom"
+"\\x2f\\x2fmysite\\x2ecom"
 ```
 
 ### 11. (Eleven)
 
 ```console
 $ encodeMethods[11]("//mysite.com")
-"\x2F\x2Fmysite\x2Ecom"
+"\\x2F\\x2Fmysite\\x2Ecom"
 ```
 
 ### 12. (Twelve)
 
 ```console
 $ encodeMethods[12]("//mysite.com")
-"\x2f\x2f\x6d\x79\x73\x69\x74\x65\x2e\x63\x6f\x6d"
+"\\x2f\\x2f\\x6d\\x79\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d"
 ```
 
 ### 13. (Thirteen)
 
 ```console
 $ encodeMethods[13]("//mysite.com")
-"\x2F\x2F\x6D\x79\x73\x69\x74\x65\x2E\x63\x6F\x6D"
+"\\x2F\\x2F\\x6D\\x79\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D"
 ```
 
 ### 14. (Fourteen)
@@ -125,7 +125,7 @@ $ encodeMethods[14]("//mysite.com")
 
 ```console
 $ encodeMethods[15]("//mysite.com")
-"/\x00/\x00m\x00y\x00s\x00i\x00t\x00e\x00.\x00c\x00o\x00m"
+"/\\x00/\\x00m\\x00y\\x00s\\x00i\\x00t\\x00e\\x00.\\x00c\\x00o\\x00m"
 ```
 
 ### 16. (Sixteen)
@@ -148,3 +148,4 @@ $ encodeMethods[14]("//mysite.com")
 $ encodeMethods[14]("//mysite.com")
 "/\\x00/\\x00m\\x00y\\x00s\\x00i\\x00t\\x00e\\x00.\\x00c\\x00o\\x00m"
 ```
+
