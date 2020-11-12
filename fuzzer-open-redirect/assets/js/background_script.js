@@ -8,7 +8,7 @@ let delayForceWakeTabsThread = 1000;
 let delayRangeFuzzerThread = [8000, 30000];
 let delayRangeScannerThread = [8000, 30000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
-let delayURLInjectionThread = 25000;
+let delayURLInjectionThread = 30000;
 let hexEncodingTypes = [
   [0],
   [0,0],
@@ -34,6 +34,15 @@ let hexEncodingTypes = [
   [15],
   [15,0],
   [15,4],
+  [16],
+  [16,0],
+  [16,4],
+  [17],
+  [17,0],
+  [17,4],
+  [18],
+  [18,0],
+  [18,4],
 ];
 let sessionID = "8230ufjio";
 let threadCountFuzzer = 4;
