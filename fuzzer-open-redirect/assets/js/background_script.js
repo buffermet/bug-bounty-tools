@@ -8,7 +8,7 @@ let delayForceWakeTabsThread = 1000;
 let delayRangeFuzzerThread = [8000, 30000];
 let delayRangeScannerThread = [8000, 30000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
-let delayURLInjectionThread = 20000;
+let delayURLInjectionThread = 25000;
 let hexEncodingTypes = [
   [0],
   [0,0],
@@ -36,7 +36,7 @@ let hexEncodingTypes = [
   [15,4],
 ];
 let sessionID = "8230ufjio";
-let threadCountFuzzer = 2;
+let threadCountFuzzer = 4;
 let threadCountScanner = 1;
 let timeoutCallback = 16000;
 let timeoutCloseTabs = 16000;
@@ -290,13 +290,43 @@ const encodeMethods = {
   },
   15: str => {
     /**
-     *  Returns a given string with null bytes between each character.
+     *  Returns a given string with a null byte between each character.
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
       encodedBuffer[a] = str.charAt(a);
     }
     return encodedBuffer.join("\x00");
+  },
+  16: str => {
+    /**
+     *  Returns a given string with a hex encoded null byte (type 16) between each character.
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = str.charAt(a);
+    }
+    return encodedBuffer.join("%00");
+  },
+  17: str => {
+    /**
+     *  Returns a given string with a hex encoded null byte (type 17) between each character.
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = str.charAt(a);
+    }
+    return encodedBuffer.join("\\u0000");
+  },
+  18: str => {
+    /**
+     *  Returns a given string with a hex encoded null byte (type 18) between each character.
+     */
+    let encodedBuffer = new Array(str.length);
+    for (let a = 0; a < str.length; a++) {
+      encodedBuffer[a] = str.charAt(a);
+    }
+    return encodedBuffer.join("\\x00");
   },
 };
 
