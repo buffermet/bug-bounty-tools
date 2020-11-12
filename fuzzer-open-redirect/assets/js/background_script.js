@@ -639,7 +639,7 @@ const parseURL = url => {
  * Register message listeners.
  */
 const registerMessageListeners = () => {
-  chrome.runtime.onMessage.addListener(async (message, sender, callback) => {
+  chrome.runtime.onMessage.addListener(async (message, sender) => {
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -651,15 +651,13 @@ const registerMessageListeners = () => {
         if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
           callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
             "&timestamp=" + encodeURIComponent(timestamp) +
-            "&url=" + encodeURIComponent(url) +
             parsedCallbackURLOpenRedirectTimestamps[5];
         } else {
           callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
             "?timestamp=" + encodeURIComponent(timestamp) +
-            "&url=" + encodeURIComponent(url) +
             parsedCallbackURLOpenRedirectTimestamps[5];
         }
-        chrome.tabs.create({url: callbackURL}, async tab => {
+        chrome.tabs.create({url: callbackURL}, tab => {
           setTimeout(() => {
             removeTab(tab.id);
             // add to callback retry URLs
@@ -677,24 +675,15 @@ const registerMessageListeners = () => {
       }
       if (message.message) {
         if (
-            message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
+             message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
           || message.message === "FRAME_READYSTATE_COMPLETE"
         ) {
-          fuzzerTabs = fuzzerTabs.filter((tab, index, arr) => {
-            if (tab.id === sender.tab.id) {
-              removeTab(tab.id);
-              return false;
-            } else {
-              return true;
-            }
+          removeTab(sender.tab.id);
+          fuzzerTabs = fuzzerTabs.filter(tab => {
+            return tab.id !== sender.tab.id;
           });
-          scannerTabs = scannerTabs.filter((tab, index, arr) => {
-            if (tab.id === sender.tab.id) {
-              removeTab(tab.id);
-              return false;
-            } else {
-              return true;
-            }
+          scannerTabs = scannerTabs.filter(tab => {
+            return tab.id !== sender.tab.id;
           });
         }
       }

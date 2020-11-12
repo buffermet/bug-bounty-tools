@@ -289,34 +289,41 @@ const unescapeHTML = str => {
  * ])
  */
 const parseURL = url => {
-  const strippedURL = stripAllTrailingWhitespaces(url);
+  const strippedURL = trimWhitespaces(url);
   const retval = ["","","","","",""];
-  // protocol
-  if (strippedURL.match(/^((?:[a-z0-9.+-]+:)?\/\/).*$/i)) {
-    retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?\/\/).*$/i, "$1");
+  /* protocol */
+  if (strippedURL.match(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i)) {
+    retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i, "$1");
   }
-  // host
-  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
-    retval[1] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i, "$1");
+  if (retval[0].toLowerCase() === "javascript:" || retval[0].toLowerCase() === "data:") {
+
+    /* ALSO PARSE DATA URLS */
+
+    retval[3] = url.slice(retval[0].length);
+    return retval;
   }
-  // port
-  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])))([:][1-9][0-9]{0,4}).*/i)) {
-    retval[2] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])))([:][1-9][0-9]{0,4}).*$/i, "$1");
+  /* host */
+  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
+    retval[1] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i, "$1");
   }
-  // path
-  if (strippedURL.match(/^(?:(?:[a-z0-9.+-]+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[:][1-9][0-9]{0,4})?)?([/][^?#]*).*$/i)) {
+  /* port */
+  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))([:][1-9][0-9]{0,4}).*/i)) {
+    retval[2] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))([:][1-9][0-9]{0,4}).*$/i, "$1");
+  }
+  /* path */
+  if (strippedURL.match(/^(?:(?:[a-z0-9.+-]+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)?([/][^?#]*).*/i)) {
     retval[3] = strippedURL.replace(/^(?:(?:[a-z0-9.+-]+:)?\/\/)?[^/?#]*([/][^?#]*).*$/i, "$1");
   }
-  // search
+  /* search */
   if (strippedURL.match(/^.*?([?][^#]*).*$/i)) {
     retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
   }
-  // anchor
-  if (strippedURL.match(/^[^#]*([#].*)$/i)) {
-    retval[5] = strippedURL.replace(/^[^#]*([#].*)$/i, "$1");
+  /* anchor */
+  if (strippedURL.match(/^[^#]*?([#].*)/i)) {
+    retval[5] = strippedURL.replace(/^[^#]*?([#].*)/i, "$1");
   }
   return retval;
-}
+};
 
 /**
  * Returns true if a given origin matches an origin specifier that's in our scope.
@@ -373,6 +380,15 @@ const toFullURL = uri => {
   }
   return uri;
 }
+
+/**
+ * Trims all leading and trailing whitespaces off a given string.
+ * (example input: " https://example.com/  \n")
+ * (example output: "https://example.com/")
+ */
+const trimWhitespaces = str => {
+  return str.replace(/^\s*(.*)\s*$/g, "$1");
+};
 
 /**
  * Sleeps an awaited promise value for the given amount of milliseconds.
@@ -584,8 +600,8 @@ const scanForURIs = async () => {
   for (let a = 0; a < redirectURLs.length; a++) {
     const parsedURL = parseURL(redirectURLs[a]);
     if (
-         !parsedURL[0].toLowerCase() === "data:"
-      && !parsedURL[0].toLowerCase() === "javascript:"
+         parsedURL[0].toLowerCase() !== "data:"
+      && parsedURL[0].toLowerCase() !== "javascript:"
     ) {
       const redirectHost = parsedURL[1];
       if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
