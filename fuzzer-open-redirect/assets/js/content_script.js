@@ -47,7 +47,7 @@ let timeoutCloseTabs = 16000;
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"' ]+)?/ig;
 const regexpSelectorURIHTML = / (?:src|href)=["']?(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))?(?:(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?::[0-9]{1,5})?)?(?:[^"'?#]*)?(?:[?][^#"']*)?(?:[#][^"']*)?["']?[ />]/ig;
-const regexpSelectorURIWithURIParameter = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"' ]+)?[?][^"' ]+[=](?:http|[/]|%2f)[^"' ]*/ig;
+const regexpSelectorURIWithURIParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"' ]+)?[?][^"' ]+[=](?:http|[/]|%2f)[^"' ]*/ig;
 
 let exploitableURLs = [];
 let scannableURLs = [];
@@ -316,7 +316,7 @@ const parseURL = url => {
     return retval;
   }
   /* host */
-  if (protocol !== "") {
+  if (protocol.length !== 0) {
     retval[1] = strippedURL.slice(retval[0].length).replace(/^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i, "$1");
   }
   /* port */
@@ -357,29 +357,26 @@ const isInScopeOrigin = origin => {
 const toFullURL = uri => {
   const parsedURL = parseURL(uri);
   if (
-       parsedURL[0] === "" /* protocol */
-    && parsedURL[1] === "" /* host */
-    && parsedURL[3] === "" /* path */
-    && parsedURL[4] === "" /* search */
-    && parsedURL[5] !== "" /* anchor */
+       parsedURL[0].length === 0 /* protocol */
+    && parsedURL[1].length === 0 /* host */
+    && parsedURL[3].length === 0 /* path */
+    && parsedURL[4].length === 0 /* search */
+    && parsedURL[5].length !== 0 /* anchor */
   ) {
-    return location.origin +
-      location.pathname +
-      (location.search ? location.search : "") +
-      uri;
+    return location.origin + location.pathname + location.search + uri;
   }
   if (
-       parsedURL[0] === "" /* protocol */
-    && parsedURL[1] === "" /* host */
-    && parsedURL[3] === "" /* path */
-    && parsedURL[4] !== "" /* search */
+       parsedURL[0].length === 0 /* protocol */
+    && parsedURL[1].length === 0 /* host */
+    && parsedURL[3].length === 0 /* path */
+    && parsedURL[4].length !== 0 /* search */
   ) {
     return location.origin + location.pathname + uri;
   }
   if (
-       parsedURL[0] === "" /* protocol */
-    && parsedURL[1] === "" /* host */
-    && parsedURL[3] !== "" /* path */
+       parsedURL[0].length === 0 /* protocol */
+    && parsedURL[1].length === 0 /* host */
+    && parsedURL[3].length !== 0 /* path */
   ) {
     return location.origin + uri;
   }
@@ -399,7 +396,7 @@ const trimWhitespaces = str => {
  * Sleeps an awaited promise value for the given amount of milliseconds.
  */
 const sleep = ms => {
-  return new Promise(res=>{
+  return new Promise(res => {
     setTimeout(res, ms);
   });
 }
@@ -426,13 +423,13 @@ const scanForExploitableURIs = async () => {
   return new Promise(async res => {
     scanCount++;
     let URLs = document.documentElement.outerHTML
-      .match(regexpSelectorURIWithURIParameter) || [];
+      .match(regexpSelectorURIWithURIParameterPlain) || [];
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
     nonRecursiveGlobalThis.location = null;
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
-      if (globalThisStringValues[a].match(regexpSelectorURIWithURIParameter)) {
-        URLs.push(toFullURL(globalThisStringValues[a]));
+      if (globalThisStringValues[a].match(regexpSelectorURIWithURIParameterPlain)) {
+        URLs.push(globalThisStringValues[a]);
       }
     }
     if (URLs.length > 0) {
@@ -443,6 +440,7 @@ const scanForExploitableURIs = async () => {
         .filter((url, index, arr) => {
           if (
                arr.indexOf(url) === index
+            && url !== location.href
             && exploitableURLs.indexOf(url) === -1
           ) {
             if (scanOutOfScopeOrigins) {
@@ -497,6 +495,7 @@ const scanForURIs = async () => {
       URLs = URLs.filter((url, index, arr) => {
         if (
              arr.indexOf(url) === index
+          && url !== location.href
           && scannableURLs.indexOf(url) === -1
         ) {
           if (scanOutOfScopeOrigins) {
@@ -527,12 +526,12 @@ const scanForURIs = async () => {
 (async () => {
   /* Parse specified callback URLs for open redirects and requests. */
   parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
-  if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
+  if (parsedCallbackURLOpenRedirectTimestamps[1].length === 0) {
     console.error("%cfuzzer-open-redirect", consoleCSS,
       "No valid origin was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
-  if (parsedCallbackURLOpenRedirectTimestamps[0] === "") {
+  if (parsedCallbackURLOpenRedirectTimestamps[0].length === 0) {
     console.warn("%cfuzzer-open-redirect", consoleCSS,
       "No protocol was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
@@ -542,12 +541,12 @@ const scanForURIs = async () => {
     "Callback URL for open redirect timestamps is parsed: " +
     parsedCallbackURLOpenRedirectTimestamps.join(""));
   parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
-  if (parsedCallbackURLRequestTimestamps[1] === "") {
+  if (parsedCallbackURLRequestTimestamps[1].length === 0) {
     console.error("%cfuzzer-open-redirect", consoleCSS,
       "No valid origin was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").");
     return;
   }
-  if (parsedCallbackURLRequestTimestamps[0] === "") {
+  if (parsedCallbackURLRequestTimestamps[0].length === 0) {
     console.warn("%cfuzzer-open-redirect", consoleCSS,
       "No protocol was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").",
       "Defaulting to \"http://\".");
@@ -558,11 +557,11 @@ const scanForURIs = async () => {
     parsedCallbackURLRequestTimestamps.join(""));
   /* Automatically close tab if this origin belongs to a specified callback URL. */
   if (
-       globalThis.location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
+       location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
          .slice(0,2)
          .join("")
          .toLowerCase()
-    || globalThis.location.origin.toLowerCase() === parsedCallbackURLRequestTimestamps
+    || location.origin.toLowerCase() === parsedCallbackURLRequestTimestamps
          .slice(0,2)
          .join("")
          .toLowerCase()

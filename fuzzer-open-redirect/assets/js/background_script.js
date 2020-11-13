@@ -5,7 +5,7 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [8000, 3000000];
+let delayRangeFuzzerThread = [8000, 30000];
 let delayRangeScannerThread = [8000, 20000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayTabWatcherThread = 30000;
@@ -949,6 +949,7 @@ parseCallbackURLs().then(async () => {
   startScannerThread();
   startFuzzerThread();
   startURLInjectionThread();
+  startTabWatcherThread();
 
   openURLInNewScannerTab("https://stackoverflow.com/");
 });
