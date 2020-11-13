@@ -53,7 +53,7 @@ let timeoutCloseTabs = 16000;
 let timeoutRequests = 16000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
-let pendingRetryURLAttempts = 6;
+let retryAttempts = 6;
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
@@ -487,9 +487,6 @@ const openURLInNewFuzzerTab = async url => {
     }, tab => {
       tabWatcherBufferNew.push(tab.id);
       setTimeout(() => {
-        if (!pendingRetryURLs[url]) {
-          pendingRetryURLs[url] = {attempts: 0};
-        }
         err("Opening tab timed out.");
       }, timeoutRequests);
       fuzzerTabs.push({
@@ -508,9 +505,6 @@ const openURLInNewFuzzerTab = async url => {
 const openURLInNewScannerTab = async url => {
   return new Promise((res, err) => {
     setTimeout(() => {
-      if (!pendingRetryURLs[url]) {
-        pendingRetryURLs[url] = {attempts: 0};
-      }
       err("Opening tab timed out.");
     }, timeoutRequests);
     chrome.tabs.create({
@@ -718,15 +712,19 @@ const registerWebRequestListeners = () => {
   chrome.webRequest.onErrorOccurred.addListener(
     details => {
       if (details.type === "main_frame") {
-        /* we may need to check scope except where cross origin redirection occurs. */
-        if (!pendingRetryURLs[details.url]) {
-//          pendingRetryURLs[details.url] = {
-//            
-//          };
-//          removeTab(details.tabId);
-        } else {
-
-        }
+        chrome.tabs.get(details.tabId, tab => {
+          if (!chrome.runtime.lastError && tab) {
+            if (
+                 tab.windowId === fuzzerWindow.id
+              || tab.windowId === scannerWindow.id
+            ) {
+              if (!pendingRetryURLs[details.url]) {
+                pendingRetryURLs[details.url] = {attempts: 0};
+              }
+              removeTab(details.tabId);
+            }
+          }
+        });
       }
     },
     {"urls": ["<all_urls>"]},
@@ -887,6 +885,9 @@ const startTabWatcherThread = async () => {
  * Starts creating injected permutations of an indefinite amount of exploitable URLs.
  */
 const startURLInjectionThread = async () => {
+  while (exploitableURLsBuffer.length === 0) {
+    await sleep(1000);
+  }
   while (true) {
     if (exploitableURLsBuffer.length !== 0) {
       let _injectedURLs = [];
