@@ -429,7 +429,9 @@ const scanForExploitableURIs = async () => {
     let URLs = document.documentElement.outerHTML
       .match(regexpSelectorURIWithURIParameterPlain) || [];
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
-    nonRecursiveGlobalThis.document.location = null;
+    if (nonRecursiveGlobalThis.document) {
+      nonRecursiveGlobalThis.document.location = null;
+    }
     nonRecursiveGlobalThis.location = null;
     nonRecursiveGlobalThis.origin = null;
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
@@ -487,7 +489,9 @@ const scanForURIs = async () => {
     });
     URLs = URLs.concat(HTMLMatches);
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
-    nonRecursiveGlobalThis.document.location = null;
+    if (nonRecursiveGlobalThis.document) {
+      nonRecursiveGlobalThis.document.location = null;
+    }
     nonRecursiveGlobalThis.location = null;
     nonRecursiveGlobalThis.origin = null;
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
