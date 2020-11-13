@@ -740,7 +740,7 @@ const registerWebRequestListeners = () => {
  * Returns a promise to remove a tab from fuzzer/scanner window.
  */
 const removeTab = async id => {
-  return new Promise((res, err) => {
+  return new Promise(async res => {
     chrome.tabs.get(id, async () => {
       if (!chrome.runtime.lastError) {
         chrome.tabs.get(id, async tab => {
@@ -752,8 +752,6 @@ const removeTab = async id => {
             res();
           }
         });
-      } else {
-        err("--- Tab with ID " + id + " does not exist.");
       }
     });
   });
