@@ -596,15 +596,19 @@ const parseURL = url => {
   const strippedURL = trimWhitespaces(url);
   const retval = ["","","","","",""];
   /* protocol */
-  if (strippedURL.match(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i)) {
-    retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i, "$1");
-  }
-  if (retval[0].toLowerCase() === "javascript:" || retval[0].toLowerCase() === "data:") {
+  retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+[:])(?:[/][/])?|(?:[a-z0-9.+-]+[:])?[/][/])?.*/i, "$1");
+  const protocol = retval[0].toLowerCase();
+  if (
+       protocol === "data:"
+    || protocol === "javascript:"
+  ) {
     retval[3] = url.slice(retval[0].length);
     return retval;
   }
   /* host */
-  retval[1] = strippedURL.slice(retval[0].length).replace(/^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i, "$1");
+  if (protocol !== "") {
+    retval[1] = strippedURL.slice(retval[0].length).replace(/^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i, "$1");
+  }
   /* port */
   retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(/^([:][1-9][0-9]{0,4})?.*/i, "$1");
   /* path */
@@ -621,6 +625,7 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
+console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -911,13 +916,13 @@ parseCallbackURLs().then(async () => {
   }
   await registerMessageListener();
   await registerWebRequestListeners();
-  await openFuzzerAndScannerWindows();
-  startForceWakeTabsThread();
+//  await openFuzzerAndScannerWindows();
+//  startForceWakeTabsThread();
   startPendingRetryURLsThread();
   startScannerThread();
   startFuzzerThread();
   startURLInjectionThread();
 
-  openURLInNewScannerTab("https://stackoverflow.com/");
+//  openURLInNewScannerTab("https://stackoverflow.com/");
 });
 
