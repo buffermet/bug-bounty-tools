@@ -378,7 +378,11 @@ const toFullURL = uri => {
     && parsedURL[1].length === 0 /* host */
     && parsedURL[3].length !== 0 /* path */
   ) {
-    return location.origin + uri;
+    if (uri.startsWith("/")) {
+      return location.origin + uri;
+    } else {
+      return location.origin + "/" + uri;
+    }
   }
   return uri;
 }
