@@ -13,7 +13,7 @@ Tabs opened by the extension will automatically close when they've fulfilled the
 <p align=center>
   <img width=87% src="https://user-images.githubusercontent.com/29265684/98942116-45d6ca00-2539-11eb-9e8b-72b81b388f6b.png" />
   <br>
-  <span width=50%>You will have 4 queues with all the injected permutations of redirect URLs when fuzzing on 4 threads.</span>
+  <sub width=50%>You will have 4 queues with all the injected permutations of redirect URLs when fuzzing on 4 threads.</sub>
 </p>
 
 ### Encoding methods
