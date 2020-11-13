@@ -5,9 +5,10 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [8000, 30000];
+let delayRangeFuzzerThread = [8000, 3000000];
 let delayRangeScannerThread = [8000, 20000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
+let delayTabWatcherThread = 30000;
 let delayURLInjectionThread = 30000;
 let encodingTypes = [
   [0],
@@ -96,6 +97,8 @@ let programs = [];
 let scannerTabs = [];
 let scannerWindow;
 let scannableURLs = [];
+let tabWatcherBufferNew = [];
+let tabWatcherBufferOld = [];
 
 /**
  * Chunks a given array to a length of a given amount.
@@ -468,6 +471,7 @@ const openURLInNewFuzzerTab = async url => {
       url: callbackURL,
       windowId: fuzzerWindow.id,
     }, tab => {
+      tabWatcherBufferNew.push(tab.id);
       setTimeout(() => {
         removeTab(tab.id);
         // add to callback retry URLs
@@ -481,6 +485,7 @@ const openURLInNewFuzzerTab = async url => {
       url: url,
       windowId: fuzzerWindow.id,
     }, tab => {
+      tabWatcherBufferNew.push(tab.id);
       setTimeout(() => {
         if (!pendingRetryURLs[url]) {
           pendingRetryURLs[url] = {attempts: 0};
@@ -512,6 +517,7 @@ const openURLInNewScannerTab = async url => {
       url: url,
       windowId: scannerWindow.id,
     }, tab => {
+      tabWatcherBufferNew.push(tab.id);
       scannerTabs.push({
         state: "loading",
         id: tab.id,
@@ -625,7 +631,6 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
-console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -648,6 +653,7 @@ console.log(message)
           url: callbackURL,
           windowId: fuzzerWindow.id,
         }, tab => {
+          tabWatcherBufferNew.push(tab.id);
           setTimeout(() => {
             removeTab(tab.id);
             // add to callback retry URLs
@@ -857,6 +863,27 @@ const startScannerThread = async () => {
 };
 
 /**
+ * Starts looking for idle tabs in fuzzer/scanner window and removes them.
+ */
+const startTabWatcherThread = async () => {
+  while (true) {
+    for (let a = 0; a < tabWatcherBufferOld.length; a++) {
+      chrome.tabs.get(tabWatcherBufferOld[a], () => {
+        if (!chrome.runtime.lastError) {
+          chrome.tabs.remove(tabWatcherBufferOld[a]);
+        }
+      });
+    }
+    tabWatcherBufferOld = [];
+    for (let a = 0; a < tabWatcherBufferNew.length; a++) {
+      tabWatcherBufferOld.push(tabWatcherBufferNew[a]);
+    }
+    tabWatcherBufferNew = [];
+    await sleep(delayTabWatcherThread);
+  }
+};
+
+/**
  * Starts creating injected permutations of an indefinite amount of exploitable URLs.
  */
 const startURLInjectionThread = async () => {
@@ -916,13 +943,13 @@ parseCallbackURLs().then(async () => {
   }
   await registerMessageListener();
   await registerWebRequestListeners();
-//  await openFuzzerAndScannerWindows();
-//  startForceWakeTabsThread();
+  await openFuzzerAndScannerWindows();
+  startForceWakeTabsThread();
   startPendingRetryURLsThread();
   startScannerThread();
   startFuzzerThread();
   startURLInjectionThread();
 
-//  openURLInNewScannerTab("https://stackoverflow.com/");
+  openURLInNewScannerTab("https://stackoverflow.com/");
 });
 

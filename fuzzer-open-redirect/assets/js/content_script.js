@@ -605,9 +605,11 @@ const scanForURIs = async () => {
   let redirectHosts = [];
   for (let a = 0; a < redirectURLs.length; a++) {
     const parsedURL = parseURL(redirectURLs[a]);
+    const protocol = parsedURL[0].toLowerCase();
     if (
-         parsedURL[0].toLowerCase() !== "data:"
-      && parsedURL[0].toLowerCase() !== "javascript:"
+         parsedURL[1].length !== 0
+      && protocol !== "data:"
+      && protocol !== "javascript:"
     ) {
       const redirectHost = parsedURL[1].toLowerCase();
       if (redirectHosts.indexOf(redirectHost) === -1) {
