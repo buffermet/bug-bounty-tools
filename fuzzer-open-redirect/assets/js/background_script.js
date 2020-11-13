@@ -73,10 +73,10 @@ const redirectURLs = [
   "runescape.com/",
   "runescape.com/splash",
   "runescape.com/splash?ing",
-  "data:text/html,<script>location='https://runescape.com/'</script>",
-  "data:text/html,<script>location='//runescape.com/'</script>",
-  "javascript:location='https://runescape.com/'",
-  "javascript:location='//runescape.com/'",
+  "data:text/html,<script>location='https://runescape.com'</script>",
+  "data:text/html,<script>location='//runescape.com'</script>",
+  "javascript:location='https://runescape.com'",
+  "javascript:location='//runescape.com'",
 ];
 const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 
@@ -97,7 +97,6 @@ let programs = [];
 let scannerTabs = [];
 let scannerWindow;
 let scannableURLs = [];
-let visitedURLs = [];
 
 /**
  * Chunks a given array to a length of a given amount.
@@ -325,7 +324,7 @@ const encodeMethods = {
   },
   16: str => {
     /**
-     *  Returns a given string with a hex encoded null byte (type 16) between each character.
+     *  Returns a given string with a URL encoded null byte between each character.
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
@@ -395,7 +394,7 @@ const getInjectedURLPermutations = (targetURL, redirectURL) => {
     regexpMatches.push({match: match[0], index: match.index});
   }
   getArrayPermutations([], regexpMatches);
-  _injectedURLs = [];
+  let _injectedURLs = [];
   for (let a = 0; a < arrayPermutations.length; a++) {
     let matchSets = arrayPermutations[a];
     let injectedURL = targetURL;
@@ -582,7 +581,7 @@ const parseCallbackURLs = async () => {
       parsedCallbackURLRequestTimestamps.join(""));
     res();
   });
-}
+};
 
 /**
  * Returns an array containing the protocol, host, port, path, search and anchor of a
@@ -605,39 +604,26 @@ const parseURL = url => {
     retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i, "$1");
   }
   if (retval[0].toLowerCase() === "javascript:" || retval[0].toLowerCase() === "data:") {
-
-    /* ALSO PARSE DATA URLS */
-
     retval[3] = url.slice(retval[0].length);
     return retval;
   }
   /* host */
-  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
-    retval[1] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i, "$1");
-  }
+  retval[1] = strippedURL.slice(retval[0].length).replace(/^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i, "$1");
   /* port */
-  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))([:][1-9][0-9]{0,4}).*/i)) {
-    retval[2] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))([:][1-9][0-9]{0,4}).*$/i, "$1");
-  }
+  retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(/^([:][1-9][0-9]{0,4})?.*/i, "$1");
   /* path */
-  if (strippedURL.match(/^(?:(?:[a-z0-9.+-]+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)?([/][^?#]*).*/i)) {
-    retval[3] = strippedURL.replace(/^(?:(?:[a-z0-9.+-]+:)?\/\/)?[^/?#]*([/][^?#]*).*$/i, "$1");
-  }
+  retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(/^([^?#]+)?.*/i, "$1");
   /* search */
-  if (strippedURL.match(/^.*?([?][^#]*).*$/i)) {
-    retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
-  }
+  retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(/^([?][^#]*)?.*/i, "$1");
   /* anchor */
-  if (strippedURL.match(/^[^#]*?([#].*)/i)) {
-    retval[5] = strippedURL.replace(/^[^#]*?([#].*)/i, "$1");
-  }
+  retval[5] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length + retval[4].length);
   return retval;
 };
 
 /**
- * Register message listeners.
+ * Register message listener.
  */
-const registerMessageListeners = () => {
+const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
     if (
          message.sessionID
@@ -728,7 +714,7 @@ const registerWebRequestListeners = () => {
         /* we may need to check scope except where cross origin redirection occurs. */
         if (!pendingRetryURLs[details.url]) {
 //          pendingRetryURLs[details.url] = {
-            
+//            
 //          };
 //          removeTab(details.tabId);
         } else {
@@ -739,27 +725,35 @@ const registerWebRequestListeners = () => {
     {"urls": ["<all_urls>"]},
     [],
   );
-  chrome.webRequest.onHeadersReceived.addListener(
-    details => {
-      if (visitedURLs.indexOf(details.url) === -1) {
-        visitedURLs.push(details.url);
-      }
-    },
-    {"urls": ["<all_urls>"]},
-    ["blocking", "extraHeaders", "responseHeaders"]
-  )
+//  chrome.webRequest.onHeadersReceived.addListener(
+//    details => {
+//      if (visitedURLs.indexOf(details.url) === -1) {
+//        visitedURLs.push(details.url);
+//      }
+//    },
+//    {"urls": ["<all_urls>"]},
+//    ["blocking", "extraHeaders", "responseHeaders"]
+//  );
 };
 
 /**
- * Returns a promise to remove a tab
+ * Returns a promise to remove a tab from fuzzer/scanner window.
  */
 const removeTab = async id => {
   return new Promise((res, err) => {
     chrome.tabs.get(id, async () => {
       if (!chrome.runtime.lastError) {
-        chrome.tabs.remove(id);
+        chrome.tabs.get(id, async tab => {
+          if (
+               tab.windowId === fuzzerWindow.id
+            || tab.windowId === scannerWindow.id
+          ) {
+            chrome.tabs.remove(id);
+            res();
+          }
+        });
       } else {
-        err("Tab with ID " + id + " does not exist.");
+        err("--- Tab with ID " + id + " does not exist.");
       }
     });
   });
@@ -778,6 +772,9 @@ const sleep = ms => {
  * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
  */
 const startFuzzerThread = async () => {
+  while (injectedURLs.length === 0) {
+    await sleep(1000);
+  }
   for (let a = 0; a < chunkedInjectedURLs.length; a++) {
     (async () => {
       while (true) {
@@ -799,6 +796,9 @@ const startFuzzerThread = async () => {
  */
 const startForceWakeTabsThread = async () => {
   while (true) {
+    if (fuzzerTabs.length === 0 && scannerTabs.length === 0) {
+      await sleep(delayForceWakeTabsThread);
+    }
     for (let a = 0; a < fuzzerTabs.length; a++) {
       chrome.tabs.update(fuzzerTabs[a].id, {
         active: true,
@@ -813,7 +813,6 @@ const startForceWakeTabsThread = async () => {
       });
       await sleep(delayForceWakeTabsThread);
     }
-    await sleep(delayForceWakeTabsThread);
   }
 };
 
@@ -916,7 +915,7 @@ parseCallbackURLs().then(async () => {
   for (let a = 0; a < threadCountScanner; a++) {
     chunkedScannableURLs[a] = [];
   }
-  await registerMessageListeners();
+  await registerMessageListener();
   await registerWebRequestListeners();
   await openFuzzerAndScannerWindows();
   startForceWakeTabsThread();

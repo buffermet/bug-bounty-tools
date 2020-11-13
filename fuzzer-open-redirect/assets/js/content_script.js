@@ -13,8 +13,22 @@ let redirectURLs = [
   "https://runescape.com/",
   "https://runescape.com/splash",
   "https://runescape.com/splash?ing",
-  "data:text/html,<script>location = 'https://runescape.com/'</script>",
-  "javascript:location = 'https://runescape.com/'",
+  "http://runescape.com",
+  "http://runescape.com/",
+  "http://runescape.com/splash",
+  "http://runescape.com/splash?ing",
+  "//runescape.com",
+  "//runescape.com/",
+  "//runescape.com/splash",
+  "//runescape.com/splash?ing",
+  "runescape.com",
+  "runescape.com/",
+  "runescape.com/splash",
+  "runescape.com/splash?ing",
+  "data:text/html,<script>location='https://runescape.com'</script>",
+  "data:text/html,<script>location='//runescape.com'</script>",
+  "javascript:location='https://runescape.com'",
+  "javascript:location='//runescape.com'",
 ];
 let scanOutOfScopeOrigins = false;
 let scope = [
@@ -296,32 +310,19 @@ const parseURL = url => {
     retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+:)?(?:\/\/)?).*$/i, "$1");
   }
   if (retval[0].toLowerCase() === "javascript:" || retval[0].toLowerCase() === "data:") {
-
-    /* ALSO PARSE DATA URLS */
-
     retval[3] = url.slice(retval[0].length);
     return retval;
   }
   /* host */
-  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i)) {
-    retval[1] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)(?:[/][^/].*$|[/]$|[?#].*$|$)/i, "$1");
-  }
+  retval[1] = strippedURL.slice(retval[0].length).replace(/^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i, "$1");
   /* port */
-  if (strippedURL.match(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))([:][1-9][0-9]{0,4}).*/i)) {
-    retval[2] = strippedURL.replace(/^(?:(?:(?:[a-z0-9.+-]+:)?\/\/)?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))([:][1-9][0-9]{0,4}).*$/i, "$1");
-  }
+  retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(/^([:][1-9][0-9]{0,4})?.*/i, "$1");
   /* path */
-  if (strippedURL.match(/^(?:(?:[a-z0-9.+-]+:)?\/\/(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:[:][1-9][0-9]{0,4})?)?([/][^?#]*).*/i)) {
-    retval[3] = strippedURL.replace(/^(?:(?:[a-z0-9.+-]+:)?\/\/)?[^/?#]*([/][^?#]*).*$/i, "$1");
-  }
+  retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(/^([^?#]+)?.*/i, "$1");
   /* search */
-  if (strippedURL.match(/^.*?([?][^#]*).*$/i)) {
-    retval[4] = strippedURL.replace(/^.*?([?][^#]*).*$/i, "$1");
-  }
+  retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(/^([?][^#]*)?.*/i, "$1");
   /* anchor */
-  if (strippedURL.match(/^[^#]*?([#].*)/i)) {
-    retval[5] = strippedURL.replace(/^[^#]*?([#].*)/i, "$1");
-  }
+  retval[5] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length + retval[4].length);
   return retval;
 };
 
@@ -597,21 +598,27 @@ const scanForURIs = async () => {
     }
   }
   /* If successfully exploited, send a timestamped callback for open redirects. */
+  let redirectHosts = [];
   for (let a = 0; a < redirectURLs.length; a++) {
     const parsedURL = parseURL(redirectURLs[a]);
     if (
          parsedURL[0].toLowerCase() !== "data:"
       && parsedURL[0].toLowerCase() !== "javascript:"
     ) {
-      const redirectHost = parsedURL[1];
-      if (location.host.toLowerCase().endsWith(redirectHost.toLowerCase())) {
-        const date = new Date();
-        const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-        chrome.runtime.sendMessage({
-          timestamp: timestamp,
-          sessionID: sessionID,
-        });
+      const redirectHost = parsedURL[1].toLowerCase();
+      if (redirectHosts.indexOf(redirectHost) === -1) {
+        redirectHosts.push(redirectHost);
       }
+    }
+  }
+  for (let a = 0; a < redirectHosts.length; a++) {
+    if (location.hostname.endsWith(redirectHosts[a])) {
+      const date = new Date();
+      const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+      chrome.runtime.sendMessage({
+        timestamp: timestamp,
+        sessionID: sessionID,
+      });
     }
   }
   /* Start scanning document for redirect URLs. */
