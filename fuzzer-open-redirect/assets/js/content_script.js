@@ -425,7 +425,9 @@ const scanForExploitableURIs = async () => {
     let URLs = document.documentElement.outerHTML
       .match(regexpSelectorURIWithURIParameterPlain) || [];
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
+    nonRecursiveGlobalThis.document.location = null;
     nonRecursiveGlobalThis.location = null;
+    nonRecursiveGlobalThis.origin = null;
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
       if (globalThisStringValues[a].match(regexpSelectorURIWithURIParameterPlain)) {
@@ -481,7 +483,9 @@ const scanForURIs = async () => {
     });
     URLs = URLs.concat(HTMLMatches);
     const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
+    nonRecursiveGlobalThis.document.location = null;
     nonRecursiveGlobalThis.location = null;
+    nonRecursiveGlobalThis.origin = null;
     const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
       if (globalThisStringValues[a].match(regexpSelectorURLPlain)) {

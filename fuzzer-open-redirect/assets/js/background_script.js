@@ -531,10 +531,14 @@ const openFuzzerAndScannerWindows = async () => {
       err("openFuzzerAndScannerWindows() timed out.")
     }, timeoutRequests);
     /* Open fuzzer window. */
-    chrome.windows.create({}, frame => {
+    chrome.windows.create({
+      url: "data:text/html,<title>about:black</title><body bgcolor=black>",
+    }, frame => {
       fuzzerWindow = frame;
       /* Open scanner window. */
-      chrome.windows.create({}, frame => {
+      chrome.windows.create({
+        url: "data:text/html,<title>about:black</title><body bgcolor=black>",
+      }, frame => {
         scannerWindow = frame;
         res();
       });
@@ -625,6 +629,7 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
+console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
@@ -745,18 +750,16 @@ const registerWebRequestListeners = () => {
  * Returns a promise to remove a tab from fuzzer/scanner window.
  */
 const removeTab = async id => {
-  return new Promise(async res => {
-    chrome.tabs.get(id, async () => {
-      if (!chrome.runtime.lastError) {
-        chrome.tabs.get(id, async tab => {
-          if (
-               tab.windowId === fuzzerWindow.id
-            || tab.windowId === scannerWindow.id
-          ) {
-            chrome.tabs.remove(id);
-            res();
-          }
-        });
+  return new Promise(res => {
+    chrome.tabs.get(id, tab => {
+      if (!chrome.runtime.lastError && tab) {
+        if (
+             tab.windowId === fuzzerWindow.id
+          || tab.windowId === scannerWindow.id
+        ) {
+          chrome.tabs.remove(id);
+          res();
+        }
       }
     });
   });
@@ -803,16 +806,24 @@ const startForceWakeTabsThread = async () => {
       await sleep(delayForceWakeTabsThread);
     }
     for (let a = 0; a < fuzzerTabs.length; a++) {
-      chrome.tabs.update(fuzzerTabs[a].id, {
-        active: true,
-        selected: true,
+      chrome.tabs.get(fuzzerTabs[a].id, tab => {
+        if (!chrome.runtime.lastError && tab) {
+          chrome.tabs.update(tab.id, {
+            active: true,
+            selected: true,
+          });
+        }
       });
       await sleep(delayForceWakeTabsThread);
     }
     for (let a = 0; a < scannerTabs.length; a++) {
-      chrome.tabs.update(scannerTabs[a].id, {
-        active: true,
-        selected: true,
+      chrome.tabs.get(scannerTabs[a].id, tab => {
+        if (!chrome.runtime.lastError && tab) {
+          chrome.tabs.update(tab.id, {
+            active: true,
+            selected: true,
+          });
+        }
       });
       await sleep(delayForceWakeTabsThread);
     }
@@ -866,8 +877,8 @@ const startScannerThread = async () => {
 const startTabWatcherThread = async () => {
   while (true) {
     for (let a = 0; a < tabWatcherBufferOld.length; a++) {
-      chrome.tabs.get(tabWatcherBufferOld[a], () => {
-        if (!chrome.runtime.lastError) {
+      chrome.tabs.get(tabWatcherBufferOld[a], tab => {
+        if (!chrome.runtime.lastError && tab) {
           chrome.tabs.remove(tabWatcherBufferOld[a]);
         }
       });
