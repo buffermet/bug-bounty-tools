@@ -5,8 +5,8 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [8000, 20000];
-let delayRangeScannerThread = [8000, 10000];
+let delayRangeFuzzerThread = [8000, 30000];
+let delayRangeScannerThread = [8000, 20000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayURLInjectionThread = 30000;
 let encodingTypes = [
@@ -45,7 +45,7 @@ let encodingTypes = [
   [18,4],
 ];
 let sessionID = "8230ufjio";
-let threadCountFuzzer = 3;
+let threadCountFuzzer = 4;
 let threadCountScanner = 1;
 let timeoutCallback = 16000;
 let timeoutCloseTabs = 16000;
@@ -464,7 +464,10 @@ const openURLInNewFuzzerTab = async url => {
         "&url=" + encodeURIComponent(url) +
         parsedCallbackURLOpenRedirectTimestamps[5];
     }
-    chrome.tabs.create({url: callbackURL}, async tab => {
+    chrome.tabs.create({
+      url: callbackURL,
+      windowId: fuzzerWindow.id,
+    }, tab => {
       setTimeout(() => {
         removeTab(tab.id);
         // add to callback retry URLs
@@ -473,12 +476,11 @@ const openURLInNewFuzzerTab = async url => {
         state: "loading",
         id: tab.id,
       });
-      chrome.tabs.move([tab.id], {
-        index: 0,
-        windowId: fuzzerWindow.id,
-      });
     });
-    chrome.tabs.create({url: url}, async tab => {
+    chrome.tabs.create({
+      url: url,
+      windowId: fuzzerWindow.id,
+    }, tab => {
       setTimeout(() => {
         if (!pendingRetryURLs[url]) {
           pendingRetryURLs[url] = {attempts: 0};
@@ -488,10 +490,6 @@ const openURLInNewFuzzerTab = async url => {
       fuzzerTabs.push({
         state: "loading",
         id: tab.id,
-      });
-      chrome.tabs.move([tab.id], {
-        index: 0,
-        windowId: fuzzerWindow.id,
       });
       // execute crawlerScripts
       res(tab);
@@ -510,14 +508,13 @@ const openURLInNewScannerTab = async url => {
       }
       err("Opening tab timed out.");
     }, timeoutRequests);
-    chrome.tabs.create({url: url}, async tab => {
+    chrome.tabs.create({
+      url: url,
+      windowId: scannerWindow.id,
+    }, tab => {
       scannerTabs.push({
         state: "loading",
         id: tab.id,
-      });
-      chrome.tabs.move([tab.id], {
-        index: 0,
-        windowId: scannerWindow.id,
       });
       // execute crawlerScripts
       res(tab);
@@ -536,12 +533,12 @@ const openFuzzerAndScannerWindows = async () => {
     /* Open fuzzer window. */
     chrome.windows.create({}, frame => {
       fuzzerWindow = frame;
+      /* Open scanner window. */
+      chrome.windows.create({}, frame => {
+        scannerWindow = frame;
+        res();
+      });
     });
-    /* Open scanner window. */
-    chrome.windows.create({}, frame => {
-      scannerWindow = frame;
-    });
-    res();
   });
 };
 
@@ -632,6 +629,7 @@ const registerMessageListener = () => {
         let callbackURL;
         const date = new Date();
         const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+        console.log("Open redirect found at ", timestamp);
         if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
           callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
             "&timestamp=" + encodeURIComponent(timestamp) +
@@ -641,7 +639,10 @@ const registerMessageListener = () => {
             "?timestamp=" + encodeURIComponent(timestamp) +
             parsedCallbackURLOpenRedirectTimestamps[5];
         }
-        chrome.tabs.create({url: callbackURL}, tab => {
+        chrome.tabs.create({
+          url: callbackURL,
+          windowId: fuzzerWindow.id,
+        }, tab => {
           setTimeout(() => {
             removeTab(tab.id);
             // add to callback retry URLs
@@ -649,10 +650,6 @@ const registerMessageListener = () => {
           fuzzerTabs.push({
             state: "loading",
             id: tab.id,
-          });
-          chrome.tabs.move([tab.id], {
-            index: 0,
-            windowId: fuzzerWindow.id,
           });
         });
         console.log("Open redirect found at ", timestamp);
