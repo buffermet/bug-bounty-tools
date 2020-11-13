@@ -74,7 +74,6 @@ const redirectURLs = [
   "runescape.com/splash",
   "runescape.com/splash?ing",
   "data:text/html,<script>location='https://runescape.com'</script>",
-  "data:text/html,<script>location='//runescape.com'</script>",
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
