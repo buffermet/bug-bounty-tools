@@ -10,7 +10,7 @@ let delayRangeScannerThread = [10000, 40000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayTabWatcherThread = 30000;
 let delayURLInjectionThread = 60000;
-let delayInjectionPermutations = 1000;
+let delayInjectionPermutations = 2000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -47,8 +47,8 @@ let encodingTypes = [
   [18,4],
 ];
 let sessionID = "8230ufjio";
-let threadCountFuzzer = 2;
-let threadCountScanner = 2;
+let threadCountFuzzer = 1;
+let threadCountScanner = 1;
 let timeoutCallback = 20000;
 let timeoutCloseTabs = 20000;
 let timeoutRequests = 20000;
