@@ -5,11 +5,11 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [10000, 40000];
-let delayRangeScannerThread = [10000, 40000];
+let delayRangeFuzzerThread = [15000, 60000];
+let delayRangeScannerThread = [15000, 60000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayTabWatcherThread = 30000;
-let delayURLInjectionThread = 40000;
+let delayURLInjectionThread = 60000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -46,8 +46,8 @@ let encodingTypes = [
   [18,4],
 ];
 let sessionID = "8230ufjio";
-let threadCountFuzzer = 3;
-let threadCountScanner = 3;
+let threadCountFuzzer = 2;
+let threadCountScanner = 2;
 let timeoutCallback = 16000;
 let timeoutCloseTabs = 16000;
 let timeoutRequests = 16000;
