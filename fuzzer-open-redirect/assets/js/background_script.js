@@ -933,6 +933,7 @@ const startURLInjectionThread = async () => {
               getInjectedURLPermutations(
                 exploitableURLsBuffer[0],
                 redirectURLVariants[b]));
+            await sleep(delayURLPermutation / 10);
           }
           await sleep(delayURLPermutation);
         }
