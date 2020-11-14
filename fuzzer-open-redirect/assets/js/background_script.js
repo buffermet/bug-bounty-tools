@@ -9,8 +9,7 @@ let delayRangeFuzzerThread = [10000, 40000];
 let delayRangeScannerThread = [10000, 40000];
 let delayRangePendingRetryURLsThread = [10000, 40000];
 let delayTabWatcherThread = 30000;
-let delayURLInjectionThread = 60000;
-let delayURLPermutation = 1000;
+let delayURLInjectionThread = 30000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -103,13 +102,25 @@ let tabAnchorFuzzer;
 let tabWatcherBuffer = [];
 
 /**
- * Chunks a given array to a length of a given amount.
+ * Chunks a given array to a given length.
  */
-const chunkArray = (urls, amountOfChunks) => {
-  const chunkSize = Math.ceil(urls.length / amountOfChunks);
-  const chunks = [];
+const chunkArrayToAmountOfChunks = (array, amountOfChunks) => {
+  const chunkSize = Math.ceil(array.length / amountOfChunks);
+  const chunks = new Array(amountOfChunks);
   for (let a = 0; a < amountOfChunks; a++) {
-    chunks[a] = urls.slice(chunkSize * a, (chunkSize * a) + chunkSize);
+    chunks[a] = array.slice(chunkSize * a, (chunkSize * a) + chunkSize);
+  }
+  return chunks;
+};
+
+/**
+ * Chunks a given array based on a given length of each chunk.
+ */
+const chunkArrayWithChunkSize = (array, chunkSize) => {
+  const amountOfChunks = Math.ceil(array.length / chunkSize);
+  const chunks = new Array(amountOfChunks);
+  for (let a = 0; a < amountOfChunks; a++) {
+    chunks[a] = array.slice(chunkSize * a, (chunkSize * a) + chunkSize);
   }
   return chunks;
 };
@@ -713,7 +724,7 @@ const registerMessageListener = () => {
             return scannableURLs.indexOf(url) === -1;
           });
           scannableURLs = scannableURLs.concat(filteredURLs);
-          const chunkedURLs = chunkArray(
+          const chunkedURLs = chunkArrayToAmountOfChunks(
             filteredURLs,
             threadCountScanner);
           for (let a = 0; a < chunkedURLs.length; a++) {
@@ -928,14 +939,17 @@ const startURLInjectionThread = async () => {
       if (exploitableURLs.indexOf(exploitableURLsBuffer[0]) === -1) {
         for (let a = 0; a < redirectURLs.length; a++) {
           const redirectURLVariants = getURLVariants(redirectURLs[a]);
-          for (let b = 0; b < redirectURLVariants.length; b++) {
-            newInjectedURLs = newInjectedURLs.concat(
-              getInjectedURLPermutations(
-                exploitableURLsBuffer[0],
-                redirectURLVariants[b]));
-            await sleep(delayURLPermutation / 10);
+          const chunkedRedirectURLVariants = chunkArrayWithChunkSize(
+            redirectURLVariants,
+            10);
+          for (let b = 0; b < chunkedRedirectURLVariants.length; b++) {
+            for (let c = 0; c < chunkedRedirectURLVariants[b].length; c++) {
+              newInjectedURLs = newInjectedURLs.concat(
+                getInjectedURLPermutations(
+                  exploitableURLsBuffer[0],
+                  chunkedRedirectURLVariants[b][c]));
+            }
           }
-          await sleep(delayURLPermutation);
         }
         exploitableURLs.push(exploitableURLsBuffer[0]);
       }
@@ -947,7 +961,7 @@ const startURLInjectionThread = async () => {
             && injectedURLs.indexOf(url) === -1);
         });
         injectedURLs = injectedURLs.concat(newInjectedURLs);
-        const chunkedURLs = chunkArray(
+        const chunkedURLs = chunkArrayToAmountOfChunks(
           newInjectedURLs,
           threadCountFuzzer);
         for (let a = 0; a < chunkedInjectedURLs.length; a++) {
