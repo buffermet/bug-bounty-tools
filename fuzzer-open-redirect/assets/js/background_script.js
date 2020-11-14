@@ -78,13 +78,14 @@ const redirectURLs = [
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
+const regexpSelectorPermuteURLParameter = new RegExp("=[^&]+", "ig");
 const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 
 let arrayPermutations = [];
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let chunkedInjectedURLs = [];
-let chunkedScannableURLs = [];
+let chunkedInjectedURLsQueue = [];
+let chunkedScannableURLsQueue = [];
 let exploitableURLs = [];
 let exploitableURLsBuffer = [];
 let fuzzerTabs = [];
@@ -406,10 +407,9 @@ const getInjectedURLPermutations = (targetURL, redirectURL) => {
   if (parsedURL[4].length !== 0) {
 
   }
-  const regexp = new RegExp("=[^&]+", "ig");
   let regexpMatches = [];
   let match;
-  while (match = regexp.exec(parsedURL[4])) {
+  while (match = regexpSelectorPermuteURLParameter.exec(parsedURL[4])) {
     regexpMatches.push({match: match[0], index: match.index});
   }
   getArrayPermutations([], regexpMatches);
@@ -720,8 +720,8 @@ const registerMessageListener = () => {
         && message.scannableURLs.length !== 0
       ) {
         (async () => {
+          const chunkedScannableURLs = chunkArrayWithChunkSize(scannableURLs, 200);
           const filteredURLs = message.scannableURLs.filter(url => {
-            const chunkedScannableURLs = chunkArrayWithChunkSize(scannableURLs, 200);
             for (let a = 0; a < chunkedScannableURLs.length; a++) {
               const scannableURLsChunk = chunkedScannableURLs[a];
               for (let b = 0; b < scannableURLsChunk.length; b++) {
@@ -737,7 +737,7 @@ const registerMessageListener = () => {
             filteredURLs,
             threadCountScanner);
           for (let a = 0; a < chunkedURLs.length; a++) {
-            chunkedScannableURLs[a] = chunkedScannableURLs[a].concat(chunkedURLs[a]);
+            chunkedScannableURLsQueue[a] = chunkedScannableURLsQueue[a].concat(chunkedURLs[a]);
           }
         })();
       }
@@ -816,12 +816,12 @@ const startFuzzerThread = async () => {
   while (injectedURLs.length === 0) {
     await sleep(1000);
   }
-  for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+  for (let a = 0; a < chunkedInjectedURLsQueue.length; a++) {
     (async () => {
       while (true) {
-        const URL = chunkedInjectedURLs[a][0];
+        const URL = chunkedInjectedURLsQueue[a][0];
         if (URL && URL !== "") {
-          chunkedInjectedURLs[a] = chunkedInjectedURLs[a].slice(1);
+          chunkedInjectedURLsQueue[a] = chunkedInjectedURLsQueue[a].slice(1);
           openURLInNewFuzzerTab(URL);
         }
         await sleep(getIntFromRange(
@@ -900,12 +900,12 @@ const startPendingRetryURLsThread = async () => {
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
 const startScannerThread = async () => {
-  for (let a = 0; a < chunkedScannableURLs.length; a++) {
+  for (let a = 0; a < chunkedScannableURLsQueue.length; a++) {
     (async () => {
       while (true) {
-        const URL = chunkedScannableURLs[a][0];
+        const URL = chunkedScannableURLsQueue[a][0];
         if (URL && URL !== "") {
-          chunkedScannableURLs[a] = chunkedScannableURLs[a].slice(1);
+          chunkedScannableURLsQueue[a] = chunkedScannableURLsQueue[a].slice(1);
           openURLInNewScannerTab(URL);
         }
         await sleep(getIntFromRange(
@@ -953,7 +953,7 @@ const startURLInjectionThread = async () => {
     await sleep(1000);
   }
   while (true) {
-    while (chunkedInjectedURLs[0].length > 1000) {
+    while (chunkedInjectedURLsQueue[0].length > 1000) {
       await sleep(1000);
     }
     if (exploitableURLsBuffer.length !== 0) {
@@ -965,11 +965,12 @@ const startURLInjectionThread = async () => {
             redirectURLVariants,
             10);
           for (let b = 0; b < chunkedRedirectURLVariants.length; b++) {
-            for (let c = 0; c < chunkedRedirectURLVariants[b].length; c++) {
+            const redirectURLVariantsChunk = chunkedRedirectURLVariants[b];
+            for (let c = 0; c < redirectURLVariantsChunk.length; c++) {
               newInjectedURLs = newInjectedURLs.concat(
                 getInjectedURLPermutations(
                   exploitableURLsBuffer[0],
-                  chunkedRedirectURLVariants[b][c]));
+                  redirectURLVariantsChunk[c]));
             }
           }
         }
@@ -977,11 +978,11 @@ const startURLInjectionThread = async () => {
       }
       exploitableURLsBuffer = exploitableURLsBuffer.slice(1);
       if (newInjectedURLs.length !== 0) {
+        const chunkedInjectedURLs = chunkArrayWithChunkSize(injectedURLs, 200);
         newInjectedURLs = newInjectedURLs.filter(async (url, index, arr) => {
           if (arr.indexOf(url) !== index) {
             return false;
           }
-          const chunkedInjectedURLs = chunkArrayWithChunkSize(injectedURLs, 200);
           for (let a = 0; a < chunkedInjectedURLs.length; a++) {
             const injectedURLsChunk = chunkedInjectedURLs[a];
             for (let b = 0; b < injectedURLsChunk.length; b++) {
@@ -996,8 +997,8 @@ const startURLInjectionThread = async () => {
         const chunkedURLs = chunkArrayToAmountOfChunks(
           newInjectedURLs,
           threadCountFuzzer);
-        for (let a = 0; a < chunkedInjectedURLs.length; a++) {
-          chunkedInjectedURLs[a] = chunkedInjectedURLs[a].concat(chunkedURLs[a]);
+        for (let a = 0; a < chunkedInjectedURLsQueue.length; a++) {
+          chunkedInjectedURLsQueue[a] = chunkedInjectedURLsQueue[a].concat(chunkedURLs[a]);
         }
       }
     }
@@ -1019,10 +1020,10 @@ const trimWhitespaces = str => {
  */
 parseCallbackURLs().then(async () => {
   for (let a = 0; a < threadCountFuzzer; a++) {
-    chunkedInjectedURLs[a] = [];
+    chunkedInjectedURLsQueue[a] = [];
   }
   for (let a = 0; a < threadCountScanner; a++) {
-    chunkedScannableURLs[a] = [];
+    chunkedScannableURLsQueue[a] = [];
   }
   await registerMessageListener();
   await registerWebRequestListeners();
