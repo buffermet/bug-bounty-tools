@@ -948,6 +948,7 @@ const startURLInjectionThread = async () => {
                 getInjectedURLPermutations(
                   exploitableURLsBuffer[0],
                   chunkedRedirectURLVariants[b][c]));
+              await sleep(100);
             }
           }
         }
