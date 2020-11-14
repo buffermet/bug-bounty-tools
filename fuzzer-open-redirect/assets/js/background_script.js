@@ -4,12 +4,13 @@
 
 /* User configurable. */
 let crawlerScripts = [];
-let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [15000, 60000];
-let delayRangeScannerThread = [15000, 60000];
+let delayForceWakeTabsThread = 2000;
+let delayRangeFuzzerThread = [10000, 40000];
+let delayRangeScannerThread = [10000, 40000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayTabWatcherThread = 30000;
 let delayURLInjectionThread = 60000;
+let delayInjectionPermutations = 1000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -48,9 +49,9 @@ let encodingTypes = [
 let sessionID = "8230ufjio";
 let threadCountFuzzer = 2;
 let threadCountScanner = 2;
-let timeoutCallback = 16000;
-let timeoutCloseTabs = 16000;
-let timeoutRequests = 16000;
+let timeoutCallback = 20000;
+let timeoutCloseTabs = 20000;
+let timeoutRequests = 20000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let retryAttempts = 6;
@@ -910,6 +911,7 @@ const startURLInjectionThread = async () => {
                 exploitableURLsBuffer[0],
                 redirectURLVariants[b]));
           }
+          await sleep(delayInjectionPermutations);
         }
         exploitableURLs.push(exploitableURLsBuffer[0]);
       }
