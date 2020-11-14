@@ -10,6 +10,7 @@ let delayRangeScannerThread = [10000, 40000];
 let delayRangePendingRetryURLsThread = [10000, 40000];
 let delayTabWatcherThread = 30000;
 let delayURLInjectionThread = 60000;
+let delayURLPermutation = 1000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -933,6 +934,7 @@ const startURLInjectionThread = async () => {
                 exploitableURLsBuffer[0],
                 redirectURLVariants[b]));
           }
+          await sleep(delayURLPermutation);
         }
         exploitableURLs.push(exploitableURLsBuffer[0]);
       }
