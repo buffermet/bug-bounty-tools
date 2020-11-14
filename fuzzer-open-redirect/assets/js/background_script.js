@@ -5,11 +5,11 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeFuzzerThread = [8000, 30000];
-let delayRangeScannerThread = [8000, 20000];
+let delayRangeFuzzerThread = [10000, 40000];
+let delayRangeScannerThread = [10000, 40000];
 let delayRangePendingRetryURLsThread = [8000, 30000];
 let delayTabWatcherThread = 30000;
-let delayURLInjectionThread = 30000;
+let delayURLInjectionThread = 40000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -46,8 +46,8 @@ let encodingTypes = [
   [18,4],
 ];
 let sessionID = "8230ufjio";
-let threadCountFuzzer = 4;
-let threadCountScanner = 1;
+let threadCountFuzzer = 3;
+let threadCountScanner = 3;
 let timeoutCallback = 16000;
 let timeoutCloseTabs = 16000;
 let timeoutRequests = 16000;
@@ -389,7 +389,7 @@ const getArrayPermutations = (prefix, arr) => {
  * ))
  */
 const getInjectedURLPermutations = (targetURL, redirectURL) => {
-  const regexp = new RegExp("=(?:http[^&]*|[/][^&]*|%2f[^&]*)", "ig");
+  const regexp = new RegExp("=[^&]+", "ig");
   let regexpMatches = [];
   let match;
   while (match = regexp.exec(targetURL)) {
@@ -629,7 +629,6 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
-console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID
