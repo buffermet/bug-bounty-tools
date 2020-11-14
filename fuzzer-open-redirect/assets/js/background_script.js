@@ -629,6 +629,7 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
+console.log(message)
     if (
          message.sessionID
       && message.sessionID === sessionID

@@ -48,8 +48,9 @@ let timeoutCloseTabs = 16000;
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
-const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'` ]+)?/ig;
-const regexpSelectorURIWithURIParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"' ]+)?[?][^"' ]+[=](?:http|[/]|%2f)[^"' ]*/ig;
+const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'`\s]+)?/ig;
+//const regexpSelectorURIWithURIParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"'\s]+)?[?][^"'\s]+[=](?:http|[/]|%2f)[^"'\s]*/ig;
+const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"'\s]+)?[?][^"'\s]+[=][^"'\s]*/ig;
 
 let exploitableURLs = [];
 let scannableURLs = [];
@@ -429,21 +430,25 @@ const scanForExploitableURIs = async () => {
     scanCount++;
     let URLs = [];
     if (document && document.documentElement) {
-      const matches = document.documentElement.outerHTML
-        .match(regexpSelectorAllHTMLAttributes);
-      matches.forEach(match => {
-        const strippedMatch = match
-          .replace(/^ [a-z-]+[=]/ig, "")
-          .replace(/^["']/, "")
-          .replace(/["']$/, "");
-        const parsedURL = parseURL(strippedMatch);
-        if (
-             parsedURL[4].length !== 0
-          && parsedURL[4].match(/=(?:http|[/]|%2f)/i)
-        ) {
-          URLs.push(strippedMatch);
-        }
-      });
+      if (document.documentElement.innerText) {
+        const matches = document.documentElement.innerText
+          .match(regexpSelectorURIWithParameterPlain) || [];
+        URLs = URLs.concat(matches);
+      }
+      if (document.documentElement.outerHTML) {
+        const matches = document.documentElement.outerHTML
+          .match(regexpSelectorAllHTMLAttributes) || [];
+        matches.forEach(match => {
+          const strippedMatch = match
+            .replace(/^ [a-z-]+[=]/ig, "")
+            .replace(/^["']/, "")
+            .replace(/["']$/, "");
+          const parsedURL = parseURL(strippedMatch);
+          if (parsedURL[4].length !== 0) {
+            URLs.push(strippedMatch);
+          }
+        });
+      }
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
     if (prunedGlobalThis.document) {
@@ -462,25 +467,24 @@ const scanForExploitableURIs = async () => {
       }
     }
     if (URLs.length > 0) {
-      for (let a = 0; a < URLs.length; a++) {
-        URLs[a] = toFullURL(unescapeHTML(URLs[a]));
-      }
-      URLs = URLs
-        .filter((url, index, arr) => {
-          if (
-               arr.indexOf(url) === index
-            && url !== location.href
-            && exploitableURLs.indexOf(url) === -1
-          ) {
-            if (scanOutOfScopeOrigins) {
-              return true;
-            } else {
-              const parsedURL = parseURL(url);
-              return isInScopeOrigin(parsedURL[0] + parsedURL[1]);
-            }
+      URLs = URLs.map(url => {
+        return toFullURL(unescapeHTML(url));
+      })
+      URLs = URLs.filter((url, index, arr) => {
+        if (
+             arr.indexOf(url) === index
+          && url !== location.href
+          && exploitableURLs.indexOf(url) === -1
+        ) {
+          if (scanOutOfScopeOrigins) {
+            return true;
+          } else {
+            const parsedURL = parseURL(url);
+            return isInScopeOrigin(parsedURL[0] + parsedURL[1]);
           }
-          return false;
-        });
+        }
+        return false;
+      });
       exploitableURLs = exploitableURLs.concat(
         URLs);
       console.log("%cfuzzer-open-redirect", consoleCSS,
@@ -503,31 +507,39 @@ const scanForURIs = async () => {
     scanCount++;
     let URLs = [];
     if (document && document.documentElement) {
-      const matches = document.documentElement.outerHTML
-        .match(regexpSelectorAllHTMLAttributes);
-      matches.forEach(match => {
-        const strippedMatch = match
+      if (document.documentElement.innerText) {
+        const matches = document.documentElement.innerText
+          .match(regexpSelectorURLPlain) || [];
+        URLs = URLs.concat(matches);
+      }
+      if (document.documentElement.outerHTML) {
+        const matches = document.documentElement.outerHTML
+          .match(regexpSelectorAllHTMLAttributes) || [];
+        matches.forEach(match => {
+          const strippedMatch = match
             .replace(/^ [a-z-]+[=]/ig, "")
             .replace(/^["']/, "")
             .replace(/["']$/, "");
-        if (match.match(/^\s*(?:action|href|src)[=]/i)) {
-          URLs.push(strippedMatch);
-        }
-        const parsedURL = parseURL(strippedMatch);
-        if (
-             parsedURL[1].length !== 0
-          || parsedURL[4].length !== 0
-          || parsedURL[5].length !== 0
-          || (
-               parsedURL[3].length !== 0
-            && (
-                 parsedURL[3].charAt(0) === "/"
-              || parsedURL[3].match(/[.][a-z]{2,3}$/i)
-              || parsedURL[3].match(/^[^/]+[/][^/]+/i)))
-        ) {
-          URLs.push(strippedMatch);
-        }
-      });
+          if (match.match(/^\s*(?:action|href|src)[=]/i)) {
+            URLs.push(strippedMatch);
+          } else {
+            const parsedURL = parseURL(strippedMatch);
+            if (
+                 parsedURL[1].length !== 0
+              || parsedURL[4].length !== 0
+              || parsedURL[5].length !== 0
+              || (
+                   parsedURL[3].length !== 0
+                && (
+                     parsedURL[3].charAt(0) === "/"
+                  || parsedURL[3].match(/[.][a-z]{2,3}$/i)
+                  || parsedURL[3].match(/^[^/]+[/][^/]+/i)))
+            ) {
+              URLs.push(strippedMatch);
+            }
+          }
+        });
+      }
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
     if (prunedGlobalThis.document) {
