@@ -32,21 +32,23 @@ let redirectURLs = [
 ];
 let scanOutOfScopeOrigins = false;
 let scope = [
-  "*://stackoverflow.com",
-  "*://stackexchange.com",
-  "*://stackapps.com",
-  "*://stackauth.com",
-  "*://superuser.com",
-  "*://serverfault.com",
-  "*://askubuntu.com",
-  "*://mathoverflow.net",
+  "*://*.playstation.net",
+  "*://*.sonyentertainmentnetwork.com",
+  "*://*.api.playstation.com",
+  "*://my.playstation.com",
+  "*://store.playstation.com",
+  "*://social.playstation.com",
+  "*://transact.playstation.com",
+  "*://wallets.playstation.com",
+  "*://direct.playstation.com",
+  "*://api.direct.playstation.com",
 ];
 let sessionID = "8230ufjio";
 let timeoutCloseTabs = 16000;
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
-const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"' ]+)?/ig;
-const regexpSelectorURIHTML = / (?:src|href)=["']?(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))?(?:(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?::[0-9]{1,5})?)?(?:[^"'?#]*)?(?:[?][^#"']*)?(?:[#][^"']*)?["']?[ />]/ig;
+const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
+const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'` ]+)?/ig;
 const regexpSelectorURIWithURIParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))?(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"' ]+)?[?][^"' ]+[=](?:http|[/]|%2f)[^"' ]*/ig;
 
 let exploitableURLs = [];
@@ -331,7 +333,6 @@ const parseURL = url => {
 };
 
 /**
- * Returns true if a given origin matches an origin specifier that's in our scope.
  * (example input: "http://www.in.scope.domain.com")
  * (example output given "*://*.in.scope.*" is in the scope: true)
  */
@@ -426,17 +427,37 @@ const stripAllTrailingWhitespaces = str => {
 const scanForExploitableURIs = async () => {
   return new Promise(async res => {
     scanCount++;
-    let URLs = document.documentElement.outerHTML
-      .match(regexpSelectorURIWithURIParameterPlain) || [];
-    const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
-    if (nonRecursiveGlobalThis.document) {
-      nonRecursiveGlobalThis.document.location = null;
+    let URLs = [];
+    if (document && document.documentElement) {
+      const matches = document.documentElement.outerHTML
+        .match(regexpSelectorAllHTMLAttributes);
+      matches.forEach(match => {
+        const strippedMatch = match
+          .replace(/^ [a-z-]+[=]/ig, "")
+          .replace(/^["']/, "")
+          .replace(/["']$/, "");
+        const parsedURL = parseURL(strippedMatch);
+        if (
+             parsedURL[4].length !== 0
+          && parsedURL[4].match(/=(?:http|[/]|%2f)/i)
+        ) {
+          URLs.push(strippedMatch);
+        }
+      });
     }
-    nonRecursiveGlobalThis.location = null;
-    nonRecursiveGlobalThis.origin = null;
-    const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
+    const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
+    if (prunedGlobalThis.document) {
+      prunedGlobalThis.document.location = null;
+    }
+    prunedGlobalThis.location = null;
+    prunedGlobalThis.origin = null;
+    const globalThisStringValues = getAllStringValues(prunedGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
-      if (globalThisStringValues[a].match(regexpSelectorURIWithURIParameterPlain)) {
+      const parsedURL = parseURL(globalThisStringValues[a]);
+      if (
+           parsedURL[4].length !== 0
+        && parsedURL[4].match(/=(?:http|[/]|%2f)/i)
+      ) {
         URLs.push(globalThisStringValues[a]);
       }
     }
@@ -480,23 +501,54 @@ const scanForExploitableURIs = async () => {
 const scanForURIs = async () => {
   return new Promise(async res => {
     scanCount++;
-    let URLs = document.documentElement.outerHTML
-      .match(regexpSelectorURLPlain) || [];
-    let HTMLMatches = document.documentElement.outerHTML
-      .match(regexpSelectorURIHTML) || [];
-    HTMLMatches = HTMLMatches.map(match => {
-      return match.replace(/^ (?:src|href)=["']?(.*?)["']?[ />]$/g, "$1");
-    });
-    URLs = URLs.concat(HTMLMatches);
-    const nonRecursiveGlobalThis = JSON.parse(JSON.prune(globalThis));
-    if (nonRecursiveGlobalThis.document) {
-      nonRecursiveGlobalThis.document.location = null;
+    let URLs = [];
+    if (document && document.documentElement) {
+      const matches = document.documentElement.outerHTML
+        .match(regexpSelectorAllHTMLAttributes);
+      matches.forEach(match => {
+        const strippedMatch = match
+            .replace(/^ [a-z-]+[=]/ig, "")
+            .replace(/^["']/, "")
+            .replace(/["']$/, "");
+        if (match.match(/^\s*(?:action|href|src)[=]/i)) {
+          URLs.push(strippedMatch);
+        }
+        const parsedURL = parseURL(strippedMatch);
+        if (
+             parsedURL[1].length !== 0
+          || parsedURL[4].length !== 0
+          || parsedURL[5].length !== 0
+          || (
+               parsedURL[3].length !== 0
+            && (
+                 parsedURL[3].charAt(0) === "/"
+              || parsedURL[3].match(/[.][a-z]{2,3}$/i)
+              || parsedURL[3].match(/^[^/]+[/][^/]+/i)))
+        ) {
+          URLs.push(strippedMatch);
+        }
+      });
     }
-    nonRecursiveGlobalThis.location = null;
-    nonRecursiveGlobalThis.origin = null;
-    const globalThisStringValues = getAllStringValues(nonRecursiveGlobalThis);
+    const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
+    if (prunedGlobalThis.document) {
+      prunedGlobalThis.document.location = null;
+    }
+    prunedGlobalThis.location = null;
+    prunedGlobalThis.origin = null;
+    const globalThisStringValues = getAllStringValues(prunedGlobalThis);
     for (let a = 0; a < globalThisStringValues.length; a++) {
-      if (globalThisStringValues[a].match(regexpSelectorURLPlain)) {
+      const parsedURL = parseURL(globalThisStringValues[a]);
+      if (
+           parsedURL[1].length !== 0
+        || parsedURL[4].length !== 0
+        || parsedURL[5].length !== 0
+        || (
+             parsedURL[3].length !== 0
+          && (
+               parsedURL[3].charAt(0) === "/"
+            || parsedURL[3].match(/[.][a-z]{2,3}$/i)
+            || parsedURL[3].match(/^[^/]+[/][^/]+/i)))
+      ) {
         URLs.push(globalThisStringValues[a]);
       }
     }
@@ -569,14 +621,16 @@ const scanForURIs = async () => {
     parsedCallbackURLRequestTimestamps.join(""));
   /* Automatically close tab if this origin belongs to a specified callback URL. */
   if (
-       location.origin.toLowerCase() === parsedCallbackURLOpenRedirectTimestamps
-         .slice(0,2)
-         .join("")
-         .toLowerCase()
-    || location.origin.toLowerCase() === parsedCallbackURLRequestTimestamps
-         .slice(0,2)
-         .join("")
-         .toLowerCase()
+           location.origin.toLowerCase()
+       === parsedCallbackURLOpenRedirectTimestamps
+             .slice(0,2)
+             .join("")
+             .toLowerCase()
+    ||     location.origin.toLowerCase()
+       === parsedCallbackURLRequestTimestamps
+             .slice(0,2)
+             .join("")
+             .toLowerCase()
   ) {
     chrome.runtime.sendMessage({
       sessionID: sessionID,
@@ -651,7 +705,7 @@ const scanForURIs = async () => {
       exploitableURLs: exploitableURLs,
       scannableURLs: scannableURLs,
       sessionID: sessionID,
-    });  
+    });
   }, timeoutCloseTabs);
   while (!globalThis.document) {
     await sleep(300);
@@ -668,7 +722,7 @@ const scanForURIs = async () => {
         sessionID: sessionID,
         message: "FRAME_READYSTATE_INTERACTIVE",
       });
-    })
+    });
   } else {
     chrome.runtime.sendMessage({
       sessionID: sessionID,

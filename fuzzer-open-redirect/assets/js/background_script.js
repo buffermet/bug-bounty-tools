@@ -962,6 +962,6 @@ parseCallbackURLs().then(async () => {
   startURLInjectionThread();
   startTabWatcherThread();
 
-  openURLInNewScannerTab("https://stackoverflow.com/");
+  openURLInNewScannerTab("https://store.playstation.com/");
 });
 
