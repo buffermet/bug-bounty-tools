@@ -5,11 +5,11 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 2000;
-let delayRangeFuzzerThread = [10000, 40000];
-let delayRangeScannerThread = [10000, 40000];
-let delayRangePendingRetryURLsThread = [10000, 40000];
+let delayRangeFuzzerThread = [15000, 40000];
+let delayRangeScannerThread = [15000, 40000];
+let delayRangePendingRetryURLsThread = [15000, 40000];
 let delayTabWatcherThread = 30000;
-let delayURLInjectionThread = 30000;
+let delayURLInjectionThread = 3000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -721,7 +721,16 @@ const registerMessageListener = () => {
       ) {
         (async () => {
           const filteredURLs = message.scannableURLs.filter(url => {
-            return scannableURLs.indexOf(url) === -1;
+            const chunkedScannableURLs = chunkArrayWithChunkSize(scannableURLs, 200);
+            for (let a = 0; a < chunkedScannableURLs.length; a++) {
+              const scannableURLsChunk = chunkedScannableURLs[a];
+              for (let b = 0; b < scannableURLsChunk.length; b++) {
+                if (scannableURLsChunk[b] === url) {
+                  return false;
+                }
+              }
+            }
+            return true;
           });
           scannableURLs = scannableURLs.concat(filteredURLs);
           const chunkedURLs = chunkArrayToAmountOfChunks(
@@ -837,6 +846,11 @@ const startForceWakeTabsThread = async () => {
           chrome.tabs.update(tab.id, {
             active: true,
             selected: true,
+          }, () => {
+            chrome.tabs.update(tabAnchorFuzzer, {
+              active: true,
+              selected: true,
+            });
           });
         }
       });
@@ -848,6 +862,11 @@ const startForceWakeTabsThread = async () => {
           chrome.tabs.update(tab.id, {
             active: true,
             selected: true,
+          }, () => {
+            chrome.tabs.update(tabAnchorScanner, {
+              active: true,
+              selected: true,
+            });
           });
         }
       });
@@ -934,6 +953,9 @@ const startURLInjectionThread = async () => {
     await sleep(1000);
   }
   while (true) {
+    while (chunkedInjectedURLs[0].length > 1000) {
+      await sleep(1000);
+    }
     if (exploitableURLsBuffer.length !== 0) {
       let newInjectedURLs = [];
       if (exploitableURLs.indexOf(exploitableURLsBuffer[0]) === -1) {
@@ -948,7 +970,6 @@ const startURLInjectionThread = async () => {
                 getInjectedURLPermutations(
                   exploitableURLsBuffer[0],
                   chunkedRedirectURLVariants[b][c]));
-              await sleep(100);
             }
           }
         }
@@ -956,10 +977,20 @@ const startURLInjectionThread = async () => {
       }
       exploitableURLsBuffer = exploitableURLsBuffer.slice(1);
       if (newInjectedURLs.length !== 0) {
-        newInjectedURLs = newInjectedURLs.filter((url, index, arr) => {
-          return (
-               arr.indexOf(url) === index
-            && injectedURLs.indexOf(url) === -1);
+        newInjectedURLs = newInjectedURLs.filter(async (url, index, arr) => {
+          if (arr.indexOf(url) !== index) {
+            return false;
+          }
+          const chunkedInjectedURLs = chunkArrayWithChunkSize(injectedURLs, 200);
+          for (let a = 0; a < chunkedInjectedURLs.length; a++) {
+            const injectedURLsChunk = chunkedInjectedURLs[a];
+            for (let b = 0; b < injectedURLsChunk.length; b++) {
+              if (injectedURLsChunk[b] === url) {
+                return false;
+              }
+            }
+          }
+          return true;
         });
         injectedURLs = injectedURLs.concat(newInjectedURLs);
         const chunkedURLs = chunkArrayToAmountOfChunks(
