@@ -44,13 +44,11 @@ let scope = [
   "*://api.direct.playstation.com",
 ];
 let sessionID = "8230ufjio";
-let timeoutCloseTabs = 16000;
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
 const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'`\s]+)?/ig;
-//const regexpSelectorURIWithURIParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"'\s]+)?[?][^"'\s]+[=](?:http|[/]|%2f)[^"'\s]*/ig;
-const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?(?:[^"'\s]+)?[?][^"'\s]+[=][^"'\s]*/ig;
+const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))[^"'`\s]*[?][^"'`\s]+[=][^"'`\s]*/ig;
 
 let exploitableURLs = [];
 let scannableURLs = [];
@@ -429,7 +427,7 @@ const scanForExploitableURIs = async () => {
   return new Promise(async res => {
     scanCount++;
     let URLs = [];
-    if (document && document.documentElement) {
+    if (document.documentElement) {
       if (document.documentElement.innerText) {
         const matches = document.documentElement.innerText
           .match(regexpSelectorURIWithParameterPlain) || [];
@@ -506,7 +504,7 @@ const scanForURIs = async () => {
   return new Promise(async res => {
     scanCount++;
     let URLs = [];
-    if (document && document.documentElement) {
+    if (document.documentElement) {
       if (document.documentElement.innerText) {
         const matches = document.documentElement.innerText
           .match(regexpSelectorURLPlain) || [];
@@ -707,18 +705,6 @@ const scanForURIs = async () => {
   /* Start scanning document for redirect URLs. */
   console.log("%cfuzzer-open-redirect", consoleCSS,
     "Scanning for redirect URLs.");
-  setTimeout(async () => {
-    await scanForExploitableURIs();
-    await scanForURIs();
-    while (scanCount !== 0) {
-      await sleep(1000);
-    }
-    chrome.runtime.sendMessage({
-      exploitableURLs: exploitableURLs,
-      scannableURLs: scannableURLs,
-      sessionID: sessionID,
-    });
-  }, timeoutCloseTabs);
   while (!globalThis.document) {
     await sleep(300);
   }
