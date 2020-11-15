@@ -5,11 +5,11 @@
 /* User configurable. */
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 2000;
-let delayRangeFuzzerThread = [15000, 40000];
-let delayRangeScannerThread = [15000, 40000];
-let delayRangePendingRetryURLsThread = [15000, 40000];
+let delayRangeFuzzerThread = [20000, 40000];
+let delayRangeScannerThread = [20000, 40000];
+let delayRangePendingRetryURLsThread = [20000, 40000];
 let delayTabWatcherThread = 30000;
-let delayURLInjectionThread = 3000;
+let delayURLInjectionThread = 10000;
 let encodingTypes = [
   [0],
   [0,0],
@@ -84,8 +84,8 @@ const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 let arrayPermutations = [];
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let chunkedInjectedURLsQueue = [];
-let chunkedScannableURLsQueue = [];
+let chunkedFuzzerQueues = [];
+let chunkedScannerQueues = [];
 let exploitableURLs = [];
 let exploitableURLsBuffer = [];
 let fuzzerTabs = [];
@@ -94,6 +94,7 @@ let injectedURLs = [];
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let pendingRetryURLs = {};
+let pendingRetryCallbackURLs = {};
 let programs = [];
 let scannerTabs = [];
 let scannerWindow;
@@ -470,9 +471,9 @@ const getURLVariants = url => {
  */
 const openURLInNewFuzzerTab = async url => {
   return new Promise((res, err) => {
-    let callbackURL;
     const date = new Date();
     const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
+    let callbackURL;
     if (parsedCallbackURLRequestTimestamps[4] !== "") {
       callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 5).join("") +
         "&timestamp=" + encodeURIComponent(timestamp) +
@@ -484,18 +485,12 @@ const openURLInNewFuzzerTab = async url => {
         "&url=" + encodeURIComponent(url) +
         parsedCallbackURLOpenRedirectTimestamps[5];
     }
-    chrome.tabs.create({
-      url: callbackURL,
-      windowId: fuzzerWindow.id,
-    }, tab => {
-      setTimeout(() => {
-        removeTab(tab.id);
-        // add to callback retry URLs
-      }, timeoutCallback);
-      fuzzerTabs.push({
-        state: "loading",
-        id: tab.id,
-      });
+    fetch(callbackURL).then(res => {
+      if (!res.ok) {
+        if (!pendingRetryCallbackURLs[callbackURL]) {
+          pendingRetryCallbackURLs[callbackURL] = {attempts: 0};
+        }
+      }
     });
     chrome.tabs.create({
       url: url,
@@ -662,33 +657,24 @@ const registerMessageListener = () => {
       && message.sessionID === sessionID
     ) {
       if (message.timestamp) {
+        console.log("Open redirect found at ", message.timestamp);
         let callbackURL;
-        const date = new Date();
-        const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-        console.log("Open redirect found at ", timestamp);
         if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
           callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
-            "&timestamp=" + encodeURIComponent(timestamp) +
+            "&timestamp=" + encodeURIComponent(message.timestamp) +
             parsedCallbackURLOpenRedirectTimestamps[5];
         } else {
           callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
-            "?timestamp=" + encodeURIComponent(timestamp) +
+            "?timestamp=" + encodeURIComponent(message.timestamp) +
             parsedCallbackURLOpenRedirectTimestamps[5];
         }
-        chrome.tabs.create({
-          url: callbackURL,
-          windowId: fuzzerWindow.id,
-        }, tab => {
-          setTimeout(() => {
-            removeTab(tab.id);
-            // add to callback retry URLs
-          }, timeoutCallback);
-          fuzzerTabs.push({
-            state: "loading",
-            id: tab.id,
-          });
+        fetch(callbackURL).then(res => {
+          if (!res.ok) {
+            if (!pendingRetryCallbackURLs[callbackURL]) {
+              pendingRetryCallbackURLs[callbackURL] = {attempts: 0};
+            }
+          }
         });
-        console.log("Open redirect found at ", timestamp);
       }
       if (message.message) {
         if (
@@ -737,7 +723,7 @@ const registerMessageListener = () => {
             filteredURLs,
             threadCountScanner);
           for (let a = 0; a < chunkedURLs.length; a++) {
-            chunkedScannableURLsQueue[a] = chunkedScannableURLsQueue[a].concat(chunkedURLs[a]);
+            chunkedScannerQueues[a] = chunkedScannerQueues[a].concat(chunkedURLs[a]);
           }
         })();
       }
@@ -816,12 +802,12 @@ const startFuzzerThread = async () => {
   while (injectedURLs.length === 0) {
     await sleep(1000);
   }
-  for (let a = 0; a < chunkedInjectedURLsQueue.length; a++) {
+  for (let a = 0; a < chunkedFuzzerQueues.length; a++) {
     (async () => {
       while (true) {
-        const URL = chunkedInjectedURLsQueue[a][0];
+        const URL = chunkedFuzzerQueues[a][0];
         if (URL && URL !== "") {
-          chunkedInjectedURLsQueue[a] = chunkedInjectedURLsQueue[a].slice(1);
+          chunkedFuzzerQueues[a] = chunkedFuzzerQueues[a].slice(1);
           openURLInNewFuzzerTab(URL);
         }
         await sleep(getIntFromRange(
@@ -900,12 +886,12 @@ const startPendingRetryURLsThread = async () => {
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
 const startScannerThread = async () => {
-  for (let a = 0; a < chunkedScannableURLsQueue.length; a++) {
+  for (let a = 0; a < chunkedScannerQueues.length; a++) {
     (async () => {
       while (true) {
-        const URL = chunkedScannableURLsQueue[a][0];
+        const URL = chunkedScannerQueues[a][0];
         if (URL && URL !== "") {
-          chunkedScannableURLsQueue[a] = chunkedScannableURLsQueue[a].slice(1);
+          chunkedScannerQueues[a] = chunkedScannerQueues[a].slice(1);
           openURLInNewScannerTab(URL);
         }
         await sleep(getIntFromRange(
@@ -953,7 +939,7 @@ const startURLInjectionThread = async () => {
     await sleep(1000);
   }
   while (true) {
-    while (chunkedInjectedURLsQueue[0].length > 1000) {
+    while (chunkedFuzzerQueues[0].length > 1000) {
       await sleep(1000);
     }
     if (exploitableURLsBuffer.length !== 0) {
@@ -997,8 +983,8 @@ const startURLInjectionThread = async () => {
         const chunkedURLs = chunkArrayToAmountOfChunks(
           newInjectedURLs,
           threadCountFuzzer);
-        for (let a = 0; a < chunkedInjectedURLsQueue.length; a++) {
-          chunkedInjectedURLsQueue[a] = chunkedInjectedURLsQueue[a].concat(chunkedURLs[a]);
+        for (let a = 0; a < chunkedFuzzerQueues.length; a++) {
+          chunkedFuzzerQueues[a] = chunkedFuzzerQueues[a].concat(chunkedURLs[a]);
         }
       }
     }
@@ -1020,10 +1006,10 @@ const trimWhitespaces = str => {
  */
 parseCallbackURLs().then(async () => {
   for (let a = 0; a < threadCountFuzzer; a++) {
-    chunkedInjectedURLsQueue[a] = [];
+    chunkedFuzzerQueues[a] = [];
   }
   for (let a = 0; a < threadCountScanner; a++) {
-    chunkedScannableURLsQueue[a] = [];
+    chunkedScannerQueues[a] = [];
   }
   await registerMessageListener();
   await registerWebRequestListeners();
