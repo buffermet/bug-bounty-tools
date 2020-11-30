@@ -29,7 +29,7 @@ $ encodeMethods[0]("//mysite.com")
 
 ### 1. (One)
 
-This is the same method of encoding as `globalThis.encodeURIComponent` in lowercase.
+This is the same method of encoding as `globalThis.encodeURIComponent` with hex in lowercase.
 
 ```console
 $ encodeMethods[1]("//mysite.com")

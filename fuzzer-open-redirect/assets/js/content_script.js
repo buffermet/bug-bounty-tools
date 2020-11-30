@@ -4,10 +4,10 @@
 
 "use strict";
 
-globalThis.console ? globalThis.console.clear = () => {} : "";
-
+let bufferLengthURLs = 30;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
+let delayThrottleURLIndexing = 200;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -26,7 +26,6 @@ let redirectURLs = [
   "runescape.com/splash",
   "runescape.com/splash?ing",
   "data:text/html,<script>location='https://runescape.com'</script>",
-  "data:text/html,<script>location='//runescape.com'</script>",
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
@@ -43,17 +42,20 @@ let scope = [
   "*://direct.playstation.com",
   "*://api.direct.playstation.com",
 ];
-let sessionID = "8230ufjio";
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
-const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'`\s]+)?/ig;
-const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))[^"'`\s]*[?][^"'`\s]+[=][^"'`\s]*/ig;
+const regexpSelectorAnyFileExtension = /[.][a-z]{2,3}$/i;
+const regexpSelectorDebrisHTMLAttributeOne = /^ [a-z-]+[=]/ig;
+const regexpSelectorDebrisHTMLAttributeTwo = /^["']/;
+const regexpSelectorDebrisHTMLAttributeThree = /["']$/;
+const regexpSelectorPathWithDirectory = /^[^/]+[/][^/]+/i;
+const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'`),\s ]+)?/ig;
+const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))[^"'`),\s ]*[?][^"'`),\s ]+[=][^"'`),\s ]*/ig;
+//vim...`
 
-let exploitableURLs = [];
+let injectableParameterURLs = [];
 let scannableURLs = [];
-let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
-let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let paused = false;
 let scanCount = 0;
 
@@ -173,6 +175,28 @@ let scanCount = 0;
 })();
 
 /**
+ * Buffered and throttled method that returns the index of a given target object in a given
+ * array.
+ */
+const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
+  const amountOfChunks = Math.ceil(arr / bufferLength);
+  for (let a = 0; a < amountOfChunks; a++) {
+    for (
+      let b = a * bufferLengthURLs;
+         b < arr.length
+      && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
+      b++
+    ) {
+      if (arr[b] === target) {
+        return b;
+      }
+    }
+    await sleep(throttleDuration);
+  }
+  return -1;
+};
+
+/**
  * Returns an array of all string values that were found in a given object.
  */
 const getAllStringValues = obj => {
@@ -199,6 +223,7 @@ const unescapeHTML = str => {
     .replace(/&#36;/ig,  "\$")
     .replace(/&#37;/ig,  "%")
     .replace(/&amp;/ig,  "&")
+    .replace(/&#38;/ig,  "&")
     .replace(/&#39;/ig,  "'")
     .replace(/&#40;/ig,  "(")
     .replace(/&#41;/ig,  ")")
@@ -221,8 +246,10 @@ const unescapeHTML = str => {
     .replace(/&#58;/ig,  ":")
     .replace(/&#59;/ig,  ";")
     .replace(/&lt;/ig,   "<")
+    .replace(/&#60;/ig,  "<")
     .replace(/&#61;/ig,  "=")
     .replace(/&gt;/ig,   ">")
+    .replace(/&#62;/ig,  ">")
     .replace(/&#63;/ig,  "?")
     .replace(/&#64;/ig,  "@")
     .replace(/&#65;/ig,  "A")
@@ -399,7 +426,7 @@ const trimWhitespaces = str => {
 /**
  * Sleeps an awaited promise value for the given amount of milliseconds.
  */
-const sleep = ms => {
+const sleep = async ms => {
   return new Promise(res => {
     setTimeout(res, ms);
   });
@@ -429,23 +456,74 @@ const scanForExploitableURIs = async () => {
     let URLs = [];
     if (document.documentElement) {
       if (document.documentElement.innerText) {
-        const matches = document.documentElement.innerText
-          .match(regexpSelectorURIWithParameterPlain) || [];
-        URLs = URLs.concat(matches);
+        let match;
+        while (
+          match = regexpSelectorURIWithParameterPlain.exec(
+            document.documentElement.innerText)
+        ) {
+          URLs.push(toFullURL(match[0]));
+        }
       }
       if (document.documentElement.outerHTML) {
-        const matches = document.documentElement.outerHTML
-          .match(regexpSelectorAllHTMLAttributes) || [];
-        matches.forEach(match => {
-          const strippedMatch = match
-            .replace(/^ [a-z-]+[=]/ig, "")
-            .replace(/^["']/, "")
-            .replace(/["']$/, "");
-          const parsedURL = parseURL(strippedMatch);
-          if (parsedURL[4].length !== 0) {
-            URLs.push(strippedMatch);
+        let match;
+        while (
+          match = regexpSelectorAllHTMLAttributes.exec(
+            document.documentElement.outerHTML)
+        ) {
+          const strippedMatch = match[0]
+            .replace(regexpSelectorDebrisHTMLAttributeOne, "")
+            .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
+            .replace(regexpSelectorDebrisHTMLAttributeThree, "");
+          if (match[0].match(/^ (?:action|href|src)[=]/i)) {
+            const parsedURL = parseURL(strippedMatch);
+            if (parsedURL[4].length !== 0) {
+              const fullURL = toFullURL(strippedMatch);
+              if (
+                   fullURL !== location.href
+                && (
+                     scanOutOfScopeOrigins
+                  || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                )
+                && await bufferedIndexOf(
+                     URLs,
+                     fullURL,
+                     bufferLengthURLs,
+                     delayThrottleURLIndexing) === -1
+                && await bufferedIndexOf(
+                     injectableParameterURLs,
+                     fullURL,
+                     bufferLengthURLs,
+                     delayThrottleURLIndexing) === -1
+              ) {
+                URLs.push(fullURL);
+              }
+            }
+          } else {
+            const parsedURL = parseURL(strippedMatch);
+            if (parsedURL[4].length !== 0) {
+              const fullURL = toFullURL(strippedMatch);
+              if (
+                   fullURL !== location.href
+                && (
+                     scanOutOfScopeOrigins
+                  || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                )
+                && await bufferedIndexOf(
+                     URLs,
+                     fullURL,
+                     bufferLengthURLs,
+                     delayThrottleURLIndexing) === -1
+                && await bufferedIndexOf(
+                     injectableParameterURLs,
+                     fullURL,
+                     bufferLengthURLs,
+                     delayThrottleURLIndexing) === -1
+              ) {
+                URLs.push(fullURL);
+              }
+            }
           }
-        });
+        }
       }
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
@@ -455,36 +533,42 @@ const scanForExploitableURIs = async () => {
     prunedGlobalThis.location = null;
     prunedGlobalThis.origin = null;
     const globalThisStringValues = getAllStringValues(prunedGlobalThis);
-    for (let a = 0; a < globalThisStringValues.length; a++) {
-      const parsedURL = parseURL(globalThisStringValues[a]);
-      if (
-           parsedURL[4].length !== 0
-        && parsedURL[4].match(/=(?:http|[/]|%2f)/i)
+    const amountOfChunks = Math.ceil(globalThisStringValues.length / bufferLengthURLs);
+    for (let a = 0; a < amountOfChunks; a++) {
+      for (
+        let b = a * bufferLengthURLs;
+           b < globalThisStringValues.length
+        && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
+        b++
       ) {
-        URLs.push(globalThisStringValues[a]);
-      }
-    }
-    if (URLs.length > 0) {
-      URLs = URLs.map(url => {
-        return toFullURL(unescapeHTML(url));
-      })
-      URLs = URLs.filter((url, index, arr) => {
-        if (
-             arr.indexOf(url) === index
-          && url !== location.href
-          && exploitableURLs.indexOf(url) === -1
-        ) {
-          if (scanOutOfScopeOrigins) {
-            return true;
-          } else {
-            const parsedURL = parseURL(url);
-            return isInScopeOrigin(parsedURL[0] + parsedURL[1]);
+        const parsedFullURL = parseURL(globalThisStringValues[b]);
+        if (parsedFullURL[4].length !== 0) {
+          const fullURL = parsedFullURL.join("");
+          if (
+               fullURL !== location.href
+            && (
+                 scanOutOfScopeOrigins
+              || isInScopeOrigin(parsedFullURL.slice(0, 2).join(""))
+            )
+            && await bufferedIndexOf(
+                 URLs,
+                 fullURL,
+                 bufferLengthURLs,
+                 delayThrottleURLIndexing) === -1
+            && await bufferedIndexOf(
+                 injectableParameterURLs,
+                 fullURL,
+                 bufferLengthURLs,
+                 delayThrottleURLIndexing) === -1
+          ) {
+            URLs.push(fullURL);
           }
         }
-        return false;
-      });
-      exploitableURLs = exploitableURLs.concat(
-        URLs);
+      }
+      await sleep(delayThrottleURLIndexing);
+    }
+    if (URLs.length > 0) {
+      injectableParameterURLs = injectableParameterURLs.concat(URLs);
       console.log("%cfuzzer-open-redirect", consoleCSS,
         "Discovered " + URLs.length + " new URL(s) that are potentially vulnerable and in scope.");
     } else {
@@ -506,37 +590,99 @@ const scanForURIs = async () => {
     let URLs = [];
     if (document.documentElement) {
       if (document.documentElement.innerText) {
-        const matches = document.documentElement.innerText
-          .match(regexpSelectorURLPlain) || [];
-        URLs = URLs.concat(matches);
+        let match;
+        while (match = regexpSelectorURLPlain.exec(document.documentElement.innerText)) {
+          const parsedURL = parseURL(match[0]);
+          if (
+               match[0] !== location.href
+            && (
+                 scanOutOfScopeOrigins
+              || isInScopeOrigin(parsedURL.slice(0, 2).join(""))
+            )
+            && await bufferedIndexOf(
+                 URLs,
+                 match[0],
+                 bufferLengthURLs,
+                 delayThrottleURLIndexing) === -1
+            && await bufferedIndexOf(
+                 scannableURLs,
+                 match[0],
+                 bufferLengthURLs,
+                 delayThrottleURLIndexing) === -1
+          ) {
+            URLs.push(match[0]);
+          }
+        }
       }
       if (document.documentElement.outerHTML) {
-        const matches = document.documentElement.outerHTML
-          .match(regexpSelectorAllHTMLAttributes) || [];
-        matches.forEach(match => {
-          const strippedMatch = match
-            .replace(/^ [a-z-]+[=]/ig, "")
-            .replace(/^["']/, "")
-            .replace(/["']$/, "");
-          if (match.match(/^\s*(?:action|href|src)[=]/i)) {
-            URLs.push(strippedMatch);
-          } else {
-            const parsedURL = parseURL(strippedMatch);
+        let match;
+        while (
+          match = regexpSelectorAllHTMLAttributes.exec(
+            document.documentElement.outerHTML)
+        ) {
+          const strippedMatch = match[0]
+            .replace(regexpSelectorDebrisHTMLAttributeOne, "")
+            .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
+            .replace(regexpSelectorDebrisHTMLAttributeThree, "");
+          const parsedURL = parseURL(strippedMatch);
+          if (match[0].match(/^ (?:action|href|src)[=]/i)) {
+            const fullURL = toFullURL(strippedMatch);
             if (
-                 parsedURL[1].length !== 0
-              || parsedURL[4].length !== 0
-              || parsedURL[5].length !== 0
-              || (
-                   parsedURL[3].length !== 0
-                && (
-                     parsedURL[3].charAt(0) === "/"
-                  || parsedURL[3].match(/[.][a-z]{2,3}$/i)
-                  || parsedURL[3].match(/^[^/]+[/][^/]+/i)))
+                 fullURL !== location.href
+              && (
+                   scanOutOfScopeOrigins
+                || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+              )
+              && await bufferedIndexOf(
+                   URLs,
+                   fullURL,
+                   bufferLengthURLs,
+                   delayThrottleURLIndexing) === -1
+              && await bufferedIndexOf(
+                   scannableURLs,
+                   fullURL,
+                   bufferLengthURLs,
+                   delayThrottleURLIndexing) === -1
             ) {
-              URLs.push(strippedMatch);
+              URLs.push(fullURL);
+            }
+          } else {
+            if (
+                 parsedURL[1].length !== 0 /* host */
+              || parsedURL[4].length !== 0 /* search */
+              || parsedURL[5].length !== 0 /* hash */
+              || (
+                   parsedURL[3].length !== 0 /* path */
+                && (
+                     parsedURL[3].charAt(0) === "/" /* path */
+                  || parsedURL[3].match(/[.][a-z]{2,3}$/i) /* path */
+                  || parsedURL[3].match(/^[^/]+[/][^/]+/i) /* path */
+                )
+              )
+            ) {
+              const fullURL = toFullURL(strippedMatch);
+              if (
+                   fullURL !== location.href
+                && (
+                     scanOutOfScopeOrigins
+                  || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                )
+                && await bufferedIndexOf(
+                     URLs,
+                     fullURL,
+                     bufferLengthURLs,
+                     delayThrottleURLIndexing) === -1
+                && await bufferedIndexOf(
+                     scannableURLs,
+                     fullURL,
+                     bufferLengthURLs,
+                     delayThrottleURLIndexing) === -1
+              ) {
+                URLs.push(fullURL);
+              }
             }
           }
-        });
+        }
       }
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
@@ -546,43 +692,57 @@ const scanForURIs = async () => {
     prunedGlobalThis.location = null;
     prunedGlobalThis.origin = null;
     const globalThisStringValues = getAllStringValues(prunedGlobalThis);
-    for (let a = 0; a < globalThisStringValues.length; a++) {
-      const parsedURL = parseURL(globalThisStringValues[a]);
-      if (
-           parsedURL[1].length !== 0
-        || parsedURL[4].length !== 0
-        || parsedURL[5].length !== 0
-        || (
-             parsedURL[3].length !== 0
-          && (
-               parsedURL[3].charAt(0) === "/"
-            || parsedURL[3].match(/[.][a-z]{2,3}$/i)
-            || parsedURL[3].match(/^[^/]+[/][^/]+/i)))
+    const amountOfChunks = Math.ceil(globalThisStringValues.length / bufferLengthURLs);
+    for (let a = 0; a < amountOfChunks; a++) {
+      for (
+        let b = a * bufferLengthURLs;
+           b < globalThisStringValues.length
+        && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
+        b++
       ) {
-        URLs.push(globalThisStringValues[a]);
-      }
-    }
-    if (URLs.length > 0) {
-      URLs = URLs.map(url => {
-        return toFullURL(unescapeHTML(url));
-      })
-      URLs = URLs.filter((url, index, arr) => {
+        const parsedURL = parseURL(globalThisStringValues[b]);
         if (
-             arr.indexOf(url) === index
-          && url !== location.href
-          && scannableURLs.indexOf(url) === -1
+             parsedURL[1].length !== 0 /* host */
+          || parsedURL[4].length !== 0 /* search */
+          || parsedURL[5].length !== 0 /* hash */
+          || (
+               parsedURL[3].length !== 0 /* path */
+            && (
+                 parsedURL[3].charAt(0) === "/" /* path */
+              || parsedURL[3].match(regexpSelectorAnyFileExtension) /* path */
+              || parsedURL[3].match(regexpSelectorPathWithDirectory) /* path */
+            )
+          )
         ) {
-          if (scanOutOfScopeOrigins) {
-            return true;
-          } else {
-            const parsedURL = parseURL(url);
-            return isInScopeOrigin(parsedURL[0] + parsedURL[1]);
+          const fullURL = toFullURL(globalThisStringValues[[b]]);
+          if (
+               fullURL !== location.href
+            && await bufferedIndexOf(
+                 URLs,
+                 fullURL,
+                 bufferLengthURLs,
+                 delayThrottleURLIndexing) === -1
+            && await bufferedIndexOf(
+                 scannableURLs,
+                 fullURL,
+                 bufferLengthURLs,
+                 delayThrottleURLIndexing) === -1
+          ) {
+            if (scanOutOfScopeOrigins) {
+              URLs.push(fullURL);
+            } else {
+              const parsedFullURL = parseURL(fullURL);
+              if (isInScopeOrigin(parsedFullURL[0] + parsedFullURL[1])) {
+                URLs.push(fullURL);
+              }
+            }
           }
         }
-        return false;
-      });
-      scannableURLs = scannableURLs.concat(
-        URLs);
+      }
+      await sleep(delayThrottleURLIndexing);
+    }
+    if (URLs.length > 0) {
+      scannableURLs = scannableURLs.concat(URLs);
       console.log("%cfuzzer-open-redirect", consoleCSS,
         "Discovered " + URLs.length +  " new URL(s) that are in scope.");
     } else {
@@ -598,84 +758,6 @@ const scanForURIs = async () => {
  * Init fuzzer.
  */
 (async () => {
-  /* Parse specified callback URLs for open redirects and requests. */
-  parsedCallbackURLOpenRedirectTimestamps = parseURL(callbackURLOpenRedirectTimestamps);
-  if (parsedCallbackURLOpenRedirectTimestamps[1].length === 0) {
-    console.error("%cfuzzer-open-redirect", consoleCSS,
-      "No valid origin was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").");
-    return;
-  }
-  if (parsedCallbackURLOpenRedirectTimestamps[0].length === 0) {
-    console.warn("%cfuzzer-open-redirect", consoleCSS,
-      "No protocol was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").",
-      "Defaulting to \"http://\".");
-    parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
-  }
-  console.log("%cfuzzer-open-redirect", consoleCSS,
-    "Callback URL for open redirect timestamps is parsed: " +
-    parsedCallbackURLOpenRedirectTimestamps.join(""));
-  parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
-  if (parsedCallbackURLRequestTimestamps[1].length === 0) {
-    console.error("%cfuzzer-open-redirect", consoleCSS,
-      "No valid origin was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").");
-    return;
-  }
-  if (parsedCallbackURLRequestTimestamps[0].length === 0) {
-    console.warn("%cfuzzer-open-redirect", consoleCSS,
-      "No protocol was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").",
-      "Defaulting to \"http://\".");
-    parsedCallbackURLRequestTimestamps[0] = "http://";
-  }
-  console.log("%cfuzzer-open-redirect", consoleCSS,
-    "Callback URL for request timestamps is parsed: " +
-    parsedCallbackURLRequestTimestamps.join(""));
-  /* Automatically close tab if this origin belongs to a specified callback URL. */
-  if (
-           location.origin.toLowerCase()
-       === parsedCallbackURLOpenRedirectTimestamps
-             .slice(0,2)
-             .join("")
-             .toLowerCase()
-    ||     location.origin.toLowerCase()
-       === parsedCallbackURLRequestTimestamps
-             .slice(0,2)
-             .join("")
-             .toLowerCase()
-  ) {
-    chrome.runtime.sendMessage({
-      sessionID: sessionID,
-      message: "CALLBACK_FRAME_READYSTATE_LOADING",
-    });
-    while (!globalThis.document) {
-      await sleep(300);
-    }
-    if (globalThis.readyState === "loading") {
-      globalThis.document("DOMContentLoaded", () => {
-        chrome.runtime.sendMessage({
-          sessionID: sessionID,
-          message: "CALLBACK_FRAME_READYSTATE_INTERACTIVE",
-        });
-      });
-    } else {
-      chrome.runtime.sendMessage({
-        sessionID: sessionID,
-        message: "CALLBACK_FRAME_READYSTATE_INTERACTIVE",
-      });
-      if (globalThis.readyState !== "complete") {
-        globalThis.addEventListener("load", () => {
-          chrome.runtime.sendMessage({
-            sessionID: sessionID,
-            message: "CALLBACK_FRAME_READYSTATE_COMPLETE",
-          });
-        });
-      } else {
-        chrome.runtime.sendMessage({
-          sessionID: sessionID,
-          message: "CALLBACK_FRAME_READYSTATE_COMPLETE",
-        });
-      }
-    }
-  }
   /* If successfully exploited, send a timestamped callback for open redirects. */
   let redirectHosts = [];
   for (let a = 0; a < redirectURLs.length; a++) {
@@ -696,10 +778,7 @@ const scanForURIs = async () => {
     if (location.hostname.endsWith(redirectHosts[a])) {
       const date = new Date();
       const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-      chrome.runtime.sendMessage({
-        timestamp: timestamp,
-        sessionID: sessionID,
-      });
+      chrome.runtime.sendMessage({timestamp: timestamp});
     }
   }
   /* Start scanning document for redirect URLs. */
@@ -709,23 +788,15 @@ const scanForURIs = async () => {
     await sleep(300);
   }
   if (globalThis.document.readyState === "loading") {
-    globalThis.document.addEventListener(
-      "DOMContentLoaded",
-      scanForExploitableURIs);
-    globalThis.document.addEventListener(
-      "DOMContentLoaded",
-      scanForURIs);
     globalThis.document.addEventListener("DOMContentLoaded", async () => {
-      chrome.runtime.sendMessage({
-        sessionID: sessionID,
-        message: "FRAME_READYSTATE_INTERACTIVE",
-      });
+      await scanForExploitableURIs();
+      await scanForURIs();
+    });
+    globalThis.document.addEventListener("DOMContentLoaded", () => {
+      chrome.runtime.sendMessage({message: "FRAME_READYSTATE_INTERACTIVE"});
     });
   } else {
-    chrome.runtime.sendMessage({
-      sessionID: sessionID,
-      message: "FRAME_READYSTATE_INTERACTIVE",
-    });
+    chrome.runtime.sendMessage({message: "FRAME_READYSTATE_INTERACTIVE"});
     if (globalThis.document.readyState !== "complete") {
       /* Document has not finished loading. */
       globalThis.addEventListener("load", async () => {
@@ -735,26 +806,10 @@ const scanForURIs = async () => {
           await sleep(1000);
         }
         chrome.runtime.sendMessage({
-          exploitableURLs: exploitableURLs,
+          injectableParameterURLs: injectableParameterURLs,
+          message: "FRAME_READYSTATE_COMPLETE",
           scannableURLs: scannableURLs,
-          sessionID: sessionID,
         });
-        setTimeout(async () => {
-          await scanForExploitableURIs();
-          await scanForURIs();
-          while (scanCount !== 0) {
-            await sleep(1000);
-          }
-          chrome.runtime.sendMessage({
-            exploitableURLs: exploitableURLs,
-            scannableURLs: scannableURLs,
-            sessionID: sessionID,
-          });
-          chrome.runtime.sendMessage({
-            sessionID: sessionID,
-            message: "FRAME_READYSTATE_COMPLETE",
-          });
-        }, 2000);
       });
     } else {
       /* Document has finished loading. */
@@ -764,26 +819,10 @@ const scanForURIs = async () => {
         await sleep(1000);
       }
       chrome.runtime.sendMessage({
-        exploitableURLs: exploitableURLs,
+        injectableParameterURLs: injectableParameterURLs,
+        message: "FRAME_READYSTATE_COMPLETE",
         scannableURLs: scannableURLs,
-        sessionID: sessionID,
       });
-      setTimeout(async () => {
-        await scanForExploitableURIs();
-        await scanForURIs();
-        while (scanCount !== 0) {
-          await sleep(1000);
-        }
-        chrome.runtime.sendMessage({
-          exploitableURLs: exploitableURLs,
-          scannableURLs: scannableURLs,
-          sessionID: sessionID,
-        });
-        chrome.runtime.sendMessage({
-          sessionID: sessionID,
-          message: "FRAME_READYSTATE_COMPLETE",
-        });
-      }, 2000);
     }
   }
 })();

