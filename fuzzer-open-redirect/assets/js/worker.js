@@ -2,8 +2,8 @@
  * Web worker for fuzzer-open-redirect.
  */
 
-let bufferLengthURLs = 30;
-let delayThrottleURLIndexing = 200;
+let bufferLengthURLs = 20;
+let delayThrottleURLIndexing = 300;
 let delayThrottleURLPathInjection = 100;
 let delayURLInjectionThread = 2000;
 let delayURLScannerThread = 2000;
@@ -80,6 +80,7 @@ let threadCount;
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 const regexpSelectorURLParameterValue = /=[^&]*/g;
+const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[23]f)/i;
 
 /**
  * Buffered and throttled method that returns the index of a given target object in a given
@@ -419,7 +420,7 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
   };
   let match;
   while (match = regexpSelectorURLParameterValue.exec(parsedURL[4])) {
-    if (match[0].match(/^[=](?:http|%68%74%74%70|[/]|[?]|%[23]f)/i)) {
+    if (match[0].match(regexpSelectorURLRedirectParameter)) {
       regexpMatches.injectableRedirectParameterURLs.push({
         index: match.index,
         match: match[0],
@@ -557,9 +558,6 @@ const registerMessageListener = () => {
     if (message.data) {
       if (message.data.threadCount) {
         threadCount = message.data.threadCount;
-      }
-      if (message.data.delayThrottleURLIndexing) {
-        delayThrottleURLIndexing = message.data.delayThrottleURLIndexing;
       }
       if (
            message.data.injectableParameterURLs
@@ -717,36 +715,30 @@ const startURLPathInjectionThread = async () => {
               const injectedURL = parsedInjectablePathURL.slice(0, 3).join("") +
                 pathEntries.slice(0, a).join("/") + redirectURLsForPathExploitation[b] +
                 parsedInjectablePathURL.slice(5, 6).join("");
-              newInjectedPathURLs.push(injectedURL);
-            }
-            await sleep(delayThrottleURLPathInjection);
-          }
-          if (newInjectedPathURLs.length !== 0) {
-            let filteredNewInjectedPathURLs = [];
-            for (let a = 0; a < newInjectedPathURLs.length; a++) {
               if (
                    await bufferedIndexOf(
-                     filteredNewInjectedPathURLs,
-                     newInjectedPathURLs[a],
+                     newInjectedPathURLs,
+                     injectedURL,
                      bufferLengthURLs,
                      delayThrottleURLIndexing) === -1
                 && await bufferedIndexOf(
                      injectedPathURLs,
-                     newInjectedPathURLs[a],
+                     injectedURL,
                      bufferLengthURLs,
                      delayThrottleURLIndexing) === -1
               ) {
-                filteredNewInjectedPathURLs.push(newInjectedPathURLs[a]);
+                newInjectedPathURLs.push(injectedURL);
               }
             }
-            if (filteredNewInjectedPathURLs.length !== 0) {
-              injectedPathURLs = injectedPathURLs.concat(filteredNewInjectedPathURLs);
-              postMessage({
-                appendage: {
-                  injectedPathURLsQueue: filteredNewInjectedPathURLs
-                }
-              });
-            }
+            await sleep(delayThrottleURLPathInjection);
+          }
+          if (newInjectedPathURLs.length !== 0) {
+            injectedPathURLs = injectedPathURLs.concat(newInjectedPathURLs);
+            postMessage({
+              appendage: {
+                injectedPathURLsQueue: newInjectedPathURLs
+              }
+            });
           }
         }
       }

@@ -4,10 +4,11 @@
 
 "use strict";
 
-let bufferLengthURLs = 30;
+let bufferLengthURLs = 20;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleURLIndexing = 200;
+let delayThrottleRegexpSearch = 2;
+let delayThrottleURLIndexing = 300;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -49,6 +50,7 @@ const regexpSelectorAnyFileExtension = /[.][a-z]{2,3}$/i;
 const regexpSelectorDebrisHTMLAttributeOne = /^ [a-z-]+[=]/ig;
 const regexpSelectorDebrisHTMLAttributeTwo = /^["']/;
 const regexpSelectorDebrisHTMLAttributeThree = /["']$/;
+const regexpSelectorHTMLURLAttribute = /^ (?:action|href|src)[=]/i;
 const regexpSelectorPathWithDirectory = /^[^/]+[/][^/]+/i;
 const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'`),\s ]+)?/ig;
 const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))[^"'`),\s ]*[?][^"'`),\s ]+[=][^"'`),\s ]*/ig;
@@ -474,7 +476,7 @@ const scanForExploitableURIs = async () => {
             .replace(regexpSelectorDebrisHTMLAttributeOne, "")
             .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
             .replace(regexpSelectorDebrisHTMLAttributeThree, "");
-          if (match[0].match(/^ (?:action|href|src)[=]/i)) {
+          if (match[0].match(regexpSelectorHTMLURLAttribute)) {
             const parsedURL = parseURL(strippedMatch);
             if (parsedURL[4].length !== 0) {
               const fullURL = toFullURL(strippedMatch);
@@ -617,21 +619,21 @@ const scanForURIs = async () => {
       if (document.documentElement.outerHTML) {
         let match;
         while (
-          match = regexpSelectorAllHTMLAttributes.exec(
-            document.documentElement.outerHTML)
+          match = regexpSelectorAllHTMLAttributes.exec(document.documentElement.outerHTML)
         ) {
           const strippedMatch = match[0]
             .replace(regexpSelectorDebrisHTMLAttributeOne, "")
             .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
             .replace(regexpSelectorDebrisHTMLAttributeThree, "");
           const parsedURL = parseURL(strippedMatch);
-          if (match[0].match(/^ (?:action|href|src)[=]/i)) {
+          if (match[0].match(regexpSelectorHTMLURLAttribute)) {
             const fullURL = toFullURL(strippedMatch);
+            const parsedFullURL = parseURL(fullURL);
             if (
                  fullURL !== location.href
               && (
                    scanOutOfScopeOrigins
-                || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                || isInScopeOrigin(parsedFullURL.slice(0, 2).join(""))
               )
               && await bufferedIndexOf(
                    URLs,
@@ -789,8 +791,8 @@ const scanForURIs = async () => {
   }
   if (globalThis.document.readyState === "loading") {
     globalThis.document.addEventListener("DOMContentLoaded", async () => {
-      await scanForExploitableURIs();
-      await scanForURIs();
+      scanForExploitableURIs();
+      scanForURIs();
     });
     globalThis.document.addEventListener("DOMContentLoaded", () => {
       chrome.runtime.sendMessage({message: "FRAME_READYSTATE_INTERACTIVE"});
@@ -800,8 +802,8 @@ const scanForURIs = async () => {
     if (globalThis.document.readyState !== "complete") {
       /* Document has not finished loading. */
       globalThis.addEventListener("load", async () => {
-        await scanForExploitableURIs();
-        await scanForURIs();
+        scanForExploitableURIs();
+        scanForURIs();
         while (scanCount !== 0) {
           await sleep(1000);
         }
@@ -813,8 +815,8 @@ const scanForURIs = async () => {
       });
     } else {
       /* Document has finished loading. */
-      await scanForExploitableURIs();
-      await scanForURIs();
+      scanForExploitableURIs();
+      scanForURIs();
       while (scanCount !== 0) {
         await sleep(1000);
       }

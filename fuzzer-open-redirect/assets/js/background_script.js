@@ -53,7 +53,7 @@ let pendingRetryURLs = {};
 let pendingRetryCallbackURLs = {};
 let scannableURLs = [];
 let scannableURLsQueue = [];
-let tabAnchor;
+let tabAnchorId;
 let tabIds = [];
 let tabCleanerBuffer = [];
 let windowId;
@@ -172,7 +172,7 @@ const openWindow = async () => {
       chrome.tabs.query({}, tabs => {
         tabs.forEach(tab => {
           if (tab.windowId === w.id) {
-            tabAnchor = tab.id;
+            tabAnchorId = tab.id;
           }
         });
       });
@@ -438,7 +438,7 @@ const startForceWakeTabsThread = async () => {
             active: true,
             selected: true,
           }, () => {
-            chrome.tabs.update(tabAnchor, {
+            chrome.tabs.update(tabAnchorId, {
               active: true,
               selected: true,
             });
@@ -524,7 +524,7 @@ const startTabCleanerThread = async () => {
       tabs.forEach(tab => {
         if (
              tab.windowId === windowId
-          && tab.id !== tabAnchor
+          && tab.id !== tabAnchorId
         ) {
           if (tabCleanerBuffer.indexOf(tab.id) === -1) {
             tabCleanerBuffer.push(tab.id);
