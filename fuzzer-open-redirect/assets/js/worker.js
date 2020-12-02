@@ -3,7 +3,7 @@
  */
 
 let bufferLengthURLs = 20;
-let delayThrottleURLIndexing = 300;
+let delayThrottleURLIndexing = 500;
 let delayThrottleURLPathInjection = 100;
 let delayURLInjectionThread = 2000;
 let delayURLScannerThread = 2000;

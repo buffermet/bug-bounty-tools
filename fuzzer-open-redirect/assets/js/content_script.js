@@ -8,7 +8,7 @@ let bufferLengthURLs = 20;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let delayThrottleRegexpSearch = 2;
-let delayThrottleURLIndexing = 300;
+let delayThrottleURLIndexing = 500;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -685,6 +685,7 @@ const scanForURIs = async () => {
             }
           }
         }
+        await sleep(delayThrottleRegexpSearch);
       }
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));

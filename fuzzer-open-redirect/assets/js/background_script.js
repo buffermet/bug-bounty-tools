@@ -5,13 +5,10 @@
 "use strict";
 
 let crawlerScripts = [];
-let delayForceWakeTabsThread = 2000;
-let delayRangeFuzzerThread = [10000, 25000];
-let delayRangeRequests = [10000, 25000];
-let delayRangeScannerThread = [10000, 25000];
-let delayRangePendingRetryURLsThread = [10000, 20000];
+let delayForceWakeTabsThread = 1000;
+let delayRangeRequests = [10000, 30000];
 let delayTabCleanerThread = 60000;
-let threadCount = 2;
+let threadCount = 3;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
@@ -120,30 +117,6 @@ const isFailStatusCode = statusCodeString => {
 };
 
 /**
- * Opens a given URL in a new fuzzer tab.
- */
-const openURLInNewFuzzerTab = async url => {
-  return new Promise((res, err) => {
-    const date = new Date();
-    const timestamp = date.toLocaleDateString() + " " +  date.toLocaleTimeString();
-    chrome.tabs.create({
-      url: url,
-      windowId: windowId
-    }, tab => {
-      setTimeout(() => {
-        err("Opening tab timed out.");
-      }, timeoutRequests);
-      tabIds.push({
-        state: "loading",
-        id: tab.id,
-      });
-      // execute crawlerScripts
-      res(tab);
-    });
-  });
-};
-
-/**
  * Opens a given URL in a new scanner tab.
  */
 const openURLInNewTab = async url => {
@@ -155,6 +128,7 @@ const openURLInNewTab = async url => {
       url: url,
       windowId: windowId,
     }, tab => {
+      tabIds.push(tab.id);
       // execute crawlerScripts
       res(tab);
     });
@@ -432,7 +406,7 @@ const startForceWakeTabsThread = async () => {
       await sleep(delayForceWakeTabsThread);
     }
     for (let a = 0; a < tabIds.length; a++) {
-      chrome.tabs.get(tabIds[a].id, tab => {
+      chrome.tabs.get(tabIds[a], tab => {
         if (!chrome.runtime.lastError && tab) {
           chrome.tabs.update(tab.id, {
             active: true,
@@ -482,25 +456,13 @@ const startRequestThread = async () => {
         if (injectedRedirectParameterURLsQueue.length !== 0) {
           URL = injectedRedirectParameterURLsQueue[0];
           injectedRedirectParameterURLsQueue = injectedRedirectParameterURLsQueue.slice(1);
-        }
-        if (
-             URL.length === 0
-          && injectedPathURLsQueue.length !== 0
-        ) {
+        } else if (injectedPathURLsQueue.length !== 0) {
           URL = injectedPathURLsQueue[0];
           injectedPathURLsQueue = injectedPathURLsQueue.slice(1);
-        }
-        if (
-             URL.length === 0
-          && injectedParameterURLsQueue.length !== 0
-        ) {
+        } else if (injectedParameterURLsQueue.length !== 0) {
           URL = injectedParameterURLsQueue[0];
           injectedParameterURLsQueue = injectedParameterURLsQueue.slice(1);
-        }
-        if (
-             URL.length === 0
-          && scannableURLsQueue.length !== 0
-        ) {
+        } else if (scannableURLsQueue.length !== 0) {
           URL = scannableURLsQueue[0];
           scannableURLsQueue = scannableURLsQueue.slice(1);
         }
@@ -508,8 +470,8 @@ const startRequestThread = async () => {
           openURLInNewTab(URL);
         }
         await sleep(getIntFromRange(
-          delayRangeScannerThread[0],
-          delayRangeScannerThread[1]));
+          delayRangeRequests[0],
+          delayRangeRequests[1]));
       }
     })();
   }
