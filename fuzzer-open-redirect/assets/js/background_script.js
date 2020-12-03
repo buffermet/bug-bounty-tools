@@ -254,7 +254,6 @@ const registerMessageListener = () => {
            message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
         || message.message === "FRAME_READYSTATE_COMPLETE"
       ) {
-console.log(message)
         removeTab(sender.tab.id);
         tabIds = tabIds.filter(tab => {
           return tab.id !== sender.tab.id;
@@ -415,7 +414,7 @@ const startForceWakeTabsThread = async () => {
           chrome.tabs.update(tab.id, {
             active: true,
             selected: true,
-          });
+          }, () => {});
         } else {
           tabIds = tabIds.filter(id => {
             return id !== tabIds[a];
