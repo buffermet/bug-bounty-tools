@@ -5,10 +5,10 @@
 "use strict";
 
 let crawlerScripts = [];
-let delayForceWakeTabsThread = 1000;
-let delayRangeRequests = [10000, 30000];
-let delayTabCleanerThread = 60000;
-let threadCount = 3;
+let delayForceWakeTabsThread = 3000;
+let delayRangeRequests = [5000, 6000];
+let delayTabRemovalThread = 60000;
+let threadCount = 1;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
@@ -52,7 +52,7 @@ let scannableURLs = [];
 let scannableURLsQueue = [];
 let tabAnchorId;
 let tabIds = [];
-let tabCleanerBuffer = [];
+let tabRemovalBuffer = [];
 let windowId;
 let worker = new Worker(chrome.runtime.getURL("/assets/js/worker.js"));
 
@@ -254,6 +254,7 @@ const registerMessageListener = () => {
            message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
         || message.message === "FRAME_READYSTATE_COMPLETE"
       ) {
+console.log(message)
         removeTab(sender.tab.id);
         tabIds = tabIds.filter(tab => {
           return tab.id !== sender.tab.id;
@@ -295,12 +296,10 @@ const registerWebRequestListeners = () => {
     details => {
       if (details.type === "main_frame") {
         chrome.tabs.get(details.tabId, tab => {
-          if (!chrome.runtime.lastError && tab) {
-            if (tab.windowId === windowId) {
-              removeTab(details.tabId);
-              if (!pendingRetryURLs[details.url]) {
-                pendingRetryURLs[details.url] = {attempts: 0};
-              }
+          if (!chrome.runtime.lastError && tab && tab.windowId === windowId) {
+            removeTab(details.tabId);
+            if (!pendingRetryURLs[details.url]) {
+              pendingRetryURLs[details.url] = {attempts: 0};
             }
           }
         });
@@ -321,7 +320,7 @@ const registerWebRequestListeners = () => {
 };
 
 /**
- * Returns a promise to remove a tab from fuzzer/scanner window.
+ * Returns a promise to remove a tab with the specified ID.
  */
 const removeTab = async id => {
   return new Promise(res => {
@@ -337,35 +336,40 @@ const removeTab = async id => {
 };
 
 /**
- *
+ * Sends a callback at a given timestamp for a given type.
+ * (example input: ("03/12/2020 01:06:05", "OPEN_REDIRECT_CALLBACK"))
+ * (example input: ("03/12/2020 01:06:05", "REQUEST_CALLBACK"))
  */
 const sendCallback = async (timestamp, callbackType) => {
   return new Promise((res, err) => {
     let callbackURL = "";
-    if (callbackType === "REQUEST_CALLBACK") {
-      if (parsedCallbackURLRequestTimestamps[4] !== "") {
-        callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 5).join("") +
-          "&timestamp=" + encodeURIComponent(timestamp) +
-          "&url=" + encodeURIComponent(url) +
-          parsedCallbackURLRequestTimestamps[5];
-      } else {
-        callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 4).join("") +
-          "?timestamp=" + encodeURIComponent(timestamp) +
-          "&url=" + encodeURIComponent(url) +
-          parsedCallbackURLOpenRedirectTimestamps[5];
-      }
-    } else if (callbackType === "OPEN_REDIRECT_CALLBACK") {
-      if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
-        callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
-          "&timestamp=" + encodeURIComponent(timestamp) +
-          "&url=" + encodeURIComponent(url) +
-          parsedCallbackURLOpenRedirectTimestamps[5];
-      } else {
-        callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
-          "?timestamp=" + encodeURIComponent(timestamp) +
-          "&url=" + encodeURIComponent(url) +
-          parsedCallbackURLOpenRedirectTimestamps[5];
-      }
+    switch (callbackType) {
+      case "OPEN_REDIRECT_CALLBACK":
+        if (parsedCallbackURLOpenRedirectTimestamps[4] !== "") {
+          callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 5).join("") +
+            "&timestamp=" + encodeURIComponent(timestamp) +
+            "&url=" + encodeURIComponent(url) +
+            parsedCallbackURLOpenRedirectTimestamps[5];
+        } else {
+          callbackURL = parsedCallbackURLOpenRedirectTimestamps.slice(0, 4).join("") +
+            "?timestamp=" + encodeURIComponent(timestamp) +
+            "&url=" + encodeURIComponent(url) +
+            parsedCallbackURLOpenRedirectTimestamps[5];
+        }
+        break;
+      case "REQUEST_CALLBACK":
+        if (parsedCallbackURLRequestTimestamps[4] !== "") {
+          callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 5).join("") +
+            "&timestamp=" + encodeURIComponent(timestamp) +
+            "&url=" + encodeURIComponent(url) +
+            parsedCallbackURLRequestTimestamps[5];
+        } else {
+          callbackURL = parsedCallbackURLRequestTimestamps.slice(0, 4).join("") +
+            "?timestamp=" + encodeURIComponent(timestamp) +
+            "&url=" + encodeURIComponent(url) +
+            parsedCallbackURLOpenRedirectTimestamps[5];
+        }
+        break;
     }
     if (callbackURL.length !== 0) {
       fetch(callbackURL).then(res => {
@@ -375,8 +379,8 @@ const sendCallback = async (timestamp, callbackType) => {
           }
         }
         res();
-      }).catch(_err => {
-        err(_err);
+      }).catch(e => {
+        err(e);
       });
     } else {
       err("Unable to create callback URL, " + "\n" +
@@ -411,11 +415,10 @@ const startForceWakeTabsThread = async () => {
           chrome.tabs.update(tab.id, {
             active: true,
             selected: true,
-          }, () => {
-            chrome.tabs.update(tabAnchorId, {
-              active: true,
-              selected: true,
-            });
+          });
+        } else {
+          tabIds = tabIds.filter(id => {
+            return id !== tabIds[a];
           });
         }
       });
@@ -425,7 +428,7 @@ const startForceWakeTabsThread = async () => {
 };
 
 /**
- * Tries to request pending URLs that timed out (for ??????????).
+ * Tries to request pending URLs that timed out.
  */
 const startPendingRetryURLsThread = async () => {
 //  while (true) {
@@ -478,9 +481,9 @@ const startRequestThread = async () => {
 };
 
 /**
- * Starts looking for idle tabs and removes them.
+ * Starts looking for seemingly idle tabs and removes them.
  */
-const startTabCleanerThread = async () => {
+const startTabRemovalThread = async () => {
   while (true) {
     chrome.tabs.query({}, tabs => {
       tabs.forEach(tab => {
@@ -488,18 +491,19 @@ const startTabCleanerThread = async () => {
              tab.windowId === windowId
           && tab.id !== tabAnchorId
         ) {
-          if (tabCleanerBuffer.indexOf(tab.id) === -1) {
-            tabCleanerBuffer.push(tab.id);
+          if (tabRemovalBuffer.indexOf(tab.id) === -1) {
+            tabRemovalBuffer.push(tab.id);
           } else {
+console.log("removing tab:", tab.id)
             removeTab(tab.id);
-            tabCleanerBuffer = tabCleanerBuffer.filter(id => {
+            tabRemovalBuffer = tabRemovalBuffer.filter(id => {
               return id !== tab.id;
             });
           }
         }
       });
     });
-    await sleep(delayTabCleanerThread);
+    await sleep(delayTabRemovalThread);
   }
 };
 
@@ -524,7 +528,7 @@ const trimWhitespaces = str => {
     startForceWakeTabsThread();
     startPendingRetryURLsThread();
     startRequestThread();
-    startTabCleanerThread();
+    startTabRemovalThread();
 
     openURLInNewTab("https://store.playstation.com/");
   });

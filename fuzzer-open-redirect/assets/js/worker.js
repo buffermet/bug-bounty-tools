@@ -2,8 +2,8 @@
  * Web worker for fuzzer-open-redirect.
  */
 
-let bufferLengthURLs = 20;
-let delayThrottleURLIndexing = 500;
+let bufferLengthURLs = 1000;
+let delayThrottleURLIndexing = 30;
 let delayThrottleURLPathInjection = 100;
 let delayURLInjectionThread = 2000;
 let delayURLScannerThread = 2000;
@@ -87,12 +87,12 @@ const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[2
  * array.
  */
 const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
-  const amountOfChunks = Math.ceil(arr / bufferLength);
+  const amountOfChunks = Math.ceil(arr.length / bufferLength);
   for (let a = 0; a < amountOfChunks; a++) {
     for (
-      let b = a * bufferLengthURLs;
+      let b = a * bufferLength;
          b < arr.length
-      && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
+      && b < (a * bufferLength) + bufferLength - 1;
       b++
     ) {
       if (arr[b] === target) {
@@ -690,7 +690,6 @@ const startURLPathInjectionThread = async () => {
   while (true) {
     if (injectablePathURLsBuffer.length !== 0) {
       let newInjectedPathURLs = [];
-      let filteredURLs = []
       let amountOfChunks = Math.ceil(injectablePathURLsBuffer.length / bufferLengthURLs);
       while (
            injectablePathURLsBuffer.length !== 0
@@ -704,16 +703,25 @@ const startURLPathInjectionThread = async () => {
         await sleep(delayThrottleURLIndexing);
       }
       if (injectablePathURLsBuffer.length !== 0) {
-        const injectablePathURL = injectablePathURLsBuffer[0];
-        injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
-        const parsedInjectablePathURL = parseURL(injectablePathURL);
+        injectablePathURLs.push(injectablePathURLsBuffer[0]);
+        const parsedInjectablePathURL = parseURL(injectablePathURLsBuffer[0]);
         if (parsedInjectablePathURL[3].length !== 0) {
-          let newInjectedPathURLs = [];
-          const pathEntries = parsedInjectablePathURL[3].split("/");
-          for (let a = 0; a < pathEntries.length + 1; a++) {
+          const regexpSelectorURLPathDirectory = /[/][^/]*/ig;
+          let matchIndices = [];
+          let match;
+          while (
+            match = regexpSelectorURLPathDirectory.exec(parsedInjectablePathURL[3])
+          ) {
+            matchIndices.push(match.index);
+          }
+          if (matchIndices.length !== 1) {
+            matchIndices.push(parsedInjectablePathURL[3].length);
+          }
+          for (let a = 0; a < matchIndices.length; a++) {
             for (let b = 0; b < redirectURLsForPathExploitation.length; b++) {
               const injectedURL = parsedInjectablePathURL.slice(0, 3).join("") +
-                pathEntries.slice(0, a).join("/") + redirectURLsForPathExploitation[b] +
+                parsedInjectablePathURL[3].slice(0, matchIndices[a]) +
+                redirectURLsForPathExploitation[b] +
                 parsedInjectablePathURL.slice(5, 6).join("");
               if (
                    await bufferedIndexOf(
@@ -741,6 +749,7 @@ const startURLPathInjectionThread = async () => {
             });
           }
         }
+        injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
       }
     }
     await sleep(delayURLInjectionThread);

@@ -4,11 +4,11 @@
 
 "use strict";
 
-let bufferLengthURLs = 20;
+let bufferLengthURLs = 1000;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let delayThrottleRegexpSearch = 2;
-let delayThrottleURLIndexing = 500;
+let delayThrottleURLIndexing = 30;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -181,12 +181,12 @@ let scanCount = 0;
  * array.
  */
 const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
-  const amountOfChunks = Math.ceil(arr / bufferLength);
+  const amountOfChunks = Math.ceil(arr.length / bufferLength);
   for (let a = 0; a < amountOfChunks; a++) {
     for (
-      let b = a * bufferLengthURLs;
+      let b = a * bufferLength;
          b < arr.length
-      && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
+      && b < (a * bufferLength) + bufferLength - 1;
       b++
     ) {
       if (arr[b] === target) {
@@ -567,7 +567,7 @@ const scanForExploitableURIs = async () => {
           }
         }
       }
-      await sleep(delayThrottleURLIndexing);
+//      await sleep(delayThrottleURLIndexing);
     }
     if (URLs.length > 0) {
       injectableParameterURLs = injectableParameterURLs.concat(URLs);
