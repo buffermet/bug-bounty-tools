@@ -45,6 +45,11 @@ const redirectURLs = [
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
+const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i;
+const regexpSelectorURLPath = /^([^?#]+)?.*/i;
+const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*/i;
+const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]+[:])(?:[/][/])?|(?:[a-z0-9.+-]+[:])?[/][/])?.*/i;
+const regexpSelectorURLSearch = /^([?][^#]{0,255})?.*/i;
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
@@ -198,7 +203,7 @@ const parseCallbackURLs = async () => {
 };
 
 /**
- * Returns an array containing the protocol, host, port, path, search and anchor of a
+ * Returns an array containing the protocol, host, port, path, search and hash of a
  * given URL if found.
  * (example input: "/path/to/file?v=4.4.2#hash")
  * (example output: [
@@ -214,26 +219,26 @@ const parseURL = url => {
   const strippedURL = trimWhitespaces(url);
   const retval = ["","","","","",""];
   /* protocol */
-  retval[0] = strippedURL.replace(/^((?:[a-z0-9.+-]+[:])(?:[/][/])?|(?:[a-z0-9.+-]+[:])?[/][/])?.*/i, "$1");
+  retval[0] = strippedURL.replace(regexpSelectorURLProtocol, "$1");
   const protocol = retval[0].toLowerCase();
-  if (
-       protocol === "data:"
-    || protocol === "javascript:"
-  ) {
-    retval[3] = url.slice(retval[0].length);
-    return retval;
-  }
-  /* host */
-  if (protocol !== "") {
-    retval[1] = strippedURL.slice(retval[0].length).replace(/^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i, "$1");
+  if (protocol.length !== 0) {
+    if (
+         protocol === "data:"
+      || protocol === "javascript:"
+    ) {
+      retval[3] = url.slice(retval[0].length);
+      return retval;
+    }
+    /* host */
+    retval[1] = strippedURL.slice(retval[0].length).replace(regexpSelectorURLHost, "$1");
   }
   /* port */
-  retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(/^([:][1-9][0-9]{0,4})?.*/i, "$1");
+  retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(regexpSelectorURLPort, "$1");
   /* path */
-  retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(/^([^?#]+)?.*/i, "$1");
+  retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(regexpSelectorURLPath, "$1");
   /* search */
-  retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(/^([?][^#]*)?.*/i, "$1");
-  /* anchor */
+  retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(regexpSelectorURLSearch, "$1");
+  /* hash */
   retval[5] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length + retval[4].length);
   return retval;
 };
