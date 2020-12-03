@@ -2,8 +2,8 @@
  * Web worker for fuzzer-open-redirect.
  */
 
-let bufferLengthURLs = 1000;
-let delayThrottleURLIndexing = 30;
+let bufferLengthURLs = 30;
+let delayThrottleURLIndexing = 10;
 let delayThrottleURLPathInjection = 100;
 let delayURLInjectionThread = 2000;
 let delayURLScannerThread = 2000;
@@ -99,7 +99,7 @@ const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
         return b;
       }
     }
-    await sleep(throttleDuration);
+    if (throttleDuration !== 0) await sleep(throttleDuration);
   }
   return -1;
 };

@@ -5,14 +5,15 @@
 "use strict";
 
 let crawlerScripts = [];
-let delayForceWakeTabsThread = 3000;
-let delayRangeRequests = [5000, 6000];
+let delayForceWakeTabsThread = 1000;
+let delayRangeRequests = [4000, 8000];
 let delayTabRemovalThread = 60000;
-let threadCount = 1;
+let threadCount = 2;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
+let limitOfTabs = 1;
 let retryAttempts = 6;
 let statusCodesFail = ["4*", "5*"];
 
@@ -120,10 +121,7 @@ const isFailStatusCode = statusCodeString => {
  * Opens a given URL in a new scanner tab.
  */
 const openURLInNewTab = async url => {
-  return new Promise((res, err) => {
-    setTimeout(() => {
-      err("Opening tab timed out.");
-    }, timeoutRequests);
+  return new Promise(async (res, err) => {
     chrome.tabs.create({
       url: url,
       windowId: windowId,
@@ -454,6 +452,9 @@ const startRequestThread = async () => {
   for (let a = 0; a < threadCount; a++) {
     (async () => {
       while (true) {
+        while (tabIds.length >= limitOfTabs) {
+          await sleep(300);
+        }
         let URL = "";
         if (injectedRedirectParameterURLsQueue.length !== 0) {
           URL = injectedRedirectParameterURLsQueue[0];

@@ -4,11 +4,11 @@
 
 "use strict";
 
-let bufferLengthURLs = 1000;
+let bufferLengthURLs = 50;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleRegexpSearch = 2;
-let delayThrottleURLIndexing = 30;
+let delayThrottleRegexpSearch = 5;
+let delayThrottleURLIndexing = 3;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -193,7 +193,7 @@ const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
         return b;
       }
     }
-    await sleep(throttleDuration);
+    if (throttleDuration !== 0) await sleep(throttleDuration);
   }
   return -1;
 };
