@@ -14,6 +14,12 @@ let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let limitOfTabs = 1;
+let requestPriorities = [
+  0, /* injected redirect parameter */
+  1, /* injected path */
+  2, /* any injected parameter */
+  3, /* scan */
+];
 let retryAttempts = 6;
 let statusCodesFail = ["4*", "5*"];
 
@@ -456,18 +462,36 @@ const startRequestThread = async () => {
           await sleep(300);
         }
         let URL = "";
-        if (injectedRedirectParameterURLsQueue.length !== 0) {
-          URL = injectedRedirectParameterURLsQueue[0];
-          injectedRedirectParameterURLsQueue = injectedRedirectParameterURLsQueue.slice(1);
-        } else if (injectedPathURLsQueue.length !== 0) {
-          URL = injectedPathURLsQueue[0];
-          injectedPathURLsQueue = injectedPathURLsQueue.slice(1);
-        } else if (injectedParameterURLsQueue.length !== 0) {
-          URL = injectedParameterURLsQueue[0];
-          injectedParameterURLsQueue = injectedParameterURLsQueue.slice(1);
-        } else if (scannableURLsQueue.length !== 0) {
-          URL = scannableURLsQueue[0];
-          scannableURLsQueue = scannableURLsQueue.slice(1);
+        for (let b = 0; b < requestPriorities.length; b++) {
+          if (URL.length !== 0) {
+            break;
+          }
+          switch (requestPriorities[b]) {
+            case 0:  /* injected redirect parameter */
+              if (injectedRedirectParameterURLsQueue.length !== 0) {
+                URL = injectedRedirectParameterURLsQueue[0];
+                injectedRedirectParameterURLsQueue = injectedRedirectParameterURLsQueue.slice(1);
+              }
+              break;
+            case 1:  /* injected path */
+              if (injectedPathURLsQueue.length !== 0) {
+                URL = injectedPathURLsQueue[0];
+                injectedPathURLsQueue = injectedPathURLsQueue.slice(1);
+              }
+              break;
+            case 2:  /* any injected parameter */
+              if (injectedParameterURLsQueue.length !== 0) {
+                URL = injectedParameterURLsQueue[0];
+                injectedParameterURLsQueue = injectedParameterURLsQueue.slice(1);
+              }
+              break;
+            case 3:  /* scan */
+              if (scannableURLsQueue.length !== 0) {
+                URL = scannableURLsQueue[0];
+                scannableURLsQueue = scannableURLsQueue.slice(1);
+              }
+              break;
+          }
         }
         if (URL.length !== 0) {
           openURLInNewTab(URL);
