@@ -115,6 +115,14 @@ const getIntFromRange = (min, max) => {
 };
 
 /**
+ * Returns the current timestamp.
+ */
+const getTimestamp = () => {
+  const date = new Date();
+  return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+};
+
+/**
  * Returns true if a given status code string matches the specified fail status code
  * specifiers.
  */
@@ -256,7 +264,7 @@ const registerMessageListener = () => {
     }
     if (message.timestamp) {
       console.log("Open redirect found at ", message.timestamp);
-      sendCallback(message.timestamp, "OPEN_REDIRECT_CALLBACK");
+      sendCallback(message.timestamp, "", "OPEN_REDIRECT_CALLBACK");
     }
     if (message.message) {
       if (
@@ -348,7 +356,7 @@ const removeTab = async id => {
  * (example input: ("03/12/2020 01:06:05", "OPEN_REDIRECT_CALLBACK"))
  * (example input: ("03/12/2020 01:06:05", "REQUEST_CALLBACK"))
  */
-const sendCallback = async (timestamp, callbackType) => {
+const sendCallback = async (timestamp, url, callbackType) => {
   return new Promise((res, err) => {
     let callbackURL = "";
     switch (callbackType) {
@@ -380,8 +388,8 @@ const sendCallback = async (timestamp, callbackType) => {
         break;
     }
     if (callbackURL.length !== 0) {
-      fetch(callbackURL).then(res => {
-        if (!res.ok) {
+      fetch(callbackURL).then(_res => {
+        if (!_res.ok) {
           if (!pendingRetryCallbackURLs[callbackURL]) {
             pendingRetryCallbackURLs[callbackURL] = {attempts: 0};
           }
@@ -499,6 +507,7 @@ const startRequestThread = async () => {
           }
         }
         if (URL.length !== 0) {
+          sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
           openURLInNewTab(URL);
         }
         await sleep(getIntFromRange(
