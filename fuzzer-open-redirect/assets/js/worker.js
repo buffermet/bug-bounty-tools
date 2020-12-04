@@ -79,16 +79,16 @@ let threadCount;
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
-const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*/i;
+const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLParameterValue = /=[^&]*/g;
-const regexpSelectorURLPath = /^([^?#]+)?.*/i;
-const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*/i;
-const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]+[:])(?:[/][/])?|(?:[a-z0-9.+-]+[:])?[/][/])?.*/i;
+const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
+const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
+const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
 const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[23]f)/i;
-const regexpSelectorURLSearch = /^([?][^#]{0,255})?.*/i;
+const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
 
 /**
- * Buffered and throttled method that returns the index of a given target object in a given
+ * Buffered and throttled method that returns the index of the given target value in a given
  * array.
  */
 const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
