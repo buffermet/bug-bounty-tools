@@ -1,11 +1,5 @@
 A recursive, multi-threaded open redirect URL scanner and fuzzer.
 
-### Update
-
-The issue of tabs idling seems to be solved now. Currently running a test and CPU usage is stable with over 745,000 parsed, filtered and injected URLs (and counting). It appears that Chrome extensions are a viable method to crawl for extensive periods of time.
-
-I will build Web Workers to move tasks off the main thread and an API alongside the Chromium instance for concurrency, callbacks, and to minimize the risk of losing our scanning/fuzzing progress.
-
 ### Description
 
 This is now an unpacked Chrome extension that you can install manually. GUI = WIP. Configure scope in the content and background scripts for now.
