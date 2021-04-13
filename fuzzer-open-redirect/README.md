@@ -138,13 +138,13 @@ $ encodeMethods[16]("//mysite.com")
 ### 17. (Seventeen)
 
 ```console
-$ encodeMethods[14]("//mysite.com")
+$ encodeMethods[17]("//mysite.com")
 "/\\u0000/\\u0000m\\u0000y\\u0000s\\u0000i\\u0000t\\u0000e\\u0000.\\u0000c\\u0000o\\u0000m"
 ```
 
 ### 18. (Eighteen)
 
 ```console
-$ encodeMethods[14]("//mysite.com")
+$ encodeMethods[18]("//mysite.com")
 "/\\x00/\\x00m\\x00y\\x00s\\x00i\\x00t\\x00e\\x00.\\x00c\\x00o\\x00m"
 ```
