@@ -78,7 +78,8 @@ let scannableURLsBuffer = [];
 let threadCount;
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const regexpSelectorEscapableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
+const regexpSelectorEncodableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
+const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLParameterValue = /=[^&]*/g;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
@@ -133,7 +134,7 @@ const encodeMethods = {
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
-      if (str.charAt(a).match(regexpSelectorEscapableURICharacters)) {
+      if (regexpSelectorEncodableURICharacters.test(str.charAt(a))) {
         encodedBuffer[a] = "%" + str.charCodeAt(a).toString(16).toLowerCase();
       } else {
         encodedBuffer[a] = str.charAt(a);
@@ -425,7 +426,7 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
   };
   let match;
   while (match = regexpSelectorURLParameterValue.exec(parsedURL[4])) {
-    if (match[0].match(regexpSelectorURLRedirectParameter)) {
+    if (regexpSelectorURLRedirectParameter.test(match[0])) {
       regexpMatches.injectableRedirectParameterURLs.push({
         index: match.index,
         match: match[0],
@@ -507,7 +508,7 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
  * ])
  */
 const parseURL = url => {
-  const strippedURL = trimWhitespaces(url);
+  const strippedURL = trimLeadingAndTrailingWhitespaces(url);
   const retval = ["","","","","",""];
   /* protocol */
   retval[0] = strippedURL.replace(regexpSelectorURLProtocol, "$1");
@@ -807,15 +808,15 @@ const sleep = async ms => {
  * (example input: " https://example.com/  \n")
  * (example output: "https://example.com/")
  */
-const trimWhitespaces = str => {
-  return str.replace(/^\s*(.*)\s*$/g, "$1");
+const trimLeadingAndTrailingWhitespaces = str => {
+  return str.replace(regexpSelectorLeadingAndTrailingWhitespace, "$1");
 };
 
 /* Init worker. */
 (async () => {
   await prepareRedirectURLsForPathExploitation();
   await encodeRedirectURLs();
-  await registerMessageListener();
+  registerMessageListener();
   startURLParameterInjectionThread();
   startURLPathInjectionThread();
   startURLScannerThread();

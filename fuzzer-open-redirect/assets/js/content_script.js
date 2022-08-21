@@ -4,11 +4,11 @@
 
 "use strict";
 
-let bufferLengthURLs = 30;
+let bufferLengthURLs = 50;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleRegexpSearch = 10;
-let delayThrottleURLIndexing = 10;
+let delayThrottleRegexpSearch = 3;
+let delayThrottleURLIndexing = 3;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -52,6 +52,8 @@ const regexpSelectorDebrisHTMLAttributeOne = /^ [a-z-]+[=]/ig;
 const regexpSelectorDebrisHTMLAttributeTwo = /^["']/;
 const regexpSelectorDebrisHTMLAttributeThree = /["']$/;
 const regexpSelectorHTMLURLAttribute = /^ (?:action|href|src)[=]/i;
+const regexpSelectorJSONPruneWebkitStorageInfoOne = /webkitStorageInfo/;
+const regexpSelectorJSONPruneWebkitStorageInfoTwo = /webkitStorageInfo/g;
 const regexpSelectorPathWithDirectory = /^[^/]+[/][^/]+/i;
 const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))[^"'`),\s ]*[?][^"'`),\s ]+[=][^"'`),\s ]*/ig;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
@@ -116,7 +118,7 @@ let scanCount = 0;
     }) + '"' : '"' + string + '"';
   }
   function str(key, holder, depthDecr, arrayMaxLength) {
-    if (key.match(/webkitStorageInfo/)) key = replace(/webkitStorageInfo/g, "navigator.webkitTemporaryStorage");
+    if (regexpSelectorJSONPruneWebkitStorageInfoOne.test(key)) key = replace(regexpSelectorJSONPruneWebkitStorageInfoTwo, "navigator.webkitTemporaryStorage");
     var i, k, v, length, partial, value = holder[key];
     if (value && typeof value === 'object' && typeof value.toPrunedJSON === 'function') {
       value = value.toPrunedJSON(key);
@@ -377,7 +379,7 @@ const isInScopeOrigin = origin => {
         .replace(/^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:") /* scheme */
         .replace(/[*]/ig, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
       "ig");
-    if (origin.match(regexpInScopeOrigin)) {
+    if (regexpInScopeOrigin.test(origin)) {
       return true;
     }
   }
@@ -495,7 +497,7 @@ const scanForExploitableURIs = async () => {
             .replace(regexpSelectorDebrisHTMLAttributeOne, "")
             .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
             .replace(regexpSelectorDebrisHTMLAttributeThree, "");
-          if (match[0].match(regexpSelectorHTMLURLAttribute)) {
+          if (regexpSelectorHTMLURLAttribute.test(match[0])) {
             const parsedURL = parseURL(strippedMatch);
             if (parsedURL[4].length !== 0) {
               const fullURL = toFullURL(strippedMatch);
@@ -647,7 +649,7 @@ const scanForURIs = async () => {
             .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
             .replace(regexpSelectorDebrisHTMLAttributeThree, "");
           const parsedURL = parseURL(strippedMatch);
-          if (match[0].match(regexpSelectorHTMLURLAttribute)) {
+          if (regexpSelectorHTMLURLAttribute.test(match[0])) {
             const fullURL = toFullURL(strippedMatch);
             const parsedFullURL = parseURL(fullURL);
             if (
@@ -678,8 +680,8 @@ const scanForURIs = async () => {
                    parsedURL[3].length !== 0 /* path */
                 && (
                      parsedURL[3].charAt(0) === "/" /* path */
-                  || parsedURL[3].match(/[.][a-z]{2,3}$/i) /* path */
-                  || parsedURL[3].match(/^[^/]+[/][^/]+/i) /* path */
+                  || regexpSelectorAnyFileExtension.test(parsedURL[3]) /* path */
+                  || regexpSelectorPathWithDirectory.test(parsedURL[3]) /* path */
                 )
               )
             ) {
@@ -733,8 +735,8 @@ const scanForURIs = async () => {
                parsedURL[3].length !== 0 /* path */
             && (
                  parsedURL[3].charAt(0) === "/" /* path */
-              || parsedURL[3].match(regexpSelectorAnyFileExtension) /* path */
-              || parsedURL[3].match(regexpSelectorPathWithDirectory) /* path */
+              || regexpSelectorAnyFileExtension.test(parsedURL[3]) /* path */
+              || regexpSelectorPathWithDirectory.test(parsedURL[3]) /* path */
             )
           )
         ) {

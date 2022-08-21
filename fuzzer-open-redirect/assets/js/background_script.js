@@ -46,14 +46,12 @@ const redirectURLs = [
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
+const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
-
-const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
-
 const regexpSelectorWildcardStatusCode = /[*]/g;
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
@@ -133,8 +131,8 @@ const getTimestamp = () => {
  */
 const isFailStatusCode = statusCodeString => {
   for (let a = 0; a < statusCodesFail.length; a++) {
-    const selector = "^" + statusCodesFail[a].replace(regexpSelectorWildcardStatusCode, "[0-9]+") + "$";
-    if (statusCodeString.match(new RegExp(selector))) {
+    const selector = new RegExp("^" + statusCodesFail[a].replace(regexpSelectorWildcardStatusCode, "[0-9]+") + "$");
+    if (selector.test(statusCodeString)) {
       return true;
     }
   }
