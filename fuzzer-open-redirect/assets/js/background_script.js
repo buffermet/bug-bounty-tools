@@ -6,8 +6,8 @@
 
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeRequests = [4000, 8000];
-let delayTabRemovalThread = 60000;
+let delayRangeRequests = [3000, 8000];
+let delayTabRemovalThread = 300000;
 let threadCount = 2;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
@@ -16,8 +16,8 @@ let isScannerThreadPaused = false;
 let limitOfTabs = 1;
 let requestPriorities = [
   0, /* injected redirect parameter */
-  1, /* injected path */
   2, /* any injected parameter */
+  1, /* injected path */
   3, /* scan */
 ];
 let retryAttempts = 6;
@@ -42,6 +42,7 @@ const redirectURLs = [
   "runescape.com/splash",
   "runescape.com/splash?ing",
   "data:text/html,<script>location='https://runescape.com'</script>",
+  "data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
@@ -50,6 +51,10 @@ const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
+
+const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
+
+const regexpSelectorWildcardStatusCode = /[*]/g;
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
@@ -128,7 +133,7 @@ const getTimestamp = () => {
  */
 const isFailStatusCode = statusCodeString => {
   for (let a = 0; a < statusCodesFail.length; a++) {
-    const selector = "^" + statusCodesFail[a].replace(/[*]/g, "[0-9]+") + "$";
+    const selector = "^" + statusCodesFail[a].replace(regexpSelectorWildcardStatusCode, "[0-9]+") + "$";
     if (statusCodeString.match(new RegExp(selector))) {
       return true;
     }
@@ -173,6 +178,9 @@ const openWindow = async () => {
   });
 };
 
+/**
+ * 
+ */
 const parseCallbackURLs = async () => {
   return new Promise((res, err) => {
     /* Parse specified callback URLs for open redirects and requests. */
@@ -224,7 +232,7 @@ const parseCallbackURLs = async () => {
  * ])
  */
 const parseURL = url => {
-  const strippedURL = trimWhitespaces(url);
+  const strippedURL = trimLeadingAndTrailingWhitespaces(url);
   const retval = ["","","","","",""];
   /* protocol */
   retval[0] = strippedURL.replace(regexpSelectorURLProtocol, "$1");
@@ -550,8 +558,8 @@ console.log("removing tab:", tab.id)
  * (example input: " https://example.com/  \n")
  * (example output: "https://example.com/")
  */
-const trimWhitespaces = str => {
-  return str.replace(/^\s*(.*)\s*$/g, "$1");
+const trimLeadingAndTrailingWhitespaces = str => {
+  return str.replace(regexpSelectorLeadingAndTrailingWhitespace, "$1");
 };
 
 /**
@@ -560,8 +568,8 @@ const trimWhitespaces = str => {
 (() => {
   parseCallbackURLs().then(async () => {
     worker.postMessage({threadCount: threadCount});
-    await registerMessageListener();
-    await registerWebRequestListeners();
+    registerMessageListener();
+    registerWebRequestListeners();
     await openWindow();
     startForceWakeTabsThread();
     startPendingRetryURLsThread();
@@ -571,4 +579,3 @@ const trimWhitespaces = str => {
     openURLInNewTab("https://store.playstation.com/");
   });
 })();
-

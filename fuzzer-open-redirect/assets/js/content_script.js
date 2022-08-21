@@ -4,11 +4,11 @@
 
 "use strict";
 
-let bufferLengthURLs = 50;
+let bufferLengthURLs = 30;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleRegexpSearch = 5;
-let delayThrottleURLIndexing = 3;
+let delayThrottleRegexpSearch = 10;
+let delayThrottleURLIndexing = 10;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -27,6 +27,7 @@ let redirectURLs = [
   "runescape.com/splash",
   "runescape.com/splash?ing",
   "data:text/html,<script>location='https://runescape.com'</script>",
+  "data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
   "javascript:location='https://runescape.com'",
   "javascript:location='//runescape.com'",
 ];
@@ -366,16 +367,15 @@ const parseURL = url => {
 
 /**
  * (example input: "http://www.in.scope.domain.com")
- * (example output given "*://*.in.scope.*" is in the scope: true)
+ * (example output given "\*://\*.in.scope.*" is in the scope: true)
  */
 const isInScopeOrigin = origin => {
   for (let a = 0; a < scope.length; a++) {
     const regexpInScopeOrigin = new RegExp(
-      "^" +
-      scope[a]
-        .replace(/([^*a-z0-9\]])/ig, "[$1]")
-        .replace(/^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:")
-        .replace(/[*]/ig, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"),
+      "^" + scope[a]
+        .replace(/([^*a-z0-9\]])/ig, "[$1]") /* escape chars */
+        .replace(/^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:") /* scheme */
+        .replace(/[*]/ig, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
       "ig");
     if (origin.match(regexpInScopeOrigin)) {
       return true;
@@ -385,7 +385,8 @@ const isInScopeOrigin = origin => {
 }
 
 /**
- * Returns the full URL based on a given URI that was found in the current document.
+ * Returns the full URL based on a given URI that was found in the
+ * current document.
  */
 const toFullURL = uri => {
   const parsedURL = parseURL(uri);
@@ -430,12 +431,26 @@ const trimWhitespaces = str => {
 };
 
 /**
- * Sleeps an awaited promise value for the given amount of milliseconds.
+ * Sleeps an awaited promise value for the given amount of
+ * milliseconds.
  */
 const sleep = async ms => {
   return new Promise(res => {
     setTimeout(res, ms);
   });
+}
+
+/**
+ * Starts automatically scrolling the window from top to bottom
+ * indefinitely.
+ */
+const startAutoScrolling = async () => {
+  while (true) {
+    window.scrollTo(0, 9999999999);
+    await sleep(1000);
+    window.scrollTo(0, 0);
+    await sleep(1000);
+  }
 }
 
 /**
@@ -453,8 +468,8 @@ const stripAllTrailingWhitespaces = str => {
 }
 
 /**
- * Scans this document's source and DOM tree for potentially vulnerable URLs that are in
- * scope and returns them in an array.
+ * Scans this document's source and DOM tree for potentially
+ * vulnerable URLs that are in scope and returns them in an array.
  */
 const scanForExploitableURIs = async () => {
   return new Promise(async res => {
@@ -582,13 +597,14 @@ const scanForExploitableURIs = async () => {
         "No exploitable, in-scope URIs found.");
     }
     scanCount--;
+console.log("completed scanForExploitableURIs()")
     res();
   });
 }
 
 /**
- * Scans this document's source and DOM tree for URIs that are in scope and returns them
- * in an array of URLs.
+ * Scans this document's source and DOM tree for URIs that are in
+ * scope and returns them in an array of URLs.
  */
 const scanForURIs = async () => {
   return new Promise(async res => {
@@ -618,6 +634,7 @@ const scanForURIs = async () => {
           ) {
             URLs.push(match[0]);
           }
+          await sleep(delayThrottleRegexpSearch);
         }
       }
       if (document.documentElement.outerHTML) {
@@ -688,8 +705,8 @@ const scanForURIs = async () => {
               }
             }
           }
+          await sleep(delayThrottleRegexpSearch);
         }
-        await sleep(delayThrottleRegexpSearch);
       }
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
@@ -757,6 +774,7 @@ const scanForURIs = async () => {
         "No in-scope URIs found.");
     }
     scanCount--;
+console.log("completed scanForURIs()")
     res();
   });
 }
@@ -766,6 +784,7 @@ const scanForURIs = async () => {
  */
 (async () => {
   /* If successfully exploited, send a timestamped callback for open redirects. */
+  startAutoScrolling();
   let redirectHosts = [];
   for (let a = 0; a < redirectURLs.length; a++) {
     const parsedURL = parseURL(redirectURLs[a]);
