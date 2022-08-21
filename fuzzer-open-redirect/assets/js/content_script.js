@@ -157,7 +157,7 @@ let scanCount = 0;
     }
   }
   JSON.prune = function (value, depthDecr, arrayMaxLength) {
-    if (typeof depthDecr == "object") {
+    if (typeof depthDecr === "object") {
       var options = depthDecr;
       depthDecr = options.depthDecr;
       arrayMaxLength = options.arrayMaxLength;
@@ -443,12 +443,12 @@ const sleep = async ms => {
 }
 
 /**
- * Starts automatically scrolling the window from top to bottom
- * indefinitely.
+ * Starts automatically scrolling the window from the top left to
+ * the bottom right indefinitely.
  */
 const startAutoScrolling = async () => {
   while (true) {
-    window.scrollTo(0, 9999999999);
+    window.scrollTo(9999999999, 9999999999);
     await sleep(1000);
     window.scrollTo(0, 0);
     await sleep(1000);
@@ -456,16 +456,16 @@ const startAutoScrolling = async () => {
 }
 
 /**
- * Strips trailing single/double quote.
+ * Strips leading and trailing single/double quote from a given string.
  */
-const stripTrailingQuotes = str => {
+const stripLeadingAndTrailingQuotes = str => {
   return str.replace(/^["'](.*)["']$/g, "$1");
 }
 
 /**
- * Strips all trailing whitespace.
+ * Strips leading and trailing whitespace from a given string.
  */
-const stripAllTrailingWhitespaces = str => {
+const stripLeadingAndTrailingWhitespace = str => {
   return str.replace(/^\s*(.*)\s*$/g, "$1");
 }
 
@@ -854,4 +854,3 @@ console.log("completed scanForURIs()")
     }
   }
 })();
-
