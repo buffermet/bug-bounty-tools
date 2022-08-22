@@ -594,7 +594,7 @@ const startURLParameterInjectionThread = async () => {
       let newInjectedParameterURLs = [];
       let newInjectedRedirectParameterURLs = [];
       let amountOfChunks = Math.ceil(
-        injectableParameterURLs.length / bufferLengthURLs);
+          ParameterURLs.length / bufferLengthURLs);
       for (let a = 0; a < amountOfChunks; a++) {
         for (
           let b = a * bufferLengthURLs;
@@ -763,9 +763,9 @@ const startURLPathInjectionThread = async () => {
 };
 
 /**
- * Starts scanning an indefinite amount of URLs in scope.
+ * Starts sorting an indefinite amount of URLs in scope.
  */
-const startURLScannerThread = async () => {
+const startURLSorter = async () => {
   while (true) {
     while (
          scannableURLsBuffer.length !== 0
@@ -775,13 +775,13 @@ const startURLScannerThread = async () => {
            bufferLengthURLs,
            delayThrottleURLIndexing) !== -1
     ) {
+      /* scannableURLs already contains this URL */
       scannableURLsBuffer = scannableURLsBuffer.slice(1);
       await sleep(delayThrottleURLIndexing);
     }
     if (scannableURLsBuffer.length !== 0) {
-      const newScannableURL = scannableURLsBuffer[0];
+      scannableURLs = scannableURLs.concat(scannableURLsBuffer[0]);
       scannableURLsBuffer = scannableURLsBuffer.slice(1);
-      scannableURLs = scannableURLs.concat(newScannableURL);
       postMessage({
         appendage: {
           scannableURLsQueue: [newScannableURL]
@@ -817,5 +817,5 @@ const trimLeadingAndTrailingWhitespaces = str => {
   registerMessageListener();
   startURLParameterInjectionThread();
   startURLPathInjectionThread();
-  startURLScannerThread();
+  startURLSorter();
 })();

@@ -13,7 +13,7 @@ let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
-let limitOfTabs = 15;
+let limitOfTabs = 10;
 let requestPriorities = [
   0, /* injected redirect parameter */
   2, /* any injected parameter */
@@ -472,7 +472,7 @@ const startPendingRetryURLsThread = async () => {
 };
 
 /**
- * Starts scanning an indefinite amount of URLs that are in scope.
+ * Starts requesting an indefinite amount of injected URLs.
  */
 const startRequestThread = async () => {
   for (let a = 0; a < threadCount; a++) {
