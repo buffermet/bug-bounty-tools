@@ -767,28 +767,26 @@ const startURLPathInjectionThread = async () => {
  */
 const startURLScannerThread = async () => {
   while (true) {
+    while (
+         scannableURLsBuffer.length !== 0
+      && await bufferedIndexOf(
+           scannableURLs,
+           scannableURLsBuffer[0],
+           bufferLengthURLs,
+           delayThrottleURLIndexing) !== -1
+    ) {
+      scannableURLsBuffer = scannableURLsBuffer.slice(1);
+      await sleep(delayThrottleURLIndexing);
+    }
     if (scannableURLsBuffer.length !== 0) {
-      while (
-           scannableURLsBuffer.length !== 0
-        && await bufferedIndexOf(
-             scannableURLs,
-             scannableURLsBuffer[0],
-             bufferLengthURLs,
-             delayThrottleURLIndexing) !== -1
-      ) {
-        scannableURLsBuffer = scannableURLsBuffer.slice(1);
-        await sleep(delayThrottleURLIndexing);
-      }
-      if (scannableURLsBuffer.length !== 0) {
-        const newScannableURL = scannableURLsBuffer[0];
-        scannableURLsBuffer = scannableURLsBuffer.slice(1);
-        scannableURLs = scannableURLs.concat(newScannableURL);
-        postMessage({
-          appendage: {
-            scannableURLsQueue: [newScannableURL]
-          }
-        });
-      }
+      const newScannableURL = scannableURLsBuffer[0];
+      scannableURLsBuffer = scannableURLsBuffer.slice(1);
+      scannableURLs = scannableURLs.concat(newScannableURL);
+      postMessage({
+        appendage: {
+          scannableURLsQueue: [newScannableURL]
+        }
+      });
     }
     await sleep(delayURLScannerThread);
   }

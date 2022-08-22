@@ -6,7 +6,7 @@
 
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeRequests = [3000, 8000];
+let delayRangeRequests = [4000, 8000];
 let delayTabRemovalThread = 300000;
 let threadCount = 2;
 let timeoutCallback = 40000;
@@ -217,8 +217,8 @@ const parseCallbackURLs = async () => {
 };
 
 /**
- * Returns an array containing the protocol, host, port, path, search and hash of a
- * given URL if found.
+ * Returns an array containing the protocol, host, port, path,
+ * search and hash of a given URL if found.
  * (example input: "/path/to/file?v=4.4.2#hash")
  * (example output: [
  *   "",
@@ -359,8 +359,8 @@ const removeTab = async id => {
 
 /**
  * Sends a callback at a given timestamp for a given type.
- * (example input: ("03/12/2020 01:06:05", "OPEN_REDIRECT_CALLBACK"))
- * (example input: ("03/12/2020 01:06:05", "REQUEST_CALLBACK"))
+ * (example input: ("03/12/2020 01:06:05", "...", "OPEN_REDIRECT_CALLBACK"))
+ * (example input: ("03/12/2020 01:06:05", "...", "REQUEST_CALLBACK"))
  */
 const sendCallback = async (timestamp, url, callbackType) => {
   return new Promise((res, err) => {

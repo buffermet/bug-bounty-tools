@@ -7,8 +7,8 @@
 let bufferLengthURLs = 50;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleRegexpSearch = 3;
-let delayThrottleURLIndexing = 3;
+let delayThrottleRegexpSearch = 5;
+let delayThrottleURLIndexing = 5;
 let redirectURLs = [
   "https://runescape.com",
   "https://runescape.com/",
@@ -55,10 +55,11 @@ const regexpSelectorHTMLURLAttribute = /^ (?:action|href|src)[=]/i;
 const regexpSelectorJSONPruneWebkitStorageInfoOne = /webkitStorageInfo/;
 const regexpSelectorJSONPruneWebkitStorageInfoTwo = /webkitStorageInfo/g;
 const regexpSelectorPathWithDirectory = /^[^/]+[/][^/]+/i;
-const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))[^"'`),\s ]*[?][^"'`),\s ]+[=][^"'`),\s ]*/ig;
+const regexpSelectorURIOne = /(?:^http|^\/|^[a-z0-9_-]{1,8192}[/?#])/;
+const regexpSelectorURIWithParameterPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:\/[^?# "'`),]{0,8192})?(?:\?[^# "'`),]{0,8192})?(?:[#][^ "'`),]{0,8192})?/ig;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
-const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:[^"'`),\s ]+)?/ig;
+const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:\/[^?# "'`),]{0,8192})?(?:\?[^# "'`),]{0,8192})?(?:[#][^ "'`),]{0,8192})?/ig;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
@@ -493,14 +494,14 @@ const scanForExploitableURIs = async () => {
           match = regexpSelectorAllHTMLAttributes.exec(
             document.documentElement.outerHTML)
         ) {
-          const strippedMatch = match[0]
+          const attributeValue = match[0]
             .replace(regexpSelectorDebrisHTMLAttributeOne, "")
             .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
             .replace(regexpSelectorDebrisHTMLAttributeThree, "");
           if (regexpSelectorHTMLURLAttribute.test(match[0])) {
-            const parsedURL = parseURL(strippedMatch);
-            if (parsedURL[4].length !== 0) {
-              const fullURL = toFullURL(strippedMatch);
+            const parsedURL = parseURL(attributeValue);
+            if (parsedURL[4].length !== 0) { /* search */
+              const fullURL = toFullURL(attributeValue);
               if (
                    fullURL !== location.href
                 && (
@@ -522,30 +523,33 @@ const scanForExploitableURIs = async () => {
               }
             }
           } else {
-            const parsedURL = parseURL(strippedMatch);
-            if (parsedURL[4].length !== 0) {
-              const fullURL = toFullURL(strippedMatch);
-              if (
-                   fullURL !== location.href
-                && (
-                     scanOutOfScopeOrigins
-                  || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
-                )
-                && await bufferedIndexOf(
-                     URLs,
-                     fullURL,
-                     bufferLengthURLs,
-                     delayThrottleURLIndexing) === -1
-                && await bufferedIndexOf(
-                     injectableParameterURLs,
-                     fullURL,
-                     bufferLengthURLs,
-                     delayThrottleURLIndexing) === -1
-              ) {
-                URLs.push(fullURL);
+            if (regexpSelectorURIOne.test(attributeValue)) {
+              const parsedURL = parseURL(attributeValue);
+              if (parsedURL[4].length !== 0) {
+                const fullURL = toFullURL(attributeValue);
+                if (
+                     fullURL !== location.href
+                  && (
+                       scanOutOfScopeOrigins
+                    || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                  )
+                  && await bufferedIndexOf(
+                       URLs,
+                       fullURL,
+                       bufferLengthURLs,
+                       delayThrottleURLIndexing) === -1
+                  && await bufferedIndexOf(
+                       injectableParameterURLs,
+                       fullURL,
+                       bufferLengthURLs,
+                       delayThrottleURLIndexing) === -1
+                ) {
+                  URLs.push(fullURL);
+                }
               }
             }
           }
+          await sleep(delayThrottleRegexpSearch);
         }
       }
     }
@@ -615,7 +619,9 @@ const scanForURIs = async () => {
     if (document.documentElement) {
       if (document.documentElement.innerText) {
         let match;
-        while (match = regexpSelectorURLPlain.exec(document.documentElement.innerText)) {
+        while (
+          match = regexpSelectorURLPlain.exec(document.documentElement.innerText)
+        ) {
           const parsedURL = parseURL(match[0]);
           if (
                match[0] !== location.href
@@ -642,15 +648,15 @@ const scanForURIs = async () => {
       if (document.documentElement.outerHTML) {
         let match;
         while (
-          match = regexpSelectorAllHTMLAttributes.exec(document.documentElement.outerHTML)
+          match = regexpSelectorAllHTMLAttributes.exec(
+            document.documentElement.outerHTML)
         ) {
-          const strippedMatch = match[0]
+          const attributeValue = match[0]
             .replace(regexpSelectorDebrisHTMLAttributeOne, "")
             .replace(regexpSelectorDebrisHTMLAttributeTwo, "")
             .replace(regexpSelectorDebrisHTMLAttributeThree, "");
-          const parsedURL = parseURL(strippedMatch);
           if (regexpSelectorHTMLURLAttribute.test(match[0])) {
-            const fullURL = toFullURL(strippedMatch);
+            const fullURL = toFullURL(attributeValue);
             const parsedFullURL = parseURL(fullURL);
             if (
                  fullURL !== location.href
@@ -672,44 +678,49 @@ const scanForURIs = async () => {
               URLs.push(fullURL);
             }
           } else {
-            if (
-                 parsedURL[1].length !== 0 /* host */
-              || parsedURL[4].length !== 0 /* search */
-              || parsedURL[5].length !== 0 /* hash */
-              || (
-                   parsedURL[3].length !== 0 /* path */
-                && (
-                     parsedURL[3].charAt(0) === "/" /* path */
-                  || regexpSelectorAnyFileExtension.test(parsedURL[3]) /* path */
-                  || regexpSelectorPathWithDirectory.test(parsedURL[3]) /* path */
-                )
-              )
-            ) {
-              const fullURL = toFullURL(strippedMatch);
+            if (regexpSelectorURIOne.test(attributeValue)) {
+              const parsedURL = parseURL(attributeValue);
               if (
-                   fullURL !== location.href
-                && (
-                     scanOutOfScopeOrigins
-                  || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                   parsedURL[1].length !== 0 /* host */
+                || parsedURL[4].length !== 0 /* search */
+                || parsedURL[5].length !== 0 /* hash */
+                || (
+                     parsedURL[3].length !== 0 /* path */
+                  && (
+                       parsedURL[3].charAt(0) === "/" /* path */
+                    || regexpSelectorAnyFileExtension.test(parsedURL[3]) /* path */
+                    || regexpSelectorPathWithDirectory.test(parsedURL[3]) /* path */
+                  )
                 )
-                && await bufferedIndexOf(
-                     URLs,
-                     fullURL,
-                     bufferLengthURLs,
-                     delayThrottleURLIndexing) === -1
-                && await bufferedIndexOf(
-                     scannableURLs,
-                     fullURL,
-                     bufferLengthURLs,
-                     delayThrottleURLIndexing) === -1
               ) {
-                URLs.push(fullURL);
+                const fullURL = toFullURL(attributeValue);
+                if (
+                     fullURL !== location.href
+                  && (
+                       scanOutOfScopeOrigins
+                    || isInScopeOrigin(parseURL(fullURL).slice(0, 2).join(""))
+                  )
+                  && await bufferedIndexOf(
+                       URLs,
+                       fullURL,
+                       bufferLengthURLs,
+                       delayThrottleURLIndexing) === -1
+                  && await bufferedIndexOf(
+                       scannableURLs,
+                       fullURL,
+                       bufferLengthURLs,
+                       delayThrottleURLIndexing) === -1
+                ) {
+                  URLs.push(fullURL);
+                }
               }
             }
           }
           await sleep(delayThrottleRegexpSearch);
         }
       }
+    } else {
+console.log("no document.documentElement found in scanForURIs")
     }
     const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
     if (prunedGlobalThis.document) {
@@ -811,7 +822,7 @@ console.log("completed scanForURIs()")
   }
   /* Start scanning document for redirect URLs. */
   console.log("%cfuzzer-open-redirect", consoleCSS,
-    "Scanning for redirect URLs.");
+    "Scanning for URLs.");
   while (!globalThis.document) {
     await sleep(300);
   }
@@ -819,6 +830,14 @@ console.log("completed scanForURIs()")
     globalThis.document.addEventListener("DOMContentLoaded", async () => {
       scanForExploitableURIs();
       scanForURIs();
+      while (scanCount !== 0) {
+        await sleep(1000);
+      }
+      chrome.runtime.sendMessage({
+        injectableParameterURLs: injectableParameterURLs,
+        message: "FRAME_READYSTATE_COMPLETE",
+        scannableURLs: scannableURLs,
+      });
     });
     globalThis.document.addEventListener("DOMContentLoaded", () => {
       chrome.runtime.sendMessage({message: "FRAME_READYSTATE_INTERACTIVE"});
