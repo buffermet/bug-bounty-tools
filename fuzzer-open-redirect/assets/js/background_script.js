@@ -6,14 +6,14 @@
 
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeRequests = [4000, 8000];
+let delayRangeRequests = [6000, 8000];
 let delayTabRemovalThread = 300000;
 let threadCount = 2;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
-let limitOfTabs = 1;
+let limitOfTabs = 15;
 let requestPriorities = [
   0, /* injected redirect parameter */
   2, /* any injected parameter */
@@ -126,8 +126,8 @@ const getTimestamp = () => {
 };
 
 /**
- * Returns true if a given status code string matches the specified fail status code
- * specifiers.
+ * Returns true if a given status code string matches the specified
+ * fail status code specifiers.
  */
 const isFailStatusCode = statusCodeString => {
   for (let a = 0; a < statusCodesFail.length; a++) {
@@ -262,6 +262,7 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
+console.log(message)
     if (
          message.injectableParameterURLs
       || message.scannableURLs
