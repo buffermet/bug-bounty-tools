@@ -4,6 +4,7 @@
 
 "use strict";
 
+// (()=>{
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
 let delayRangeRequests = [6000, 8000];
@@ -14,6 +15,7 @@ let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let limitOfTabs = 10;
+let localStorage;
 let requestPriorities = [
   0, /* injected redirect parameter */
   2, /* any injected parameter */
@@ -137,6 +139,44 @@ const isFailStatusCode = statusCodeString => {
     }
   }
   return false;
+};
+
+/**
+ * Returns the local storage object pointer.
+ */
+const loadStorage = async () => {
+  return new Promise(async res => {
+    chrome.storage.local.get(s => res(s));
+  });
+};
+
+/**
+ * Returns a new session object with default configuration.
+ */
+const newSession = () => {
+  return {
+    bufferLengthURLs: 80,
+    callbackURLOpenRedirectTimestamps: "",
+    callbackURLRequestTimestamps: "",
+    crawlerScripts: [],
+    delayForceWakeTabsThread: 1000,
+    delayRangeRequests: [6000, 8000],
+    delayTabRemovalThread: 300000,
+    delayThrottleAutoScrollNode: 10,
+    delayThrottleRegexpSearch: 10,
+    delayThrottleURLIndexing: 10,
+    isFuzzerThreadPaused: false,
+    isScannerThreadPaused: false,
+    limitOfTabs: 10,
+    redirectURLs: {},
+    requestPriorities: [],
+    scannedURLs: {},
+    scanOutOfScopeOrigins: false,
+    scope: {},
+    threadCount: 2,
+    timeoutCallback: 40000,
+    timeoutRequests: 40000
+  };
 };
 
 /**
@@ -274,10 +314,7 @@ console.log(message)
       sendCallback(message.timestamp, "", "OPEN_REDIRECT_CALLBACK");
     }
     if (message.message) {
-      if (
-           message.message === "CALLBACK_FRAME_READYSTATE_COMPLETE"
-        || message.message === "FRAME_READYSTATE_COMPLETE"
-      ) {
+      if (message.message === "FRAME_READYSTATE_COMPLETE") {
         removeTab(sender.tab.id);
         tabIds = tabIds.filter(tab => {
           return tab.id !== sender.tab.id;
@@ -516,6 +553,7 @@ const startRequestThread = async () => {
         if (URL.length !== 0) {
           sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
           openURLInNewTab(URL);
+
         }
         await sleep(getIntFromRange(
           delayRangeRequests[0],
@@ -561,20 +599,24 @@ const trimLeadingAndTrailingWhitespaces = str => {
   return str.replace(regexpSelectorLeadingAndTrailingWhitespace, "$1");
 };
 
+const writeStorage = async () => {
+
+};
+
 /**
  * Init background script.
  */
-(() => {
-  parseCallbackURLs().then(async () => {
-    worker.postMessage({threadCount: threadCount});
-    registerMessageListener();
-    registerWebRequestListeners();
-    await openWindow();
-    startForceWakeTabsThread();
-    startPendingRetryURLsThread();
-    startRequestThread();
-    startTabRemovalThread();
+parseCallbackURLs().then(async () => {
+  await loadStorage();
+  worker.postMessage({threadCount: threadCount});
+  registerMessageListener();
+  registerWebRequestListeners();
+  await openWindow();
+  startForceWakeTabsThread();
+  startPendingRetryURLsThread();
+  startRequestThread();
+  startTabRemovalThread();
 
-    openURLInNewTab("https://store.playstation.com/");
-  });
-})();
+  openURLInNewTab("https://store.playstation.com/");
+});
+// })();

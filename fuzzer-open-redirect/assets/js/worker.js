@@ -594,7 +594,7 @@ const startURLParameterInjectionThread = async () => {
       let newInjectedParameterURLs = [];
       let newInjectedRedirectParameterURLs = [];
       let amountOfChunks = Math.ceil(
-          ParameterURLs.length / bufferLengthURLs);
+          injectableParameterURLs.length / bufferLengthURLs);
       for (let a = 0; a < amountOfChunks; a++) {
         for (
           let b = a * bufferLengthURLs;
@@ -780,8 +780,9 @@ const startURLSorter = async () => {
       await sleep(delayThrottleURLIndexing);
     }
     if (scannableURLsBuffer.length !== 0) {
-      scannableURLs = scannableURLs.concat(scannableURLsBuffer[0]);
+      const newScannableURL = scannableURLsBuffer[0];
       scannableURLsBuffer = scannableURLsBuffer.slice(1);
+      scannableURLs = scannableURLs.concat(newScannableURL);
       postMessage({
         appendage: {
           scannableURLsQueue: [newScannableURL]

@@ -52,6 +52,7 @@ const regexpSelectorAnyFileExtension = /[.][a-z]{2,3}$/i;
 const regexpSelectorDebrisHTMLAttributeOne = /^ [a-z-]+[=]/ig;
 const regexpSelectorDebrisHTMLAttributeTwo = /^["']/;
 const regexpSelectorDebrisHTMLAttributeThree = /["']$/;
+const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
 const regexpSelectorHTMLURLAttribute = /^ (?:action|href|src)[=]/i;
 const regexpSelectorJSONPruneWebkitStorageInfoOne = /webkitStorageInfo/;
 const regexpSelectorJSONPruneWebkitStorageInfoTwo = /webkitStorageInfo/g;
@@ -64,7 +65,9 @@ const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPlain = /(?:(?:http[s]?(?:[:]|%3a))?(?:(?:[/]|%2f){2}))(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))(?:\/[^?# "'`),]{0,8192})?(?:\?[^# "'`),]{0,8192})?(?:[#][^ "'`),]{0,8192})?/ig;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
+const regexpSelectorURLScheme = /^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
+const regexpSelectorWildcard = /[*]/g;
 
 let injectableParameterURLs = [];
 let scannableURLs = [];
@@ -378,9 +381,9 @@ const isInScopeOrigin = origin => {
   for (let a = 0; a < scope.length; a++) {
     const regexpInScopeOrigin = new RegExp(
       "^" + scope[a]
-        .replace(/([^*a-z0-9\]])/ig, "[$1]") /* escape chars */
-        .replace(/^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig, "$1[a-z0-9.+-]+$2:") /* scheme */
-        .replace(/[*]/ig, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
+        .replace(regexpSelectorEscapeChars, "[$1]") /* escape chars */
+        .replace(regexpSelectorURLScheme, "$1[a-z0-9.+-]+$2:") /* scheme */
+        .replace(regexpSelectorWildcard, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
       "ig");
     if (regexpInScopeOrigin.test(origin)) {
       return true;
