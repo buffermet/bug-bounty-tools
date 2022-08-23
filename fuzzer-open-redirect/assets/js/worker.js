@@ -90,8 +90,8 @@ const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[2
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
 
 /**
- * Buffered and throttled method that returns the index of the given target value in a given
- * array.
+ * Buffered and throttled method that returns the index of the given
+ * target value in a given array.
  */
 const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
   const amountOfChunks = Math.ceil(arr.length / bufferLength);
@@ -124,14 +124,15 @@ const chunkArrayToAmountOfChunks = (array, amountOfChunks) => {
 };
 
 /**
- * An integer mapped collection of methods to encode a given URI parameter string.
+ * An integer mapped collection of methods to encode a given URI
+ * parameter string.
  */
 const encodeMethods = {
   0: globalThis.encodeURIComponent,
   1: str => {
     /**
-     *  Returns a string exactly like globalThis.encodeURIComponent does, with lowercase hex
-     *  encoding.
+     * Returns a string exactly like globalThis.encodeURIComponent
+     * does, with lowercase hex encoding.
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
@@ -145,7 +146,8 @@ const encodeMethods = {
   },
   2: str => {
     /**
-     * Returns a lowercase hex encoded string (type 1) using a given string.
+     * Returns a lowercase hex encoded string (type 1) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "https%3a%2f%2fmyredirectsite%2ecom%2f")
      */
@@ -161,7 +163,8 @@ const encodeMethods = {
   },
   3: str => {
     /**
-     * Returns an uppercase hex encoded string (type 1) using a given string.
+     * Returns an uppercase hex encoded string (type 1) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "https%3A%2F%2Fmyredirectsite%2Ecom%2F")
      */
@@ -177,7 +180,8 @@ const encodeMethods = {
   },
   4: str => {
     /**
-     * Returns a lowercase hex encoded string (type 2) using a given string.
+     * Returns a lowercase hex encoded string (type 2) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "%68%74%74%70%73%3a%2f%2f%6d%79%72%65%64%69%72%65%63%74%73%69%74%65%2e%63%6f%6d%2f")
      */
@@ -189,7 +193,8 @@ const encodeMethods = {
   },
   5: str => {
     /**
-     * Returns an uppercase hex encoded string (type 2) using a given string.
+     * Returns an uppercase hex encoded string (type 2) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "%68%74%74%70%73%3A%2F%2F%6D%79%72%65%64%69%72%65%63%74%73%69%74%65%2E%63%6F%6D%2F")
      */
@@ -201,7 +206,8 @@ const encodeMethods = {
   },
   6: str => {
     /**
-     * Returns a lowercase hex encoded string (type 3) using a given string.
+     * Returns a lowercase hex encoded string (type 3) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "https\\u003a\\u002f\\u002fmyredirectsite\\u002ecom\\u002f")
      */
@@ -217,7 +223,8 @@ const encodeMethods = {
   },
   7: str => {
     /**
-     * Returns an uppercase hex encoded string (type 3) using a given string.
+     * Returns an uppercase hex encoded string (type 3) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "https\\u003A\\u002F\\u002Fmyredirectsite\\u002Ecom\\u002f")
      */
@@ -233,7 +240,8 @@ const encodeMethods = {
   },
   8: str => {
     /**
-     * Returns a lowercase hex encoded string (type 4) using a given string.
+     * Returns a lowercase hex encoded string (type 4) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003a\\u002f\\u002f\\u006d\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002e\\u0063\\u006f\\u006d\\u002f")
      */
@@ -245,7 +253,8 @@ const encodeMethods = {
   },
   9: str => {
     /**
-     * Returns an uppercase hex encoded string (type 4) using a given string.
+     * Returns an uppercase hex encoded string (type 4) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "\\u0068\\u0074\\u0074\\u0070\\u0073\\u003A\\u002F\\u002F\\u006D\\u0079\\u0072\\u0065\\u0064\\u0069\\u0072\\u0065\\u0063\\u0074\\u0073\\u0069\\u0074\\u0065\\u002E\\u0063\\u006F\\u006D\\u002F")
      */
@@ -257,7 +266,8 @@ const encodeMethods = {
   },
   10: str => {
     /**
-     * Returns a lowercase hex encoded string (type 5) using a given string.
+     * Returns a lowercase hex encoded string (type 5) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "https\\x3a\\x2f\\x2fmyredirectsite\\x2ecom\\x2f")
      */
@@ -273,7 +283,8 @@ const encodeMethods = {
   },
   11: str => {
     /**
-     * Returns an uppercase hex encoded string (type 5) using a given string.
+     * Returns an uppercase hex encoded string (type 5) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "https\\x3A\\x2F\\x2Fmyredirectsite\\x2Ecom\\x2f")
      */
@@ -289,7 +300,8 @@ const encodeMethods = {
   },
   12: str => {
     /**
-     * Returns a lowercase hex encoded string (type 6) using a given string.
+     * Returns a lowercase hex encoded string (type 6) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3a\\x2f\\x2f\\x6d\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2e\\x63\\x6f\\x6d\\x2f")
      */
@@ -301,7 +313,8 @@ const encodeMethods = {
   },
   13: str => {
     /**
-     * Returns an uppercase hex encoded string (type 6) using a given string.
+     * Returns an uppercase hex encoded string (type 6) using a given
+     * string.
      * (example input: "https://myredirectsite.com/")
      * (example output: "\\x68\\x74\\x74\\x70\\x73\\x3A\\x2F\\x2F\\x6D\\x79\\x72\\x65\\x64\\x69\\x72\\x65\\x63\\x74\\x73\\x69\\x74\\x65\\x2E\\x63\\x6F\\x6D\\x2F")
      */
@@ -337,7 +350,8 @@ const encodeMethods = {
   },
   16: str => {
     /**
-     *  Returns a given string with a URL encoded null byte between each character.
+     *  Returns a given string with a URL encoded null byte between
+     * each character.
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
@@ -347,7 +361,8 @@ const encodeMethods = {
   },
   17: str => {
     /**
-     *  Returns a given string with a hex encoded null byte (type 17) between each character.
+     *  Returns a given string with a hex encoded null byte (type 17)
+     * between each character.
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
@@ -357,7 +372,8 @@ const encodeMethods = {
   },
   18: str => {
     /**
-     *  Returns a given string with a hex encoded null byte (type 18) between each character.
+     *  Returns a given string with a hex encoded null byte (type 18)
+     * between each character.
      */
     let encodedBuffer = new Array(str.length);
     for (let a = 0; a < str.length; a++) {
@@ -379,7 +395,8 @@ const encodeRedirectURLs = async () => {
 };
 
 /**
- * Appends all possible permutations of a given array to matchSetPermutations.
+ * Appends all possible permutations of a given array to
+ * matchSetPermutations.
  */
 const getArrayPermutations = (prefix, arr) => {
   for (let a = 0; a < arr.length; a++) {
@@ -389,7 +406,8 @@ const getArrayPermutations = (prefix, arr) => {
 };
 
 /**
- * Returns an array of URLs that are encoded as per the specified encodingTypes value.
+ * Returns an array of URLs that are encoded as per the specified
+ * encodingTypes value.
  */
 const getEncodedVariants = async url => {
   if (url.length === 0) {
@@ -496,7 +514,8 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
 };
 
 /**
- * Returns an array containing the protocol, host, port, path, search and hash of a
+ * Returns an array containing the protocol, host, port, path, search
+ * and hash of a
  * given URL if found.
  * (example input: "/path/to/file?v=4.4.2#hash")
  * (example output: [
@@ -537,7 +556,8 @@ const parseURL = url => {
 };
 
 /**
- * Creates a filtered array of redirect URLs that can be used to exploit paths.
+ * Creates a filtered array of redirect URLs that can be used to
+ * exploit paths.
  */
 const prepareRedirectURLsForPathExploitation = async () => {
   let filteredURLs = [];
@@ -586,33 +606,30 @@ const registerMessageListener = () => {
 };
 
 /**
- * Starts creating injected permutations of an indefinite amount of injected URLs.
+ * Starts creating injected permutations of an indefinite amount of
+ * injected URLs.
  */
 const startURLParameterInjectionThread = async () => {
   while (true) {
     if (injectableParameterURLsBuffer.length !== 0) {
+      /* Filter already discovered URLs that have injectable parameters. */
+      if (
+        bufferedIndexOf(
+          injectablePathURLs,
+          injectablePathURLsBuffer[0],
+          bufferLengthURLs,
+          delayThrottleURLIndexing) !== -1
+      ) {
+        injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
+      }
       let newInjectedParameterURLs = [];
       let newInjectedRedirectParameterURLs = [];
-      let amountOfChunks = Math.ceil(
-          injectableParameterURLs.length / bufferLengthURLs);
-      for (let a = 0; a < amountOfChunks; a++) {
-        for (
-          let b = a * bufferLengthURLs;
-             b < injectableParameterURLs.length
-          && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
-          b++
-        ) {
-          if (injectableParameterURLs[b] === injectableParameterURLsBuffer[0]) {
-            injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
-          }
-        }
-        await sleep(delayThrottleURLIndexing);
-      }
+      /* Generate all permutations of injected paramters. */
       if (injectableParameterURLsBuffer.length !== 0) {
         const newExploitableURL = injectableParameterURLsBuffer[0]
         injectableParameterURLs = injectableParameterURLs.concat(newExploitableURL);
         injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
-        amountOfChunks = Math.ceil(encodedRedirectURLVariants.length / bufferLengthURLs);
+        let amountOfChunks = Math.ceil(encodedRedirectURLVariants.length / bufferLengthURLs);
         for (let a = 0; a < amountOfChunks; a++) {
           for (
             let b = a * bufferLengthURLs;
@@ -630,6 +647,7 @@ const startURLParameterInjectionThread = async () => {
           }
           await sleep(delayThrottleURLIndexing);
         }
+        /* Filter already injected URLs before shipping to background. */
         let filteredNewInjectedParameterURLs = [];
         for (let a = 0; a < newInjectedParameterURLs.length; a++) {
           if (
@@ -690,7 +708,8 @@ const startURLParameterInjectionThread = async () => {
 };
 
 /**
- * Starts injecting an indefinite amount of URLs with paths using the specified redirect
+ * Starts injecting an indefinite amount of URLs with paths using the
+ * specified redirect
  * URLs that contain a path.
  */
 const startURLPathInjectionThread = async () => {
@@ -794,7 +813,8 @@ const startURLSorter = async () => {
 };
 
 /**
- * Sleeps an awaited promise value for the given amount of milliseconds.
+ * Sleeps an awaited promise value for the given amount of
+ * milliseconds.
  */
 const sleep = async ms => {
   return new Promise(res => {
