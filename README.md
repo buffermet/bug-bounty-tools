@@ -1,3 +1,5 @@
+do not use
+
 ### Collection of scraped bug bounty scopes:
 
 - [HackerOne (hackerone.com)](https://github.com/buffermet/bug-bounty-tools/tree/master/scraped-scopes/hackerone.com)

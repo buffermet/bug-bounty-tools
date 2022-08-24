@@ -1,0 +1,57 @@
+<html>
+	<head>
+		<title>Open Redirect Fuzzer</title>
+		<style>
+			html,
+			html body {
+				height: 100%;
+				width: 100%;
+				margin: 0;
+				padding: 0;
+			}
+			html body {
+				background-color: rgb(32,33,36);
+				height: auto;
+				color: #fff;
+				font-family: monospace;
+				font-size: 12px;
+			}
+			html body content {
+				display: block;
+				margin: 4px;
+				width: calc(100% - 8px);
+			}
+			html body content img {
+				height: 128px;
+				width: 100%;
+			}
+			html body buttons-container {
+				display: block;
+				width: 100%;
+				height: auto;
+			}
+			html body buttons-container button {
+				padding: 24px 32px;
+				background-color: rgba(255,255,255,0.1);
+				border: none;
+				color: #fff;
+				outline: none;
+				cursor: pointer;
+			}
+			html body buttons-container button:hover {
+				background-color: rgba(255,255,255,0.2);
+			}
+		</style>
+	</head>
+	<body>
+		<content>
+			<img src="/assets/img/logo.svg" />
+		</content>
+		<buttons-container>
+			<center>
+				<button name="new">New</button>
+				<button name="load">Load</button>
+			</center>
+		</buttons-container>
+	</body>
+</html>

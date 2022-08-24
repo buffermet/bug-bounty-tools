@@ -1,0 +1,74 @@
+<html>
+	<head>
+		<title>Load session</title>
+		<style>
+			html,
+			html body {
+				height: 100%;
+				width: 100%;
+				margin: 0;
+				padding: 0;
+			}
+			html body {
+				background-color: rgb(32,33,36);
+				height: auto;
+				color: #fff;
+				font-family: monospace;
+				font-size: 12px;
+			}
+			html body sessions-list {
+				display: block;
+				min-height: calc(100% - 12px - 31px);
+				margin: 4px;
+				width: calc(100% - 8px);
+				height: auto;
+			}
+			html body sessions-list ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+			}
+			html body sessions-list ul li {
+				margin: 0;
+				padding: 4px;
+				cursor: pointer;
+			}
+			html body sessions-list ul li:hover {
+				background-color: rgba(255,255,255,0.1);
+			}
+			html body new-session {
+				display: block;
+				margin: 4px;
+			}
+			html body new-session input {
+				width: calc(100% - 64px);
+			}
+			html body new-session input,
+			html body new-session button[name=open] {
+				padding: 8px;
+				background-color: rgba(255,255,255,0.1);
+				border: none;
+				color: #fff;
+				outline: none;
+			}
+			html body new-session button[name=open] {
+				float: right;
+				width: 60px;
+			}
+		</style>
+	</head>
+	<body>
+		<sessions-list>
+			<scrollbox>
+				<ul>
+					<li>abc</li>
+					<li>def</li>
+				</ul>
+			</scrollbox>
+		</sessions-list>
+		<new-session>
+			<input type="text"/>
+			<button name="open">Open</button>
+		</new-session>
+	</body>
+</html>

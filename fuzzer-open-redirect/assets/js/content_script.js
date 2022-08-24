@@ -4,48 +4,6 @@
 
 "use strict";
 
-let bufferLengthURLs = 80;
-let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
-let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleAutoScrollNode = 10;
-let delayThrottleRegexpSearch = 10;
-let delayThrottleURLIndexing = 10;
-let redirectURLs = [
-  "https://runescape.com",
-  "https://runescape.com/",
-  "https://runescape.com/splash",
-  "https://runescape.com/splash?ing",
-  "http://runescape.com",
-  "http://runescape.com/",
-  "http://runescape.com/splash",
-  "http://runescape.com/splash?ing",
-  "//runescape.com",
-  "//runescape.com/",
-  "//runescape.com/splash",
-  "//runescape.com/splash?ing",
-  "runescape.com",
-  "runescape.com/",
-  "runescape.com/splash",
-  "runescape.com/splash?ing",
-  "data:text/html,<script>location='https://runescape.com'</script>",
-  "data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
-  "javascript:location='https://runescape.com'",
-  "javascript:location='//runescape.com'",
-];
-let scanOutOfScopeOrigins = false;
-let scope = [
-  "*://*.playstation.net",
-  "*://*.sonyentertainmentnetwork.com",
-  "*://*.api.playstation.com",
-  "*://my.playstation.com",
-  "*://store.playstation.com",
-  "*://social.playstation.com",
-  "*://transact.playstation.com",
-  "*://wallets.playstation.com",
-  "*://direct.playstation.com",
-  "*://api.direct.playstation.com",
-];
-
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
 const regexpSelectorAnyFileExtension = /[.][a-z]{2,3}$/i;
