@@ -193,12 +193,12 @@ const openUI = async uiType => {
           url: chrome.runtime.getURL("/assets/html/welcome.html"),
         });
         break;
-      case "load":
+      case "import":
         chrome.windows.create({
           width: 600,
           height: 300,
           type: "popup",
-          url: chrome.runtime.getURL("/assets/html/load.html"),
+          url: chrome.runtime.getURL("/assets/html/import.html"),
         });
         break;
     }
@@ -683,7 +683,7 @@ const writeStorage = async () => {
  */
 (async()=>{
   localStorage = await loadStorage();
-  // openUI("welcome");
+  openUI("welcome");
 
   const session = newSession();
     // [
@@ -722,7 +722,7 @@ const writeStorage = async () => {
     // ]
   session.callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
   session.callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-  resumeSession(session);
+  // resumeSession(session);
   globalThis.debugSession = session;
 })();
 // })();

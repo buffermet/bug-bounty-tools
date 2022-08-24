@@ -1,6 +1,8 @@
+<!DOCTYPE html>
 <html>
 	<head>
 		<title>Open Redirect Fuzzer</title>
+		<link rel="stylesheet" href="/assets/css/fonts.css" />
 		<style>
 			html,
 			html body {
@@ -13,7 +15,7 @@
 				background-color: rgb(32,33,36);
 				height: auto;
 				color: #fff;
-				font-family: monospace;
+				font-family: "UbuntuCondensed";
 				font-size: 12px;
 			}
 			html body content {
@@ -22,7 +24,7 @@
 				width: calc(100% - 8px);
 			}
 			html body content img {
-				height: 128px;
+				height: 110px;
 				width: 100%;
 			}
 			html body buttons-container {
@@ -31,15 +33,29 @@
 				height: auto;
 			}
 			html body buttons-container button {
+				margin: 0 4px;
 				padding: 24px 32px;
 				background-color: rgba(255,255,255,0.1);
 				border: none;
 				color: #fff;
 				outline: none;
 				cursor: pointer;
+				font-family: "UbuntuMono";
 			}
 			html body buttons-container button:hover {
 				background-color: rgba(255,255,255,0.2);
+			}
+			html body footer {
+				margin-top: 16px;
+				width: 100%;
+				text-align: center;
+			}
+			html body footer a {
+				color: rgb(0,128,255);
+				text-decoration: none;
+			}
+			html body footer a:hover {
+				color: rgb(30,158,255);
 			}
 		</style>
 	</head>
@@ -50,8 +66,9 @@
 		<buttons-container>
 			<center>
 				<button name="new">New</button>
-				<button name="load">Load</button>
+				<button name="import">Import</button>
 			</center>
 		</buttons-container>
+		<footer>Made by <a href target="_blank">@buffermet</a></footer>
 	</body>
 </html>

@@ -661,9 +661,9 @@ console.log("completed scanForURIs()")
  * Init fuzzer.
  */
 (async () => {
-  /* If successfully exploited, send a timestamped callback for open redirects. */
   registerMessageListener();
   startAutoScrolling();
+  /* If successfully exploited, send a timestamped callback for open redirects. */
   let redirectHosts = [];
   for (let a = 0; a < sessionConfig.redirectURLs.length; a++) {
     const parsedURL = parseURL(sessionConfig.redirectURLs[a]);
