@@ -2,6 +2,8 @@
  * Web worker for fuzzer-open-redirect.
  */
 
+let sessionConfig = {};
+
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const regexpSelectorEncodableURICharacters = /[^A-Za-z0-9_.!~*'()-]/ig;
 const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
@@ -312,27 +314,27 @@ const encodeMethods = {
  * Encodes all specified redirect URIs.
  */
 const encodeRedirectURLs = async () => {
-  encodedRedirectURLVariants = [];
-  for (let a = 0; a < redirectURLs.length; a++) {
-    encodedRedirectURLVariants = encodedRedirectURLVariants.concat(
-      await getEncodedVariants(redirectURLs[a]));
+  sessionConfig.encodedRedirectURLVariants = [];
+  for (let a = 0; a < sessionConfig.redirectURLs.length; a++) {
+    sessionConfig.encodedRedirectURLVariants = sessionConfig.encodedRedirectURLVariants.concat(
+      await getEncodedVariants(sessionConfig.redirectURLs[a]));
   }
 };
 
 /**
  * Appends all possible permutations of a given array to
- * matchSetPermutations.
+ * sessionConfig.matchSetPermutations.
  */
 const getArrayPermutations = (prefix, arr) => {
   for (let a = 0; a < arr.length; a++) {
-    matchSetPermutations.push(prefix.concat(arr[a]));
+    sessionConfig.matchSetPermutations.push(prefix.concat(arr[a]));
     getArrayPermutations(prefix.concat(arr[a]), arr.slice(a + 1));
   }
 };
 
 /**
  * Returns an array of URLs that are encoded as per the specified
- * encodingTypes value.
+ * sessionConfig.encodingTypes value.
  */
 const getEncodedVariants = async url => {
   if (url.length === 0) {
@@ -340,9 +342,9 @@ const getEncodedVariants = async url => {
     return [];
   }
   let URLVariants = [];
-  for (let a = 0; a < encodingTypes.length; a++) {
+  for (let a = 0; a < sessionConfig.encodingTypes.length; a++) {
     let URLVariant = url;
-    const encodingTypeSet = encodingTypes[a];
+    const encodingTypeSet = sessionConfig.encodingTypes[a];
     for (let b = 0; b < encodingTypeSet.length; b++) {
       URLVariant = encodeMethods[encodingTypeSet[b]](URLVariant);
     }
@@ -383,11 +385,11 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
     }
   }
   /* Inject all URL parameters. */
-  matchSetPermutations = [];
+  sessionConfig.matchSetPermutations = [];
   getArrayPermutations([], regexpMatches.injectableParameterURLs);
   let newInjectedParameterURLs = [];
-  for (let a = 0; a < matchSetPermutations.length; a++) {
-    let matchSets = matchSetPermutations[a];
+  for (let a = 0; a < sessionConfig.matchSetPermutations.length; a++) {
+    let matchSets = sessionConfig.matchSetPermutations[a];
     let injectedSearch = parsedURL[4];
     for (let b = 0; b < matchSets.length; b++) {
       const matchSet = matchSets[b];
@@ -408,11 +410,11 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
     newInjectedParameterURLs.push(injectedURL);
   }
   /* Inject redirect URL parameters. */
-  matchSetPermutations = [];
+  sessionConfig.matchSetPermutations = [];
   getArrayPermutations([], regexpMatches.injectableRedirectParameterURLs);
   let newInjectedRedirectParameterURLs = [];
-  for (let a = 0; a < matchSetPermutations.length; a++) {
-    let matchSets = matchSetPermutations[a];
+  for (let a = 0; a < sessionConfig.matchSetPermutations.length; a++) {
+    let matchSets = sessionConfig.matchSetPermutations[a];
     let injectedSearch = parsedURL[4];
     for (let b = 0; b < matchSets.length; b++) {
       const matchSet = matchSets[b];
@@ -486,8 +488,8 @@ const parseURL = url => {
  */
 const prepareRedirectURLsForPathExploitation = async () => {
   let filteredURLs = [];
-  for (let a = 0; a < redirectURLs.length; a++) {
-    const parsedURL = parseURL(redirectURLs[a]);
+  for (let a = 0; a < sessionConfig.redirectURLs.length; a++) {
+    const parsedURL = parseURL(sessionConfig.redirectURLs[a]);
     if (
          parsedURL[0].length !== 0
       && parsedURL[0].toLowerCase() !== "data:"
@@ -499,31 +501,36 @@ const prepareRedirectURLsForPathExploitation = async () => {
       }
     }
   }
-  redirectURLsForPathExploitation = filteredURLs;
+  sessionConfig.redirectURLsForPathExploitation = filteredURLs;
 };
 
 /**
  * Register message listener.
  */
 const registerMessageListener = () => {
-  globalThis.onmessage = message => {
+  globalThis.onmessage = async message => {
     if (message.data) {
-      if (message.data.threadCount) {
-        threadCount = message.data.threadCount;
+      if (message.data.sessionConfig) {
+        sessionConfig = message.data.sessionConfig;
+        await prepareRedirectURLsForPathExploitation();
+        await encodeRedirectURLs();
+        startURLParameterInjectionThread();
+        startURLPathInjectionThread();
+        startURLSorter();
       }
       if (
            message.data.injectableParameterURLs
         && message.data.injectableParameterURLs.length !== 0
       ) {
-        injectableParameterURLsBuffer = injectableParameterURLsBuffer.concat(
+        sessionConfig.injectableParameterURLsBuffer = sessionConfig.injectableParameterURLsBuffer.concat(
           message.data.injectableParameterURLs);
       }
       if (
            message.data.scannableURLs
         && message.data.scannableURLs.length !== 0
       ) {
-        scannableURLsBuffer = scannableURLsBuffer.concat(message.data.scannableURLs)
-        injectablePathURLsBuffer = injectablePathURLsBuffer.concat(
+        sessionConfig.scannableURLsBuffer = sessionConfig.scannableURLsBuffer.concat(message.data.scannableURLs)
+        sessionConfig.injectablePathURLsBuffer = sessionConfig.injectablePathURLsBuffer.concat(
           message.data.scannableURLs);
       }
     }
@@ -536,41 +543,41 @@ const registerMessageListener = () => {
  */
 const startURLParameterInjectionThread = async () => {
   while (true) {
-    if (injectableParameterURLsBuffer.length !== 0) {
+    if (sessionConfig.injectableParameterURLsBuffer.length !== 0) {
       /* Filter already discovered URLs that have injectable parameters. */
       if (
         bufferedIndexOf(
-          injectablePathURLs,
-          injectablePathURLsBuffer[0],
-          bufferLengthURLs,
-          delayThrottleURLIndexing) !== -1
+          sessionConfig.injectablePathURLs,
+          sessionConfig.injectablePathURLsBuffer[0],
+          sessionConfig.bufferLengthURLs,
+          sessionConfig.delayThrottleURLIndexing) !== -1
       ) {
-        injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
+        sessionConfig.injectableParameterURLsBuffer = sessionConfig.injectableParameterURLsBuffer.slice(1);
       }
       let newInjectedParameterURLs = [];
       let newInjectedRedirectParameterURLs = [];
       /* Generate all permutations of injected paramters. */
-      if (injectableParameterURLsBuffer.length !== 0) {
-        const newExploitableURL = injectableParameterURLsBuffer[0]
+      if (sessionConfig.injectableParameterURLsBuffer.length !== 0) {
+        const newExploitableURL = sessionConfig.injectableParameterURLsBuffer[0]
         injectableParameterURLs = injectableParameterURLs.concat(newExploitableURL);
-        injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
-        let amountOfChunks = Math.ceil(encodedRedirectURLVariants.length / bufferLengthURLs);
+        sessionConfig.injectableParameterURLsBuffer = sessionConfig.injectableParameterURLsBuffer.slice(1);
+        let amountOfChunks = Math.ceil(sessionConfig.encodedRedirectURLVariants.length / sessionConfig.bufferLengthURLs);
         for (let a = 0; a < amountOfChunks; a++) {
           for (
-            let b = a * bufferLengthURLs;
-               b < encodedRedirectURLVariants.length
-            && b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
+            let b = a * sessionConfig.bufferLengthURLs;
+               b < sessionConfig.encodedRedirectURLVariants.length
+            && b < (a * sessionConfig.bufferLengthURLs) + sessionConfig.bufferLengthURLs - 1;
             b++
           ) {
             const injectedPermutations = await getInjectedURLPermutations(
               newExploitableURL,
-              encodedRedirectURLVariants[b]);
+              sessionConfig.encodedRedirectURLVariants[b]);
             newInjectedParameterURLs = newInjectedParameterURLs.concat(
               injectedPermutations.newInjectedParameterURLs);
             newInjectedRedirectParameterURLs = newInjectedRedirectParameterURLs.concat(
               injectedPermutations.newInjectedRedirectParameterURLs);
           }
-          await sleep(delayThrottleURLIndexing);
+          await sleep(sessionConfig.delayThrottleURLIndexing);
         }
         /* Filter already injected URLs before shipping to background. */
         let filteredNewInjectedParameterURLs = [];
@@ -579,13 +586,13 @@ const startURLParameterInjectionThread = async () => {
               await bufferedIndexOf(
                 filteredNewInjectedParameterURLs,
                 newInjectedParameterURLs[a],
-                bufferLengthURLs,
-                delayThrottleURLIndexing) === -1
+                sessionConfig.bufferLengthURLs,
+                sessionConfig.delayThrottleURLIndexing) === -1
            && await bufferedIndexOf(
                 injectedParameterURLs,
                 newInjectedParameterURLs[a],
-                bufferLengthURLs,
-                delayThrottleURLIndexing) === -1
+                sessionConfig.bufferLengthURLs,
+                sessionConfig.delayThrottleURLIndexing) === -1
           ) {
             filteredNewInjectedParameterURLs.push(newInjectedParameterURLs[a]);
           }
@@ -596,13 +603,13 @@ const startURLParameterInjectionThread = async () => {
                await bufferedIndexOf(
                  filteredNewInjectedRedirectParameterURLs,
                  newInjectedRedirectParameterURLs[a],
-                 bufferLengthURLs,
-                 delayThrottleURLIndexing) === -1
+                 sessionConfig.bufferLengthURLs,
+                 sessionConfig.delayThrottleURLIndexing) === -1
             && await bufferedIndexOf(
                  injectedRedirectParameterURLs,
                  newInjectedRedirectParameterURLs[a],
-                 bufferLengthURLs,
-                 delayThrottleURLIndexing) === -1
+                 sessionConfig.bufferLengthURLs,
+                 sessionConfig.delayThrottleURLIndexing) === -1
               ) {
             filteredNewInjectedRedirectParameterURLs.push(
               newInjectedRedirectParameterURLs[a]);
@@ -628,7 +635,7 @@ const startURLParameterInjectionThread = async () => {
         }
       }
     }
-    await sleep(delayURLInjectionThread);
+    await sleep(sessionConfig.delayURLInjectionThread);
   }
 };
 
@@ -639,23 +646,23 @@ const startURLParameterInjectionThread = async () => {
  */
 const startURLPathInjectionThread = async () => {
   while (true) {
-    if (injectablePathURLsBuffer.length !== 0) {
+    if (sessionConfig.injectablePathURLsBuffer.length !== 0) {
       let newInjectedPathURLs = [];
-      let amountOfChunks = Math.ceil(injectablePathURLsBuffer.length / bufferLengthURLs);
+      let amountOfChunks = Math.ceil(sessionConfig.injectablePathURLsBuffer.length / sessionConfig.bufferLengthURLs);
       while (
-           injectablePathURLsBuffer.length !== 0
+           sessionConfig.injectablePathURLsBuffer.length !== 0
         && await bufferedIndexOf(
-             injectablePathURLs,
-             injectablePathURLsBuffer[0],
-             bufferLengthURLs,
-             delayThrottleURLIndexing) !== -1
+             sessionConfig.injectablePathURLs,
+             sessionConfig.injectablePathURLsBuffer[0],
+             sessionConfig.bufferLengthURLs,
+             sessionConfig.delayThrottleURLIndexing) !== -1
       ) {
-        injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
-        await sleep(delayThrottleURLIndexing);
+        sessionConfig.injectablePathURLsBuffer = sessionConfig.injectablePathURLsBuffer.slice(1);
+        await sleep(sessionConfig.delayThrottleURLIndexing);
       }
-      if (injectablePathURLsBuffer.length !== 0) {
-        injectablePathURLs.push(injectablePathURLsBuffer[0]);
-        const parsedInjectablePathURL = parseURL(injectablePathURLsBuffer[0]);
+      if (sessionConfig.injectablePathURLsBuffer.length !== 0) {
+        sessionConfig.injectablePathURLs.push(sessionConfig.injectablePathURLsBuffer[0]);
+        const parsedInjectablePathURL = parseURL(sessionConfig.injectablePathURLsBuffer[0]);
         if (parsedInjectablePathURL[3].length !== 0) {
           let matchIndices = [];
           let match;
@@ -668,22 +675,22 @@ const startURLPathInjectionThread = async () => {
             matchIndices.push(parsedInjectablePathURL[3].length);
           }
           for (let a = 0; a < matchIndices.length; a++) {
-            for (let b = 0; b < redirectURLsForPathExploitation.length; b++) {
+            for (let b = 0; b < sessionConfig.redirectURLsForPathExploitation.length; b++) {
               const injectedURL = parsedInjectablePathURL.slice(0, 3).join("") +
                 parsedInjectablePathURL[3].slice(0, matchIndices[a]) +
-                redirectURLsForPathExploitation[b] +
+                sessionConfig.redirectURLsForPathExploitation[b] +
                 parsedInjectablePathURL.slice(5, 6).join("");
               if (
                    await bufferedIndexOf(
                      newInjectedPathURLs,
                      injectedURL,
-                     bufferLengthURLs,
-                     delayThrottleURLIndexing) === -1
+                     sessionConfig.bufferLengthURLs,
+                     sessionConfig.delayThrottleURLIndexing) === -1
                 && await bufferedIndexOf(
-                     injectedPathURLs,
+                     sessionConfig.injectedPathURLs,
                      injectedURL,
-                     bufferLengthURLs,
-                     delayThrottleURLIndexing) === -1
+                     sessionConfig.bufferLengthURLs,
+                     sessionConfig.delayThrottleURLIndexing) === -1
               ) {
                 newInjectedPathURLs.push(injectedURL);
               }
@@ -691,7 +698,7 @@ const startURLPathInjectionThread = async () => {
             await sleep(delayThrottleURLPathInjection);
           }
           if (newInjectedPathURLs.length !== 0) {
-            injectedPathURLs = injectedPathURLs.concat(newInjectedPathURLs);
+            sessionConfig.injectedPathURLs = sessionConfig.injectedPathURLs.concat(newInjectedPathURLs);
             postMessage({
               appendage: {
                 injectedPathURLsQueue: newInjectedPathURLs
@@ -699,10 +706,10 @@ const startURLPathInjectionThread = async () => {
             });
           }
         }
-        injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
+        sessionConfig.injectablePathURLsBuffer = sessionConfig.injectablePathURLsBuffer.slice(1);
       }
     }
-    await sleep(delayURLInjectionThread);
+    await sleep(sessionConfig.delayURLInjectionThread);
   }
 };
 
@@ -712,28 +719,28 @@ const startURLPathInjectionThread = async () => {
 const startURLSorter = async () => {
   while (true) {
     while (
-         scannableURLsBuffer.length !== 0
+         sessionConfig.scannableURLsBuffer.length !== 0
       && await bufferedIndexOf(
-           scannableURLs,
-           scannableURLsBuffer[0],
-           bufferLengthURLs,
-           delayThrottleURLIndexing) !== -1
+           sessionConfig.scannableURLs,
+           sessionConfig.scannableURLsBuffer[0],
+           sessionConfig.bufferLengthURLs,
+           sessionConfig.delayThrottleURLIndexing) !== -1
     ) {
-      /* scannableURLs already contains this URL */
-      scannableURLsBuffer = scannableURLsBuffer.slice(1);
-      await sleep(delayThrottleURLIndexing);
+      /* sessionConfig.scannableURLs already contains this URL */
+      sessionConfig.scannableURLsBuffer = sessionConfig.scannableURLsBuffer.slice(1);
+      await sleep(sessionConfig.delayThrottleURLIndexing);
     }
-    if (scannableURLsBuffer.length !== 0) {
-      const newScannableURL = scannableURLsBuffer[0];
-      scannableURLsBuffer = scannableURLsBuffer.slice(1);
-      scannableURLs = scannableURLs.concat(newScannableURL);
+    if (sessionConfig.scannableURLsBuffer.length !== 0) {
+      const newScannableURL = sessionConfig.scannableURLsBuffer[0];
+      sessionConfig.scannableURLsBuffer = sessionConfig.scannableURLsBuffer.slice(1);
+      sessionConfig.scannableURLs = sessionConfig.scannableURLs.concat(newScannableURL);
       postMessage({
         appendage: {
           scannableURLsQueue: [newScannableURL]
         }
       });
     }
-    await sleep(delayURLScannerThread);
+    await sleep(sessionConfig.delayURLScannerThread);
   }
 };
 
@@ -757,11 +764,4 @@ const trimLeadingAndTrailingWhitespaces = str => {
 };
 
 /* Init worker. */
-(async () => {
-  await prepareRedirectURLsForPathExploitation();
-  await encodeRedirectURLs();
-  registerMessageListener();
-  startURLParameterInjectionThread();
-  startURLPathInjectionThread();
-  startURLSorter();
-})();
+registerMessageListener();

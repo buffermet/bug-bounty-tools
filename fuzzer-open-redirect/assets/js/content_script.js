@@ -336,9 +336,9 @@ const parseURL = url => {
  * (example output given "\*://\*.in.scope.*" is in the scope: true)
  */
 const isInScopeOrigin = origin => {
-  for (let a = 0; a < scope.length; a++) {
+  for (let a = 0; a < sessionConfig.scope.length; a++) {
     const regexpInScopeOrigin = new RegExp(
-      "^" + scope[a]
+      "^" + sessionConfig.scope[a]
         .replace(regexpSelectorEscapeChars, "[$1]") /* escape chars */
         .replace(regexpSelectorURLScheme, "$1[a-z0-9.+-]+$2:") /* scheme */
         .replace(regexpSelectorWildcard, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
@@ -394,6 +394,17 @@ const toFullURL = uri => {
  */
 const trimWhitespaces = str => {
   return str.replace(/^\s*(.*)\s*$/g, "$1");
+};
+
+/**
+ * Registers message listener.
+ */
+const registerMessageListener = async () => {
+  chrome.runtime.onMessage.addListener(message => {
+    if (message.sessionConfig) {
+      sessionConfig = message.sessionConfig;
+    }
+  });
 };
 
 /**
@@ -651,10 +662,11 @@ console.log("completed scanForURIs()")
  */
 (async () => {
   /* If successfully exploited, send a timestamped callback for open redirects. */
+  registerMessageListener();
   startAutoScrolling();
   let redirectHosts = [];
-  for (let a = 0; a < redirectURLs.length; a++) {
-    const parsedURL = parseURL(redirectURLs[a]);
+  for (let a = 0; a < sessionConfig.redirectURLs.length; a++) {
+    const parsedURL = parseURL(sessionConfig.redirectURLs[a]);
     const protocol = parsedURL[0].toLowerCase();
     if (
          parsedURL[1].length !== 0

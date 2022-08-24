@@ -5,7 +5,7 @@
 "use strict";
 
 // (()=>{
-let localStorage;
+let localStorage = {};
 
 const alphabeticalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
@@ -46,9 +46,9 @@ const getTimestamp = () => {
  * Returns true if a given status code string matches the specified
  * fail status code specifiers.
  */
-const isFailStatusCode = statusCodeString => {
-  for (let a = 0; a < statusCodesFail.length; a++) {
-    const selector = new RegExp("^" + statusCodesFail[a].replace(regexpSelectorWildcardStatusCode, "[0-9]+") + "$");
+const isFailStatusCode = (session, statusCodeString) => {
+  for (let a = 0; a < session.statusCodesFail.length; a++) {
+    const selector = new RegExp("^" + session.statusCodesFail[a].replace(regexpSelectorWildcardStatusCode, "[0-9]+") + "$");
     if (selector.test(statusCodeString)) {
       return true;
     }
@@ -75,90 +75,52 @@ const newIntFromRange = (min, max) => {
 /**
  * Returns a new session object with default configuration.
  */
-const newSession = () => {
+const newSession = (redirectURLs, scope) => {
   return {
-    background: {
-      crawlerScripts: [],
-      delayForceWakeTabsThread: 1000,
-      delayRangeRequests: [6000, 8000],
-      delayTabRemovalThread: 300000,
-      threadCount: 2,
-      timeoutCallback: 40000,
-      timeoutRequests: 40000,
-      isFuzzerThreadPaused: false,
-      isScannerThreadPaused: false,
-      limitOfTabs: 10,
-      requestPriorities: [
-        0, /* injected redirect parameter */
-        2, /* any injected parameter */
-        1, /* injected path */
-        3, /* scan */
-      ],
-      retryAttempts: 6,
-      statusCodesFail: ["4*", "5*"],
-      redirectURLs: [],
-      callbackURLOpenRedirectTimestamps: "http://0.0.0.0:4242",
-      callbackURLRequestTimestamps: "http://0.0.0.0:4243",
-      injectedParameterURLsQueue: [],
-      injectedPathURLsQueue: [],
-      injectedRedirectParameterURLsQueue: [],
-      parsedCallbackURLOpenRedirectTimestamps: ["","","","","",""],
-      parsedCallbackURLRequestTimestamps: ["","","","","",""],
-      pendingRetryURLs: {},
-      pendingRetryCallbackURLs: {},
-      scannableURLs: [],
-      scannableURLsQueue: [],
-      tabAnchorId: null,
-      tabIds: [],
-      tabRemovalBuffer: [],
-      windowId: null,
-      workerPointer: null,
-    },
-    content: {
+    callbackURLOpenRedirectTimestamps: null,
+    callbackURLRequestTimestamps: null,
+    contentScriptConfig: {
       bufferLengthURLs: 80,
-      callbackURLOpenRedirectTimestamps: "http://0.0.0.0:4242",
-      callbackURLRequestTimestamps: "http://0.0.0.0:4243",
       delayThrottleAutoScrollNode: 10,
       delayThrottleRegexpSearch: 10,
       delayThrottleURLIndexing: 10,
-      redirectURLs: [
-        "https://runescape.com",
-        "https://runescape.com/",
-        "https://runescape.com/splash",
-        "https://runescape.com/splash?ing",
-        "http://runescape.com",
-        "http://runescape.com/",
-        "http://runescape.com/splash",
-        "http://runescape.com/splash?ing",
-        "//runescape.com",
-        "//runescape.com/",
-        "//runescape.com/splash",
-        "//runescape.com/splash?ing",
-        "runescape.com",
-        "runescape.com/",
-        "runescape.com/splash",
-        "runescape.com/splash?ing",
-        "data:text/html,<script>location='https://runescape.com'</script>",
-        "data:text/html,base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
-        "javascript:location='https://runescape.com'",
-        "javascript:location='//runescape.com'",
-      ],
       scanOutOfScopeOrigins: false,
-      scope: [
-        "*://*.playstation.net",
-        "*://*.sonyentertainmentnetwork.com",
-        "*://*.api.playstation.com",
-        "*://my.playstation.com",
-        "*://store.playstation.com",
-        "*://social.playstation.com",
-        "*://transact.playstation.com",
-        "*://wallets.playstation.com",
-        "*://direct.playstation.com",
-        "*://api.direct.playstation.com",
-      ],
     },
+    crawlerScripts: [],
+    delayForceWakeTabsThread: 1000,
+    delayRangeRequests: [6000, 8000],
+    delayTabRemovalThread: 300000,
+    isFuzzerThreadPaused: false,
+    isScannerThreadPaused: false,
+    limitOfTabs: 10,
+    redirectURLs: [],
+    requestPriorities: [
+      0, /* injected redirect parameter */
+      2, /* any injected parameter */
+      1, /* injected path */
+      3, /* scan */
+    ],
+    retryAttempts: 6,
+    statusCodesFail: ["4*", "5*"],
+    injectedParameterURLsQueue: [],
+    injectedPathURLsQueue: [],
+    injectedRedirectParameterURLsQueue: [],
+    parsedCallbackURLOpenRedirectTimestamps: null,
+    parsedCallbackURLRequestTimestamps: null,
+    pendingRetryURLs: {},
+    pendingRetryCallbackURLs: {},
+    scannableURLs: [],
+    scannableURLsQueue: [],
+    workerPointer: null,
     sessionId: randomString(newIntFromRange(8, 16)),
-    worker: {
+    tabAnchorId: null,
+    tabIds: [],
+    tabRemovalBuffer: [],
+    threadCount: 2,
+    timeoutCallback: 40000,
+    timeoutRequests: 40000,
+    windowId: null,
+    workerConfig: {
       bufferLengthURLs: 30,
       delayThrottleURLIndexing: 10,
       delayThrottleURLPathInjection: 100,
@@ -208,27 +170,7 @@ const newSession = () => {
       injectablePathURLs: [],
       injectablePathURLsBuffer: [],
       matchSetPermutations: [],
-      redirectURLs: [
-        "https://runescape.com",
-        "https://runescape.com/",
-        "https://runescape.com/splash",
-        "https://runescape.com/splash?ing",
-        "http://runescape.com",
-        "http://runescape.com/",
-        "http://runescape.com/splash",
-        "http://runescape.com/splash?ing",
-        "//runescape.com",
-        "//runescape.com/",
-        "//runescape.com/splash",
-        "//runescape.com/splash?ing",
-        "runescape.com",
-        "runescape.com/",
-        "runescape.com/splash",
-        "runescape.com/splash?ing",
-        "data:text/html,<script>location='https://runescape.com'</script>",
-        "javascript:location='https://runescape.com'",
-        "javascript:location='//runescape.com'",
-      ],
+      redirectURLs: [],
       redirectURLsForPathExploitation: [],
       scannableURLs: [],
       scannableURLsBuffer: [],
@@ -270,9 +212,9 @@ const openURLInNewTab = async (session, url) => {
   return new Promise(async (res, err) => {
     chrome.tabs.create({
       url: url,
-      windowId: session.background.windowId,
+      windowId: session.windowId,
     }, tab => {
-      session.background.tabIds.push(tab.id);
+      session.tabIds.push(tab.id);
       // execute crawlerScripts
       res(tab);
     });
@@ -290,11 +232,11 @@ const openWindow = async session => {
       chrome.tabs.query({}, tabs => {
         tabs.forEach(tab => {
           if (tab.windowId === w.id) {
-            session.background.tabAnchorId = tab.id;
+            session.tabAnchorId = tab.id;
           }
         });
       });
-      session.background.windowId = w.id;
+      session.windowId = w.id;
       res();
     });
   });
@@ -306,36 +248,36 @@ const openWindow = async session => {
 const parseCallbackURLs = async session => {
   return new Promise((res, err) => {
     /* Parse specified callback URLs for open redirects and requests. */
-    session.background.parsedCallbackURLOpenRedirectTimestamps = parseURL(session.background.callbackURLOpenRedirectTimestamps);
-    if (session.background.parsedCallbackURLOpenRedirectTimestamps[1] === "") {
+    session.parsedCallbackURLOpenRedirectTimestamps = parseURL(session.callbackURLOpenRedirectTimestamps);
+    if (session.parsedCallbackURLOpenRedirectTimestamps[1] === "") {
       console.error("%cfuzzer-open-redirect", consoleCSS,
-        "No valid origin was provided in the specified callback URL for open redirect timestamps (" + session.background.callbackURLOpenRedirectTimestamps + ").");
+        "No valid origin was provided in the specified callback URL for open redirect timestamps (" + session.callbackURLOpenRedirectTimestamps + ").");
       err();
     }
-    if (session.background.parsedCallbackURLOpenRedirectTimestamps[0] === "") {
+    if (session.parsedCallbackURLOpenRedirectTimestamps[0] === "") {
       console.warn("%cfuzzer-open-redirect", consoleCSS,
-        "No protocol was provided in the specified callback URL for open redirect timestamps (" + session.background.callbackURLOpenRedirectTimestamps + ").",
+        "No protocol was provided in the specified callback URL for open redirect timestamps (" + session.callbackURLOpenRedirectTimestamps + ").",
         "Defaulting to \"http://\".");
-      session.background.parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
+      session.parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
     }
     console.log("%cfuzzer-open-redirect", consoleCSS,
       "Callback URL for open redirect timestamps is parsed: " +
-      session.background.parsedCallbackURLOpenRedirectTimestamps.join(""));
-    session.background.parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
-    if (session.background.parsedCallbackURLRequestTimestamps[1] === "") {
+      session.parsedCallbackURLOpenRedirectTimestamps.join(""));
+    session.parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
+    if (session.parsedCallbackURLRequestTimestamps[1] === "") {
       console.error("%cfuzzer-open-redirect", consoleCSS,
-        "No valid origin was provided in the specified callback URL for request timestamps (" + session.background.callbackURLOpenRedirectTimestamps + ").");
+        "No valid origin was provided in the specified callback URL for request timestamps (" + session.callbackURLOpenRedirectTimestamps + ").");
       err();
     }
-    if (session.background.parsedCallbackURLRequestTimestamps[0] === "") {
+    if (session.parsedCallbackURLRequestTimestamps[0] === "") {
       console.warn("%cfuzzer-open-redirect", consoleCSS,
-        "No protocol was provided in the specified callback URL for request timestamps (" + session.background.callbackURLOpenRedirectTimestamps + ").",
+        "No protocol was provided in the specified callback URL for request timestamps (" + session.callbackURLOpenRedirectTimestamps + ").",
         "Defaulting to \"http://\".");
-      session.background.parsedCallbackURLRequestTimestamps[0] = "http://";
+      session.parsedCallbackURLRequestTimestamps[0] = "http://";
     }
     console.log("%cfuzzer-open-redirect", consoleCSS,
       "Callback URL for request timestamps is parsed: " +
-      session.background.parsedCallbackURLRequestTimestamps.join(""));
+      session.parsedCallbackURLRequestTimestamps.join(""));
     res();
   });
 };
@@ -405,18 +347,25 @@ console.log(message)
              message.injectableParameterURLs
           || message.scannableURLs
         ) {
-          session.background.workerPointer.postMessage(message);
+          session.workerPointer.postMessage(message);
         }
         if (message.timestamp) {
           console.log("Open redirect found at ", message.timestamp);
           sendCallback(message.timestamp, "", "OPEN_REDIRECT_CALLBACK");
         }
         if (message.message) {
-          if (message.message === "FRAME_READYSTATE_COMPLETE") {
-            removeTab(sender.tab.id);
-            tabIds = tabIds.filter(tab => {
-              return tab.id !== sender.tab.id;
-            });
+          switch (message.message) {
+            case "FRAME_READYSTATE_COMPLETE":
+              removeTab(sender.tab.id);
+              session.tabIds = session.tabIds.filter(tab => {
+                return tab.id !== sender.tab.id;
+              });
+              break;
+            case "FRAME_REQUEST_CONTENT_SCRIPT_CONFIG":
+              chrome.tabs.sendMessage(
+                sender.tab.id,
+                {sessionConfig: session.contentScriptConfig});
+              break;
           }
         }
       }
@@ -424,24 +373,24 @@ console.log(message)
       // no message.sessionId declared
     }
   });
-  session.background.workerPointer.onmessage = message => {
+  session.workerPointer.onmessage = message => {
 //    if (message.data.retryCallbackURL) {
 //    }
     if (message.data.appendage) {
       if (message.data.appendage.injectedParameterURLsQueue) {
-        session.background.injectedParameterURLsQueue = session.background.injectedParameterURLsQueue.concat(
+        session.injectedParameterURLsQueue = session.injectedParameterURLsQueue.concat(
           message.data.appendage.injectedParameterURLsQueue);
       }
       if (message.data.appendage.injectedPathURLsQueue) {
-        session.background.injectedPathURLsQueue = session.background.injectedPathURLsQueue.concat(
+        session.injectedPathURLsQueue = session.injectedPathURLsQueue.concat(
           message.data.appendage.injectedPathURLsQueue);
       }
       if (message.data.appendage.injectedRedirectParameterURLsQueue) {
-        session.background.injectedRedirectParameterURLsQueue = session.background.injectedRedirectParameterURLsQueue.concat(
+        session.injectedRedirectParameterURLsQueue = session.injectedRedirectParameterURLsQueue.concat(
           message.data.appendage.injectedRedirectParameterURLsQueue);
       }
       if (message.data.appendage.scannableURLsQueue) {
-        session.background.scannableURLsQueue = session.background.scannableURLsQueue.concat(
+        session.scannableURLsQueue = session.scannableURLsQueue.concat(
           message.data.appendage.scannableURLsQueue);
       }
     }
@@ -458,8 +407,8 @@ const registerWebRequestListeners = session => {
         chrome.tabs.get(details.tabId, tab => {
           if (!chrome.runtime.lastError && tab && tab.windowId === windowId) {
             removeTab(details.tabId);
-            if (!session.background.pendingRetryURLs[details.url]) {
-              session.background.pendingRetryURLs[details.url] = {attempts: 0};
+            if (!session.pendingRetryURLs[details.url]) {
+              session.pendingRetryURLs[details.url] = {attempts: 0};
             }
           }
         });
@@ -469,9 +418,9 @@ const registerWebRequestListeners = session => {
     []);
   chrome.webRequest.onHeadersReceived.addListener(
     details => {
-      if (isFailStatusCode(details.statusCode.toString())) {
-        if (!session.background.pendingRetryURLs[details.url]) {
-          session.background.pendingRetryURLs[details.url] = {attempts: 0};
+      if (isFailStatusCode(session, details.statusCode.toString())) {
+        if (!session.pendingRetryURLs[details.url]) {
+          session.pendingRetryURLs[details.url] = {attempts: 0};
         }
       }
     },
@@ -482,12 +431,12 @@ const registerWebRequestListeners = session => {
 /**
  * Returns a promise to remove a tab with the specified ID.
  */
-const removeTab = async id => {
+const removeTab = async (session, tabId) => {
   return new Promise(res => {
-    chrome.tabs.get(id, tab => {
+    chrome.tabs.get(tabId, tab => {
       if (!chrome.runtime.lastError && tab) {
-        if (tab.windowId === windowId) {
-          chrome.tabs.remove(id);
+        if (tab.windowId === session.windowId) {
+          chrome.tabs.remove(tabId);
           res();
         }
       }
@@ -500,8 +449,8 @@ const removeTab = async id => {
  */
 const resumeSession = async session => {
   return new Promise(async (res, err) => {
-    session.background.workerPointer = new Worker(chrome.runtime.getURL("/assets/js/worker.js"));
-    session.background.workerPointer.postMessage({threadCount: session.background.threadCount});
+    session.workerPointer = new Worker(chrome.runtime.getURL("/assets/js/worker.js"));
+    session.workerPointer.postMessage({sessionConfig: session.workerConfig});
     registerMessageListener(session);
     registerWebRequestListeners(session);
     await openWindow(session);
@@ -565,7 +514,7 @@ const sendCallback = async (timestamp, url, callbackType) => {
         "timestamp: " + timestamp + "\n" +
         "callback type: " + callbackType + "\n" +
         "callback URLs: " + callbackURLRequestTimestamps +
-          ", " + session.background.callbackURLOpenRedirectTimestamps);
+          ", " + session.callbackURLOpenRedirectTimestamps);
     }
   });
 };
@@ -584,23 +533,23 @@ const sleep = ms => {
  */
 const startForceWakeTabsThread = async session => {
   while (true) {
-    if (session.background.tabIds.length === 0) {
-      await sleep(session.background.delayForceWakeTabsThread);
+    if (session.tabIds.length === 0) {
+      await sleep(session.delayForceWakeTabsThread);
     }
-    for (let a = 0; a < session.background.tabIds.length; a++) {
-      chrome.tabs.get(session.background.tabIds[a], tab => {
+    for (let a = 0; a < session.tabIds.length; a++) {
+      chrome.tabs.get(session.tabIds[a], tab => {
         if (!chrome.runtime.lastError && tab) {
           chrome.tabs.update(tab.id, {
             active: true,
             selected: true,
           }, () => {});
         } else {
-          session.background.tabIds = session.background.tabIds.filter(id => {
-            return id !== session.background.tabIds[a];
+          session.tabIds = session.tabIds.filter(id => {
+            return id !== session.tabIds[a];
           });
         }
       });
-      await sleep(session.background.delayForceWakeTabsThread);
+      await sleep(session.delayForceWakeTabsThread);
     }
   }
 };
@@ -613,7 +562,7 @@ const startPendingRetryURLsThread = async () => {
 //    pendingRetryURLs.forEach(url => {
 //      if (
 //            parseURL(url).slice(0, 2)
-//        === parseURL(session.background.callbackURLOpenRedirectTimestamps).slice(0, 2)
+//        === parseURL(session.callbackURLOpenRedirectTimestamps).slice(0, 2)
 //      ) {
 //        openURLInNewTab(url).then(() => {
 //          pendingRetryURLs = pendingRetryURLs.filter(_url => {
@@ -631,40 +580,40 @@ const startPendingRetryURLsThread = async () => {
  * session.
  */
 const startRequestThread = async session => {
-  for (let a = 0; a < session.background.threadCount; a++) {
+  for (let a = 0; a < session.threadCount; a++) {
     (async () => {
       while (true) {
-        while (session.background.tabIds.length >= session.background.limitOfTabs) {
+        while (session.tabIds.length >= session.limitOfTabs) {
           await sleep(300);
         }
         let URL = "";
-        for (let b = 0; b < session.background.requestPriorities.length; b++) {
+        for (let b = 0; b < session.requestPriorities.length; b++) {
           if (URL.length !== 0) {
             break;
           }
-          switch (session.background.requestPriorities[b]) {
+          switch (session.requestPriorities[b]) {
             case 0:  /* injected redirect parameter */
-              if (session.background.injectedRedirectParameterURLsQueue.length !== 0) {
-                URL = session.background.injectedRedirectParameterURLsQueue[0];
-                session.background.injectedRedirectParameterURLsQueue = session.background.injectedRedirectParameterURLsQueue.slice(1);
+              if (session.injectedRedirectParameterURLsQueue.length !== 0) {
+                URL = session.injectedRedirectParameterURLsQueue[0];
+                session.injectedRedirectParameterURLsQueue = session.injectedRedirectParameterURLsQueue.slice(1);
               }
               break;
             case 1:  /* injected path */
-              if (session.background.injectedPathURLsQueue.length !== 0) {
-                URL = session.background.injectedPathURLsQueue[0];
-                session.background.injectedPathURLsQueue = session.background.injectedPathURLsQueue.slice(1);
+              if (session.injectedPathURLsQueue.length !== 0) {
+                URL = session.injectedPathURLsQueue[0];
+                session.injectedPathURLsQueue = session.injectedPathURLsQueue.slice(1);
               }
               break;
             case 2:  /* any injected parameter */
-              if (session.background.injectedParameterURLsQueue.length !== 0) {
-                URL = session.background.injectedParameterURLsQueue[0];
-                session.background.injectedParameterURLsQueue = session.background.injectedParameterURLsQueue.slice(1);
+              if (session.injectedParameterURLsQueue.length !== 0) {
+                URL = session.injectedParameterURLsQueue[0];
+                session.injectedParameterURLsQueue = session.injectedParameterURLsQueue.slice(1);
               }
               break;
             case 3:  /* scan */
-              if (session.background.scannableURLsQueue.length !== 0) {
-                URL = session.background.scannableURLsQueue[0];
-                session.background.scannableURLsQueue = session.background.scannableURLsQueue.slice(1);
+              if (session.scannableURLsQueue.length !== 0) {
+                URL = session.scannableURLsQueue[0];
+                session.scannableURLsQueue = session.scannableURLsQueue.slice(1);
               }
               break;
           }
@@ -674,9 +623,9 @@ const startRequestThread = async session => {
           openURLInNewTab(URL);
 
         }
-        await sleep(getIntFromRange(
-          session.background.delayRangeRequests[0],
-          session.background.delayRangeRequests[1]));
+        await sleep(newIntFromRange(
+          session.delayRangeRequests[0],
+          session.delayRangeRequests[1]));
       }
     })();
   }
@@ -690,22 +639,22 @@ const startTabRemovalThread = async session => {
     chrome.tabs.query({}, tabs => {
       tabs.forEach(tab => {
         if (
-             tab.windowId === session.background.windowId
-          && tab.id !== session.background.tabAnchorId
+             tab.windowId === session.windowId
+          && tab.id !== session.tabAnchorId
         ) {
-          if (session.background.tabRemovalBuffer.indexOf(tab.id) === -1) {
-            session.background.tabRemovalBuffer.push(tab.id);
+          if (session.tabRemovalBuffer.indexOf(tab.id) === -1) {
+            session.tabRemovalBuffer.push(tab.id);
           } else {
 console.log("removing tab:", tab.id)
             removeTab(tab.id);
-            session.background.tabRemovalBuffer = session.background.tabRemovalBuffer.filter(id => {
+            session.tabRemovalBuffer = session.tabRemovalBuffer.filter(id => {
               return id !== tab.id;
             });
           }
         }
       });
     });
-    await sleep(session.background.delayTabRemovalThread);
+    await sleep(session.delayTabRemovalThread);
   }
 };
 
@@ -721,18 +670,59 @@ const trimLeadingAndTrailingWhitespaces = str => {
 /**
  * Overwrites the localStorage as Chrome's local storage object.
  */
-const writeStorage = async obj => {
-  return new Promise(res => chrome.storage.local.set(localStorage, res));
+const writeStorage = async () => {
+  return new Promise(res => {
+    if (localStorage) {
+      chrome.storage.local.set(localStorage, res);
+    }
+  });
 };
 
 /**
  * Init background script.
  */
 (async()=>{
-  
   localStorage = await loadStorage();
   // openUI("welcome");
 
-  startSession
+  const session = newSession();
+    // [
+    //   "https://runescape.com",
+    //   "https://runescape.com/",
+    //   "https://runescape.com/splash",
+    //   "https://runescape.com/splash?ing",
+    //   "http://runescape.com",
+    //   "http://runescape.com/",
+    //   "http://runescape.com/splash",
+    //   "http://runescape.com/splash?ing",
+    //   "//runescape.com",
+    //   "//runescape.com/",
+    //   "//runescape.com/splash",
+    //   "//runescape.com/splash?ing",
+    //   "runescape.com",
+    //   "runescape.com/",
+    //   "runescape.com/splash",
+    //   "runescape.com/splash?ing",
+    //   "data:text/html,<script>location='https://runescape.com'</script>",
+    //   "data:text/html,base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
+    //   "javascript:location='https://runescape.com'",
+    //   "javascript:location='//runescape.com'",
+    // ],
+    // [
+    //   "*://*.playstation.net",
+    //   "*://*.sonyentertainmentnetwork.com",
+    //   "*://*.api.playstation.com",
+    //   "*://my.playstation.com",
+    //   "*://store.playstation.com",
+    //   "*://social.playstation.com",
+    //   "*://transact.playstation.com",
+    //   "*://wallets.playstation.com",
+    //   "*://direct.playstation.com",
+    //   "*://api.direct.playstation.com",
+    // ]
+  session.callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
+  session.callbackURLRequestTimestamps = "http://0.0.0.0:4243";
+  resumeSession(session);
+  globalThis.debugSession = session;
 })();
 // })();
