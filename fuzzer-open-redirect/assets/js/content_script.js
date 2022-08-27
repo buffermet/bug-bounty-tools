@@ -4,6 +4,8 @@
 
 "use strict";
 
+let sessionConfig = {};
+
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
 const regexpSelectorAnyFileExtension = /[.][a-z]{2,3}$/i;

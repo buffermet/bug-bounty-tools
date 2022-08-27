@@ -15,7 +15,7 @@
     "default_popup": "/assets/html/ui.html",
     "default_title": "Open Redirect Fuzzer"
   },
-  "content_security_policy": "script-src 'self' 'wasm-eval'; object-src 'none'",
+  "content_security_policy": "script-src-elem 'self' 'unsafe-inline'",
   "permissions": [
     "<all_urls>",
     "activeTab",

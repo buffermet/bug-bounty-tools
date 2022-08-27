@@ -180,7 +180,7 @@ const newSession = (redirectURLs, scope) => {
 };
 
 /**
- * Opens a UI window of a given type.
+ * Opens a UI window of a given type and returns the tabId.
  */
 const openUI = async uiType => {
   return new Promise(res => {
@@ -191,14 +191,18 @@ const openUI = async uiType => {
           height: 230,
           type: "popup",
           url: chrome.runtime.getURL("/assets/html/welcome.html"),
+        }, w => {
+          res(w.tabs[0].id);
         });
         break;
-      case "import":
+      case "new":
         chrome.windows.create({
-          width: 600,
-          height: 300,
+          width: 450,
+          height: 230,
           type: "popup",
-          url: chrome.runtime.getURL("/assets/html/import.html"),
+          url: chrome.runtime.getURL("/assets/html/new.html"),
+        }, w => {
+          res(w.tabs[0].id);
         });
         break;
     }
@@ -366,7 +370,10 @@ console.log(message)
                 sender.tab.id,
                 {sessionConfig: session.contentScriptConfig});
               break;
-          }
+            case "UI_REQUEST_NEW_SESSION":
+              openUI("new");
+              break;
+           }
         }
       }
     } else {
