@@ -1,0 +1,47 @@
+<meta content-type="text/html" charset="utf-8">
+<link rel="stylesheet" type="text/css" href="/assets/css/panel.css">
+<ui state="stopped">
+    <topbar>
+        <btn class="selected">1</btn>
+        <btn>2</btn>
+        <btn>3</btn>
+        <btn>4</btn>
+        <btn>5</btn>
+    </topbar>
+    <content>
+        <section id="config" state="reflected stored">
+            <heading>SCOPE</heading>
+            <line>Reflected XSS <checkbox id="reflected" state="checked"/></line>
+            <line>Stored XSS <checkbox id="stored" state="checked"/></line>
+            <collapsable id="blind-xss-checkbox">
+                <line>Blind XSS <checkbox id="blind" state="checked"/></line>
+            </collapsable>
+            <subheading>DOMAINS</subheading>
+            <line><btn class="add" title="Add another domain that is in scope."></btn><input type="text" placeholder="https://target.com/injected-page" /></line>
+        </section>
+        <separator/>
+<!--         <section id="config" state="reflected stored">
+            <collapsable id="">
+                <heading>CONFIGURATION</heading>
+                <subheading>REFLECTED XSS</subheading>
+                <line>Reflected XSS</line>
+                <line>Reflected XSS</line>
+                <collapsable id="stored">
+                    <line><btn class="info" title="Enter a URL that the fuzzer will periodically reload to check for stored XSS payloads."></btn><input type="text" placeholder="https://target.com/injected-page" /></line>
+                    <line>Blind XSS <checkbox id="blind" state="checked"/></line>
+                </collapsable>
+            </collapsable>
+        </section> -->
+    </content>
+    <bottombar>
+        <status-bar>
+            <span><value-sent>4</value-sent>&nbsp;&nbsp;SENT</span>
+            <span><value-failed>2</value-failed>&nbsp;&nbsp;FAILED</span>
+            <span><value-queued>113</value-queued>&nbsp;&nbsp;QUEUED</span>
+        </status-bar>
+        <btn class="play"></btn>
+        <btn class="pause"></btn>
+        <btn class="stop"></btn>
+    </bottombar>
+    <script src="/assets/js/test.js" />
+</ui>

