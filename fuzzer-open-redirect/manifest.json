@@ -19,9 +19,11 @@
   "permissions": [
     "<all_urls>",
     "activeTab",
+    "contextMenus",
+    "storage",
+    "unlimitedStorage",
     "webRequest",
-    "webRequestBlocking",
-    "contextMenus"
+    "webRequestBlocking"
   ],
   "incognito": "spanning",
   "background": {

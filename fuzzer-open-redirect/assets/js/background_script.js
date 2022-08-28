@@ -173,6 +173,9 @@ const loadStorage = async () => {
       if (!storage.requestedScannableURLs) {
         storage.requestedScannableURLs = localStorage.requestedScannableURLs;
       }
+      if (!storage.scannableURLsQueue) {
+        storage.scannableURLsQueue = localStorage.scannableURLsQueue;
+      }
       resolve(storage);
     });
   });
@@ -321,7 +324,7 @@ console.log(message)
       }
     }
   });
-  worker.onmessage = message => {
+  worker.onmessage = async message => {
 //    if (message.data.retryCallbackURL) {
 //      if (pendingRetryCallbackURLs) {
 //      }
@@ -529,7 +532,6 @@ const startRequestThread = async () => {
                 URL = localStorage.injectedRedirectParameterURLsQueue[0];
                 localStorage.injectedRedirectParameterURLsQueue = localStorage.injectedRedirectParameterURLsQueue.slice(1);
                 localStorage.requestedInjectedRedirectParameterURLs.push(URL);
-                await writeStorage();
               }
               break;
             case 1:  /* injected path */
@@ -537,7 +539,6 @@ const startRequestThread = async () => {
                 URL = localStorage.injectedPathURLsQueue[0];
                 localStorage.injectedPathURLsQueue = localStorage.injectedPathURLsQueue.slice(1);
                 localStorage.requestedInjectedPathURLs.push(URL);
-                await writeStorage();
               }
               break;
             case 2:  /* any injected parameter */
@@ -545,7 +546,6 @@ const startRequestThread = async () => {
                 URL = localStorage.injectedParameterURLsQueue[0];
                 localStorage.injectedParameterURLsQueue = localStorage.injectedParameterURLsQueue.slice(1);
                 localStorage.requestedInjectedParameterURLs.push(URL);
-                await writeStorage();
               }
               break;
             case 3:  /* scan */
@@ -553,7 +553,6 @@ const startRequestThread = async () => {
                 URL = localStorage.scannableURLsQueue[0];
                 localStorage.scannableURLsQueue = localStorage.scannableURLsQueue.slice(1);
                 localStorage.requestedScannableURLs.push(URL);
-                await writeStorage();
               }
               break;
           }
@@ -561,6 +560,7 @@ const startRequestThread = async () => {
         if (URL.length !== 0) {
           sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
           openURLInNewTab(URL);
+          await writeStorage();
         }
         await sleep(getIntFromRange(
           delayRangeRequests[0],
@@ -621,6 +621,8 @@ const writeStorage = () => {
  */
 (() => {
   parseCallbackURLs().then(async () => {
+    localStorage = await loadStorage();
+console.log(localStorage)
     worker.postMessage({threadCount: threadCount});
     registerMessageListener();
     registerWebRequestListeners();
