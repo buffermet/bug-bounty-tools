@@ -8,26 +8,24 @@ let localStorage = {
   injectedParameterURLsQueue: [],
   injectedPathURLsQueue: [],
   injectedRedirectParameterURLsQueue: [],
-  requestedInjectedParameterURLs: [],
-  requestedInjectedPathURLs: [],
-  requestedInjectedRedirectParameterURLs: [],
-  requestedScannableURLs: [],
+  requestedURLs: [],
   scannableURLsQueue: [],
 };
 
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
-let delayRangeRequests = [6000, 8000];
+let delayPendingRetryURLsThread = 20000;
+let delayRangeRequests = [5000, 8000];
 let delayTabRemovalThread = 300000;
 let threadCount = 2;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
-let limitOfTabs = 10;
+let limitOfTabs = 5;
 let requestPriorities = [
-  0, /* injected redirect parameter */
-  2, /* any injected parameter */
+  2, /* injected redirect parameter */
+  0, /* injected parameter */
   1, /* injected path */
   3, /* scan */
 ];
@@ -69,14 +67,36 @@ let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
-let pendingRetryURLs = {};
-let pendingRetryCallbackURLs = {};
+let pendingRetryURLs = [];
+let pendingRetryCallbackURLs = [];
 let scannableURLs = [];
 let tabAnchorId;
 let tabIds = [];
 let tabRemovalBuffer = [];
 let windowId;
 let worker = new Worker(chrome.runtime.getURL("/assets/js/worker.js"));
+
+/**
+ * Buffered and throttled method that returns the index of a given target object in a given
+ * array.
+ */
+ const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
+  const amountOfChunks = Math.ceil(arr.length / bufferLength);
+  for (let a = 0; a < amountOfChunks; a++) {
+    for (
+      let b = a * bufferLength;
+         b < arr.length
+      && b < (a * bufferLength) + bufferLength - 1;
+      b++
+    ) {
+      if (arr[b] === target) {
+        return b;
+      }
+    }
+    if (throttleDuration !== 0) await sleep(throttleDuration);
+  }
+  return -1;
+};
 
 /**
  * Chunks a given array to a given length.
@@ -103,7 +123,8 @@ const chunkArrayWithChunkSize = (array, chunkSize) => {
 };
 
 /**
- * Returns an array of all string values that were found in a given object.
+ * Returns an array of all string values that were found in a given
+ * object.
  */
 const getAllStringValues = obj => {
   let strings = [];
@@ -118,7 +139,8 @@ const getAllStringValues = obj => {
 };
 
 /**
- * Returns an integer value between a minimum and maximum range of milliseconds.
+ * Returns an integer value between a minimum and maximum range of
+ * milliseconds.
  */
 const getIntFromRange = (min, max) => {
   return parseInt(min + (Math.random() * (max - min)));
@@ -161,17 +183,8 @@ const loadStorage = async () => {
       if (!storage.injectedRedirectParameterURLsQueue) {
         storage.injectedRedirectParameterURLsQueue = localStorage.injectedRedirectParameterURLsQueue;
       }
-      if (!storage.requestedInjectedParameterURLs) {
-        storage.requestedInjectedParameterURLs = localStorage.requestedInjectedParameterURLs;
-      }
-      if (!storage.requestedInjectedPathURLs) {
-        storage.requestedInjectedPathURLs = localStorage.requestedInjectedPathURLs;
-      }
-      if (!storage.requestedInjectedRedirectParameterURLs) {
-        storage.requestedInjectedRedirectParameterURLs = localStorage.requestedInjectedRedirectParameterURLs;
-      }
-      if (!storage.requestedScannableURLs) {
-        storage.requestedScannableURLs = localStorage.requestedScannableURLs;
+      if (!storage.requestedURLs) {
+        storage.requestedURLs = localStorage.requestedURLs;
       }
       if (!storage.scannableURLsQueue) {
         storage.scannableURLsQueue = localStorage.scannableURLsQueue;
@@ -189,9 +202,11 @@ const openURLInNewTab = async url => {
     chrome.tabs.create({
       url: url,
       windowId: windowId,
-    }, tab => {
+    }, async tab => {
       tabIds.push(tab.id);
       // execute crawlerScripts
+      localStorage.requestedURLs.push(url);
+      await writeStorage();
       res(tab);
     });
   });
@@ -259,8 +274,8 @@ const parseCallbackURLs = async () => {
 };
 
 /**
- * Returns an array containing the protocol, host, port, path,
- * search and hash of a given URL if found.
+ * Returns an array containing the protocol, host, port, path, search
+ * and hash of a given URL if found.
  * (example input: "/path/to/file?v=4.4.2#hash")
  * (example output: [
  *   "",
@@ -304,7 +319,6 @@ const parseURL = url => {
  */
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener(async (message, sender) => {
-console.log(message)
     if (
          message.injectableParameterURLs
       || message.scannableURLs
@@ -325,10 +339,6 @@ console.log(message)
     }
   });
   worker.onmessage = async message => {
-//    if (message.data.retryCallbackURL) {
-//      if (pendingRetryCallbackURLs) {
-//      }
-//    }
     if (message.data.appendage) {
       if (message.data.appendage.injectedParameterURLsQueue) {
         localStorage.injectedParameterURLsQueue = localStorage.injectedParameterURLsQueue.concat(
@@ -355,14 +365,21 @@ console.log(message)
  * Registers webRequest listeners.
  */
 const registerWebRequestListeners = () => {
+  /* Record offline error responses from main frames with no content scripts and remove their tabs. */
   chrome.webRequest.onErrorOccurred.addListener(
     details => {
       if (details.type === "main_frame") {
         chrome.tabs.get(details.tabId, tab => {
           if (!chrome.runtime.lastError && tab && tab.windowId === windowId) {
             removeTab(details.tabId);
-            if (!pendingRetryURLs[details.url]) {
-              pendingRetryURLs[details.url] = {attempts: 0};
+            if (
+              bufferedIndexOf(
+                pendingRetryURLs,
+                details.url,
+                bufferLengthURLs,
+                delayThrottleURLIndexing) === -1
+            ) {
+              pendingRetryURLs.push(details.url);
             }
           }
         });
@@ -370,11 +387,20 @@ const registerWebRequestListeners = () => {
     },
     {"urls": ["<all_urls>"]},
     []);
+  /* Record responses from main frames that match a specified fail status code. */
   chrome.webRequest.onHeadersReceived.addListener(
     details => {
-      if (isFailStatusCode(details.statusCode.toString())) {
-        if (!pendingRetryURLs[details.url]) {
-          pendingRetryURLs[details.url] = {attempts: 0};
+      if (details.type === "main_frame") {
+        if (isFailStatusCode(details.statusCode.toString())) {
+          if (
+            bufferedIndexOf(
+              pendingRetryURLs,
+              details.url,
+              bufferLengthURLs,
+              delayThrottleURLIndexing) === -1
+          ) {
+            pendingRetryURLs.push(details.url);
+          }
         }
       }
     },
@@ -456,7 +482,8 @@ const sendCallback = async (timestamp, url, callbackType) => {
 };
 
 /**
- * Sleeps an awaited promise value for the given amount of milliseconds.
+ * Sleeps an awaited promise value for the given amount of
+ * milliseconds.
  */
 const sleep = ms => {
   return new Promise(res => {
@@ -519,7 +546,7 @@ const startRequestThread = async () => {
     (async () => {
       while (true) {
         while (tabIds.length >= limitOfTabs) {
-          await sleep(300);
+          await sleep();
         }
         let URL = "";
         for (let b = 0; b < requestPriorities.length; b++) {
@@ -527,32 +554,28 @@ const startRequestThread = async () => {
             break;
           }
           switch (requestPriorities[b]) {
-            case 0:  /* injected redirect parameter */
-              if (localStorage.injectedRedirectParameterURLsQueue.length !== 0) {
-                URL = localStorage.injectedRedirectParameterURLsQueue[0];
-                localStorage.injectedRedirectParameterURLsQueue = localStorage.injectedRedirectParameterURLsQueue.slice(1);
-                localStorage.requestedInjectedRedirectParameterURLs.push(URL);
+            case 0:  /* injected parameter */
+              if (localStorage.injectedParameterURLsQueue.length !== 0) {
+                URL = localStorage.injectedParameterURLsQueue[0];
+                localStorage.injectedParameterURLsQueue = localStorage.injectedParameterURLsQueue.slice(1);
               }
-              break;
+            break;
             case 1:  /* injected path */
               if (localStorage.injectedPathURLsQueue.length !== 0) {
                 URL = localStorage.injectedPathURLsQueue[0];
                 localStorage.injectedPathURLsQueue = localStorage.injectedPathURLsQueue.slice(1);
-                localStorage.requestedInjectedPathURLs.push(URL);
               }
               break;
-            case 2:  /* any injected parameter */
-              if (localStorage.injectedParameterURLsQueue.length !== 0) {
-                URL = localStorage.injectedParameterURLsQueue[0];
-                localStorage.injectedParameterURLsQueue = localStorage.injectedParameterURLsQueue.slice(1);
-                localStorage.requestedInjectedParameterURLs.push(URL);
+            case 2:  /* injected redirect parameter */
+              if (localStorage.injectedRedirectParameterURLsQueue.length !== 0) {
+                URL = localStorage.injectedRedirectParameterURLsQueue[0];
+                localStorage.injectedRedirectParameterURLsQueue = localStorage.injectedRedirectParameterURLsQueue.slice(1);
               }
               break;
             case 3:  /* scan */
               if (localStorage.scannableURLsQueue.length !== 0) {
                 URL = localStorage.scannableURLsQueue[0];
                 localStorage.scannableURLsQueue = localStorage.scannableURLsQueue.slice(1);
-                localStorage.requestedScannableURLs.push(URL);
               }
               break;
           }

@@ -459,9 +459,9 @@ const startAutoScrolling = async () => {
       const node = allNodes[a];
       while (true) {
         node.scrollTo(9999999999, 9999999999);
-        await sleep(1000);
+        await sleep(500);
         node.scrollTo(0, 0);
-        await sleep(1000);
+        await sleep(500);
       }
       await sleep(delayThrottleAutoScrollNode);
     })();

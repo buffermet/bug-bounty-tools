@@ -2,7 +2,7 @@
  * Web worker for fuzzer-open-redirect.
  */
 
-let bufferLengthURLs = 30;
+let bufferLengthURLs = 80;
 let delayThrottleURLIndexing = 10;
 let delayThrottleURLPathInjection = 100;
 let delayURLInjectionThread = 2000;
