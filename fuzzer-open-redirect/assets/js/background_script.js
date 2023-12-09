@@ -123,22 +123,6 @@ const chunkArrayWithChunkSize = (array, chunkSize) => {
 };
 
 /**
- * Returns an array of all string values that were found in a given
- * object.
- */
-const getAllStringValues = obj => {
-  let strings = [];
-  Object.keys(obj).forEach(key => {
-    if (typeof(obj[key]) === "object" && obj[key]) {
-      strings = strings.concat(getAllStringValues(obj[key]));
-    } else if (typeof(globalThis[key]) === "string") {
-      strings = strings.push(obj[key]);
-    }
-  });
-  return strings;
-};
-
-/**
  * Returns an integer value between a minimum and maximum range of
  * milliseconds.
  */
@@ -607,7 +591,6 @@ const startTabRemovalThread = async () => {
           if (tabRemovalBuffer.indexOf(tab.id) === -1) {
             tabRemovalBuffer.push(tab.id);
           } else {
-console.log("removing tab:", tab.id)
             removeTab(tab.id);
             tabRemovalBuffer = tabRemovalBuffer.filter(id => {
               return id !== tab.id;
@@ -645,7 +628,6 @@ const writeStorage = () => {
 (() => {
   parseCallbackURLs().then(async () => {
     localStorage = await loadStorage();
-console.log(localStorage)
     worker.postMessage({threadCount: threadCount});
     registerMessageListener();
     registerWebRequestListeners();
