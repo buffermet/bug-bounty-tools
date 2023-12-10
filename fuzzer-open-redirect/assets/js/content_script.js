@@ -10,23 +10,23 @@ let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
 let delayThrottleAutoScrollNode = 10;
 let delayThrottleRegexpSearch = 10;
 let delayThrottleURLIndexing = 10;
-let redirectURLs = [
+const redirectURLs = [
 	"https://runescape.com",
-	"https://runescape.com/",
-	"https://runescape.com/splash",
-	"https://runescape.com/splash?ing",
+	// "https://runescape.com/",
+	// "https://runescape.com/splash",
+	// "https://runescape.com/splash?ing",
 	"http://runescape.com",
-	"http://runescape.com/",
-	"http://runescape.com/splash",
-	"http://runescape.com/splash?ing",
+	// "http://runescape.com/",
+	// "http://runescape.com/splash",
+	// "http://runescape.com/splash?ing",
 	"//runescape.com",
-	"//runescape.com/",
-	"//runescape.com/splash",
-	"//runescape.com/splash?ing",
-	"runescape.com",
-	"runescape.com/",
-	"runescape.com/splash",
-	"runescape.com/splash?ing",
+	// "//runescape.com/",
+	// "//runescape.com/splash",
+	// "//runescape.com/splash?ing",
+	// "runescape.com",
+	// "runescape.com/",
+	// "runescape.com/splash",
+	// "runescape.com/splash?ing",
 	"data:text/html,<script>location='https://runescape.com'</script>",
 	"data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
 	"javascript:location='https://runescape.com'",
@@ -224,112 +224,6 @@ const getAllStringValues = obj => {
 		}
 	});
 	return strings;
-}
-
-/**
- * Decodes all HTML entities in a given string.
- */
-const unescapeHTML = str => {
-	let unescapedStr = str
-		.replace(/&#32;/ig,  " ")
-		.replace(/&#33;/ig,  "!")
-		.replace(/&#34;/ig,  "\"")
-		.replace(/&#35;/ig,  "#")
-		.replace(/&#36;/ig,  "\$")
-		.replace(/&#37;/ig,  "%")
-		.replace(/&amp;/ig,  "&")
-		.replace(/&#38;/ig,  "&")
-		.replace(/&#39;/ig,  "'")
-		.replace(/&#40;/ig,  "(")
-		.replace(/&#41;/ig,  ")")
-		.replace(/&#42;/ig,  "*")
-		.replace(/&#43;/ig,  "+")
-		.replace(/&#44;/ig,  ",")
-		.replace(/&#45;/ig,  "-")
-		.replace(/&#46;/ig,  ".")
-		.replace(/&#47;/ig,  "/")
-		.replace(/&#48;/ig,  "0")
-		.replace(/&#49;/ig,  "1")
-		.replace(/&#50;/ig,  "2")
-		.replace(/&#51;/ig,  "3")
-		.replace(/&#52;/ig,  "4")
-		.replace(/&#53;/ig,  "5")
-		.replace(/&#54;/ig,  "6")
-		.replace(/&#55;/ig,  "7")
-		.replace(/&#56;/ig,  "8")
-		.replace(/&#57;/ig,  "9")
-		.replace(/&#58;/ig,  ":")
-		.replace(/&#59;/ig,  ";")
-		.replace(/&lt;/ig,   "<")
-		.replace(/&#60;/ig,  "<")
-		.replace(/&#61;/ig,  "=")
-		.replace(/&gt;/ig,   ">")
-		.replace(/&#62;/ig,  ">")
-		.replace(/&#63;/ig,  "?")
-		.replace(/&#64;/ig,  "@")
-		.replace(/&#65;/ig,  "A")
-		.replace(/&#66;/ig,  "B")
-		.replace(/&#67;/ig,  "C")
-		.replace(/&#68;/ig,  "D")
-		.replace(/&#69;/ig,  "E")
-		.replace(/&#70;/ig,  "F")
-		.replace(/&#71;/ig,  "G")
-		.replace(/&#72;/ig,  "H")
-		.replace(/&#73;/ig,  "I")
-		.replace(/&#74;/ig,  "J")
-		.replace(/&#75;/ig,  "K")
-		.replace(/&#76;/ig,  "L")
-		.replace(/&#77;/ig,  "M")
-		.replace(/&#78;/ig,  "N")
-		.replace(/&#79;/ig,  "O")
-		.replace(/&#80;/ig,  "P")
-		.replace(/&#81;/ig,  "Q")
-		.replace(/&#82;/ig,  "R")
-		.replace(/&#83;/ig,  "S")
-		.replace(/&#84;/ig,  "T")
-		.replace(/&#85;/ig,  "U")
-		.replace(/&#86;/ig,  "V")
-		.replace(/&#87;/ig,  "W")
-		.replace(/&#88;/ig,  "X")
-		.replace(/&#89;/ig,  "Y")
-		.replace(/&#90;/ig,  "Z")
-		.replace(/&#91;/ig,  "[")
-		.replace(/&#92;/ig,  "\\")
-		.replace(/&#93;/ig,  "]")
-		.replace(/&#94;/ig,  "^")
-		.replace(/&#95;/ig,  "_")
-		.replace(/&#96;/ig,  "`")
-		.replace(/&#97;/ig,  "a")
-		.replace(/&#98;/ig,  "b")
-		.replace(/&#99;/ig,  "c")
-		.replace(/&#100;/ig, "d")
-		.replace(/&#101;/ig, "e")
-		.replace(/&#102;/ig, "f")
-		.replace(/&#103;/ig, "g")
-		.replace(/&#104;/ig, "h")
-		.replace(/&#105;/ig, "i")
-		.replace(/&#106;/ig, "j")
-		.replace(/&#107;/ig, "k")
-		.replace(/&#108;/ig, "l")
-		.replace(/&#109;/ig, "m")
-		.replace(/&#110;/ig, "n")
-		.replace(/&#111;/ig, "o")
-		.replace(/&#112;/ig, "p")
-		.replace(/&#113;/ig, "q")
-		.replace(/&#114;/ig, "r")
-		.replace(/&#115;/ig, "s")
-		.replace(/&#116;/ig, "t")
-		.replace(/&#117;/ig, "u")
-		.replace(/&#118;/ig, "v")
-		.replace(/&#119;/ig, "w")
-		.replace(/&#120;/ig, "x")
-		.replace(/&#121;/ig, "y")
-		.replace(/&#122;/ig, "z")
-		.replace(/&#123;/ig, "{")
-		.replace(/&#124;/ig, "|")
-		.replace(/&#125;/ig, "}")
-		.replace(/&#126;/ig, "~");
-	return unescapedStr;
 }
 
 /**
@@ -563,7 +457,6 @@ const scanForExploitableURIs = async () => {
 				"No exploitable, in-scope URIs found.");
 		}
 		scanCount--;
-console.log("completed scanForExploitableURIs()")
 		res();
 	});
 }
@@ -616,7 +509,6 @@ const scanForURIs = async () => {
 				}
 			}
 		} else {
-console.log("no document.documentElement found in scanForURIs")
 		}
 		const prunedGlobalThis = JSON.parse(JSON.prune(globalThis));
 		if (prunedGlobalThis.document) {
@@ -683,7 +575,6 @@ console.log("no document.documentElement found in scanForURIs")
 				"No in-scope URIs found.");
 		}
 		scanCount--;
-console.log("completed scanForURIs()")
 		res();
 	});
 }

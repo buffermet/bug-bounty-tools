@@ -12,11 +12,13 @@ let localStorage = {
 	scannableURLsQueue: [],
 };
 
+let bufferLengthURLs = 80;
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
 let delayPendingRetryURLsThread = 20000;
 let delayRangeRequests = [5000, 8000];
 let delayTabRemovalThread = 300000;
+let delayThrottleURLIndexing = 10;
 let threadCount = 2;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;

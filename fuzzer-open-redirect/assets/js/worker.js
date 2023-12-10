@@ -29,24 +29,25 @@ let injectableParameterURLsBuffer = [];
 let injectablePathURLs = [];
 let injectablePathURLsBuffer = [];
 let matchSetPermutations = [];
-let redirectURLs = [
+const redirectURLs = [
 	"https://runescape.com",
-	"https://runescape.com/",
-	"https://runescape.com/splash",
-	"https://runescape.com/splash?ing",
+	// "https://runescape.com/",
+	// "https://runescape.com/splash",
+	// "https://runescape.com/splash?ing",
 	"http://runescape.com",
-	"http://runescape.com/",
-	"http://runescape.com/splash",
-	"http://runescape.com/splash?ing",
+	// "http://runescape.com/",
+	// "http://runescape.com/splash",
+	// "http://runescape.com/splash?ing",
 	"//runescape.com",
-	"//runescape.com/",
-	"//runescape.com/splash",
-	"//runescape.com/splash?ing",
-	"runescape.com",
-	"runescape.com/",
-	"runescape.com/splash",
-	"runescape.com/splash?ing",
+	// "//runescape.com/",
+	// "//runescape.com/splash",
+	// "//runescape.com/splash?ing",
+	// "runescape.com",
+	// "runescape.com/",
+	// "runescape.com/splash",
+	// "runescape.com/splash?ing",
 	"data:text/html,<script>location='https://runescape.com'</script>",
+	"data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
 	"javascript:location='https://runescape.com'",
 	"javascript:location='//runescape.com'",
 ];
@@ -76,7 +77,7 @@ const bufferedIndexOf = async (arr, target, bufferLength, throttleDuration) => {
 	for (let a = 0; a < amountOfChunks; a++) {
 		for (
 			let b = a * bufferLength;
-				 b < arr.length
+			   b < arr.length
 			&& b < (a * bufferLength) + bufferLength - 1;
 			b++
 		) {
