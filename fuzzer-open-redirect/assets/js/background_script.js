@@ -158,7 +158,7 @@ const isFailStatusCode = statusCodeString => {
  * Returns a promise that resolves the local storage object.
  */
 const loadStorage = async () => {
-	return new Promise(resolve => {
+	return new Promise(res => {
 		chrome.storage.local.get(storage => {
 			if (!storage.injectedParameterURLsQueue) {
 				storage.injectedParameterURLsQueue = localStorage.injectedParameterURLsQueue;
@@ -175,7 +175,7 @@ const loadStorage = async () => {
 			if (!storage.scannableURLsQueue) {
 				storage.scannableURLsQueue = localStorage.scannableURLsQueue;
 			}
-			resolve(storage);
+			res(storage);
 		});
 	});
 };
@@ -184,7 +184,7 @@ const loadStorage = async () => {
  * Opens a given URL in a new scanner tab.
  */
 const openURLInNewTab = async url => {
-	return new Promise(async (res, err) => {
+	return new Promise(async res => {
 		chrome.tabs.create({
 			url: url,
 			windowId: windowId,
@@ -202,18 +202,14 @@ const openURLInNewTab = async url => {
  * Opens new windows for fuzzing and scanning.
  */
 const openWindow = async () => {
-	return new Promise((res, err) => {
+	return new Promise(res => {
 		chrome.windows.create({
 			url: "data:text/html,<title>about:black</title><body bgcolor=black>",
 		}, w => {
-			chrome.tabs.query({}, tabs => {
-				tabs.forEach(tab => {
-					if (tab.windowId === w.id) {
-						tabAnchorId = tab.id;
-					}
-				});
-			});
-			windowId = w.id;
+			chrome.tabs.query({}, tabs => tabs.forEach(tab => {
+				if (tab.windowId === w.id) tabAnchorId = tab.id;
+			}));
+			windowId = w.id
 			res();
 		});
 	});
@@ -273,6 +269,7 @@ const parseCallbackURLs = async () => {
  * ])
  */
 const parseURL = url => {
+	let sliceLength = 0;
 	const strippedURL = trimLeadingAndTrailingWhitespaces(url);
 	const retval = ["","","","","",""];
 	/* protocol */
@@ -290,13 +287,16 @@ const parseURL = url => {
 		retval[1] = strippedURL.slice(retval[0].length).replace(regexpSelectorURLHost, "$1");
 	}
 	/* port */
-	retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(regexpSelectorURLPort, "$1");
+	sliceLength = retval[0].length + retval[1].length;
+	retval[2] = strippedURL.slice(sliceLength).replace(regexpSelectorURLPort, "$1");
 	/* path */
-	retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(regexpSelectorURLPath, "$1");
+	sliceLength = sliceLength + retval[2].length;
+	retval[3] = strippedURL.slice(sliceLength).replace(regexpSelectorURLPath, "$1");
 	/* search */
-	retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(regexpSelectorURLSearch, "$1");
+	sliceLength = sliceLength + retval[3].length;
+	retval[4] = strippedURL.slice(sliceLength).replace(regexpSelectorURLSearch, "$1");
 	/* hash */
-	retval[5] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length + retval[4].length);
+	retval[5] = strippedURL.slice(sliceLength + retval[4].length);
 	return retval;
 };
 
@@ -400,11 +400,13 @@ const registerWebRequestListeners = () => {
 const removeTab = async id => {
 	return new Promise(res => {
 		chrome.tabs.get(id, tab => {
-			if (!chrome.runtime.lastError && tab) {
-				if (tab.windowId === windowId) {
-					chrome.tabs.remove(id);
-					res();
-				}
+			if (
+				   !chrome.runtime.lastError
+				&& tab
+				&& tab.windowId === windowId
+			) {
+				chrome.tabs.remove(id)
+				res();
 			}
 		});
 	});
