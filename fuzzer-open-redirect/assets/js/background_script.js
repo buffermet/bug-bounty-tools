@@ -16,7 +16,7 @@ let bufferLengthURLs = 80;
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
 let delayPendingRetryURLsThread = 20000;
-let delayRangeRequests = [5000, 8000];
+let delayRangeRequests = [6000, 8000];
 let delayTabRemovalThread = 300000;
 let delayThrottleURLIndexing = 10;
 let threadCount = 2;
@@ -26,9 +26,9 @@ let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let limitOfTabs = 5;
 let requestPriorities = [
+	1, /* injected path */
 	2, /* injected redirect parameter */
 	0, /* injected parameter */
-	1, /* injected path */
 	3, /* scan */
 ];
 let retryAttempts = 6;
@@ -569,6 +569,7 @@ const startRequestThread = async () => {
 					}
 				}
 				if (URL.length !== 0) {
+					if (URL.startsWith("//")) URL = `http:${URL}`;
 					sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
 					openURLInNewTab(URL);
 					await writeStorage();
