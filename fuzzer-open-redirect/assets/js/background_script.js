@@ -32,6 +32,18 @@ let requestPriorities = [
 	3, /* scan */
 ];
 let retryAttempts = 6;
+let scope = [
+	"*://*.playstation.net",
+	"*://*.sonyentertainmentnetwork.com",
+	"*://*.api.playstation.com",
+	"*://my.playstation.com",
+	"*://store.playstation.com",
+	"*://social.playstation.com",
+	"*://transact.playstation.com",
+	"*://wallets.playstation.com",
+	"*://direct.playstation.com",
+	"*://api.direct.playstation.com",
+];
 let statusCodesFail = ["4*", "5*"];
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
