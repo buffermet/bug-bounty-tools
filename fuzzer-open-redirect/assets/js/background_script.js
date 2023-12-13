@@ -580,9 +580,10 @@ const startRequestThread = async () => {
 				}
 				if (URL.length !== 0) {
 					if (URL.startsWith("//")) URL = `http:${URL}`;
+					const parsedURL = parseURL(URL);
 					if (
 						   scanOutOfScopeOrigins
-						|| isInScopeOrigin(parsedFullURL.slice(0, 2).join(""))
+						|| isInScopeOrigin(parsedURL.slice(0, 2).join(""))
 					) {
 						sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
 						openURLInNewTab(URL);
