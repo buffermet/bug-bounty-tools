@@ -56,7 +56,7 @@ const redirectURLs = [
 	"javascript:location='https://runescape.com'",
 	"javascript:location='//runescape.com'",
 ];
-const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
+const regexpSelectorEscapeChars = /([^*:a-z0-9\]])/ig;
 const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;

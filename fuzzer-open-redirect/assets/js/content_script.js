@@ -52,7 +52,7 @@ const regexpSelectorAnyFileExtension = /[.][a-z]{2,3}$/i;
 const regexpSelectorDebrisHTMLAttributeOne = /^ [a-z-]+[=]/ig;
 const regexpSelectorDebrisHTMLAttributeTwo = /^["']/;
 const regexpSelectorDebrisHTMLAttributeThree = /["']$/;
-const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
+const regexpSelectorEscapeChars = /([^*:a-z0-9\]])/ig;
 const regexpSelectorHTMLURLAttribute = /^ (?:action|href|src)[=]/i;
 const regexpSelectorJSONPruneWebkitStorageInfoOne = /webkitStorageInfo/;
 const regexpSelectorJSONPruneWebkitStorageInfoTwo = /webkitStorageInfo/g;
