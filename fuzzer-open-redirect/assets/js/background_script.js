@@ -17,7 +17,7 @@ let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
 let delayPendingRetryURLsThread = 20000;
 let delayRangeRequests = [6000, 8000];
-let delayTabRemovalThread = 300000;
+let delayTabRemovalThread = 30000;
 let delayThrottleURLIndexing = 10;
 let threadCount = 2;
 let timeoutCallback = 40000;
@@ -37,33 +37,23 @@ let statusCodesFail = ["4*", "5*"];
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const redirectURLs = [
 	"https://runescape.com",
-	// "https://runescape.com/",
-	// "https://runescape.com/splash",
-	// "https://runescape.com/splash?ing",
 	"http://runescape.com",
-	// "http://runescape.com/",
-	// "http://runescape.com/splash",
-	// "http://runescape.com/splash?ing",
 	"//runescape.com",
-	// "//runescape.com/",
-	// "//runescape.com/splash",
-	// "//runescape.com/splash?ing",
-	// "runescape.com",
-	// "runescape.com/",
-	// "runescape.com/splash",
-	// "runescape.com/splash?ing",
 	"data:text/html,<script>location='https://runescape.com'</script>",
 	"data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
 	"javascript:location='https://runescape.com'",
 	"javascript:location='//runescape.com'",
 ];
+const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
 const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
+const regexpSelectorURLScheme = /^([a-z0-9.+-]*)\*([a-z0-9.+-]*):/ig;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
-const regexpSelectorWildcardStatusCode = /[*]/g;
+const regexpSelectorWildcardStatusCode = /\*/g;
+const regexpSelectorWildcardSubdomain = /\*\./g;
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
@@ -71,6 +61,7 @@ let parsedCallbackURLOpenRedirectTimestamps = ["","","","","",""];
 let parsedCallbackURLRequestTimestamps = ["","","","","",""];
 let pendingRetryURLs = [];
 let pendingRetryCallbackURLs = [];
+let scanOutOfScopeOrigins = false;
 let scannableURLs = [];
 let tabAnchorId;
 let tabIds = [];
@@ -153,6 +144,25 @@ const isFailStatusCode = statusCodeString => {
 	}
 	return false;
 };
+
+/**
+ * (example input: "http://www.in.scope.domain.com")
+ * (example output given "\*://\*.in.scope.*" is in the scope: true)
+ */
+const isInScopeOrigin = origin => {
+	for (let a = 0; a < scope.length; a++) {
+		const regexpInScopeOrigin = new RegExp(
+			"^" + scope[a]
+				.replace(regexpSelectorEscapeChars, "[$1]") /* escape chars */
+				.replace(regexpSelectorURLScheme, "$1[a-z0-9.+-]+$2:") /* scheme */
+				.replace(regexpSelectorWildcardSubdomain, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?[.])+)"), /* host wildcard */
+			"ig");
+		if (regexpInScopeOrigin.test(origin)) {
+			return true;
+		}
+	}
+	return false;
+}
 
 /**
  * Returns a promise that resolves the local storage object.
@@ -527,7 +537,7 @@ const startPendingRetryURLsThread = async () => {
 };
 
 /**
- * Starts requesting an indefinite amount of injected URLs.
+ * Starts requesting an indefinite amount of queued URLs.
  */
 const startRequestThread = async () => {
 	for (let a = 0; a < threadCount; a++) {
@@ -570,8 +580,13 @@ const startRequestThread = async () => {
 				}
 				if (URL.length !== 0) {
 					if (URL.startsWith("//")) URL = `http:${URL}`;
-					sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
-					openURLInNewTab(URL);
+					if (
+						   scanOutOfScopeOrigins
+						|| isInScopeOrigin(parsedFullURL.slice(0, 2).join(""))
+					) {
+						sendCallback(getTimestamp(), URL, "REQUEST_CALLBACK");
+						openURLInNewTab(URL);
+					}
 					await writeStorage();
 				}
 				await sleep(getIntFromRange(
