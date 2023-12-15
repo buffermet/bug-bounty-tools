@@ -56,16 +56,16 @@ const redirectURLs = [
 	"javascript:location='https://runescape.com'",
 	"javascript:location='//runescape.com'",
 ];
-const regexpSelectorEscapeChars = /([^*:a-z0-9\]])/ig;
+const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
 const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
-const regexpSelectorURLScheme = /^([a-z0-9.+-]*)\*([a-z0-9.+-]*):/ig;
+const regexpSelectorURLSchemeEscaped = /^([a-z0-9.+-]*)\*([a-z0-9.+-]*)\[:\]/ig;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
 const regexpSelectorWildcardStatusCode = /\*/g;
-const regexpSelectorWildcardSubdomain = /\*\./g;
+const regexpSelectorWildcardSubdomainEscaped = /\*\[\.\]/g;
 
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
@@ -166,8 +166,8 @@ const isInScopeOrigin = origin => {
 		const regexpInScopeOrigin = new RegExp(
 			"^" + scope[a]
 				.replace(regexpSelectorEscapeChars, "[$1]") /* escape chars */
-				.replace(regexpSelectorURLScheme, "$1[a-z0-9.+-]+$2:") /* scheme */
-				.replace(regexpSelectorWildcardSubdomain, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?[.])+)"), /* host wildcard */
+				.replace(regexpSelectorURLSchemeEscaped, "$1[a-z0-9.+-]+$2:") /* scheme */
+				.replace(regexpSelectorWildcardSubdomainEscaped, "(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?[.])+)"), /* host wildcard */
 			"ig");
 		if (regexpInScopeOrigin.test(origin)) {
 			return true;
