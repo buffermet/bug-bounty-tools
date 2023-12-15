@@ -3,9 +3,9 @@
  */
 
 let bufferLengthURLs = 80;
-let delayThrottleURLIndexing = 10;
-let delayThrottleURLPathInjection = 100;
+let delayURLIndexing = 10;
 let delayURLInjectionThread = 2000;
+let delayURLPathInjection = 100;
 let delayURLScannerThread = 2000;
 let encodingTypes = [
 	[0],
@@ -596,7 +596,7 @@ const startURLParameterInjectionThread = async () => {
 					injectableParameterURLs,
 					injectableParameterURLsBuffer[0],
 					bufferLengthURLs,
-					delayThrottleURLIndexing) !== -1
+					delayURLIndexing) !== -1
 			) {
 				injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
 			}
@@ -623,7 +623,7 @@ const startURLParameterInjectionThread = async () => {
 						newInjectedRedirectParameterURLs = newInjectedRedirectParameterURLs.concat(
 							injectedPermutations.newInjectedRedirectParameterURLs);
 					}
-					await sleep(delayThrottleURLIndexing);
+					await sleep(delayURLIndexing);
 				}
 				/* Filter already injected URLs before shipping to background. */
 				let filteredNewInjectedParameterURLs = [];
@@ -633,12 +633,12 @@ const startURLParameterInjectionThread = async () => {
 								filteredNewInjectedParameterURLs,
 								newInjectedParameterURLs[a],
 								bufferLengthURLs,
-								delayThrottleURLIndexing) === -1
+								delayURLIndexing) === -1
 					 && await bufferedIndexOf(
 								injectedParameterURLs,
 								newInjectedParameterURLs[a],
 								bufferLengthURLs,
-								delayThrottleURLIndexing) === -1
+								delayURLIndexing) === -1
 					) {
 						filteredNewInjectedParameterURLs.push(newInjectedParameterURLs[a]);
 					}
@@ -650,12 +650,12 @@ const startURLParameterInjectionThread = async () => {
 								 filteredNewInjectedRedirectParameterURLs,
 								 newInjectedRedirectParameterURLs[a],
 								 bufferLengthURLs,
-								 delayThrottleURLIndexing) === -1
+								 delayURLIndexing) === -1
 						&& await bufferedIndexOf(
 								 injectedRedirectParameterURLs,
 								 newInjectedRedirectParameterURLs[a],
 								 bufferLengthURLs,
-								 delayThrottleURLIndexing) === -1
+								 delayURLIndexing) === -1
 							) {
 						filteredNewInjectedRedirectParameterURLs.push(
 							newInjectedRedirectParameterURLs[a]);
@@ -699,10 +699,10 @@ const startURLPathInjectionThread = async () => {
 						 injectablePathURLs,
 						 injectablePathURLsBuffer[0],
 						 bufferLengthURLs,
-						 delayThrottleURLIndexing) !== -1
+						 delayURLIndexing) !== -1
 			) {
 				injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
-				await sleep(delayThrottleURLIndexing);
+				await sleep(delayURLIndexing);
 			}
 			if (injectablePathURLsBuffer.length !== 0) {
 				injectablePathURLs.push(injectablePathURLsBuffer[0]);
@@ -733,17 +733,17 @@ const startURLPathInjectionThread = async () => {
 										 newInjectedPathURLs,
 										 injectedURL,
 										 bufferLengthURLs,
-										 delayThrottleURLIndexing) === -1
+										 delayURLIndexing) === -1
 								&& await bufferedIndexOf(
 										 injectedPathURLs,
 										 injectedURL,
 										 bufferLengthURLs,
-										 delayThrottleURLIndexing) === -1
+										 delayURLIndexing) === -1
 							) {
 								newInjectedPathURLs.push(injectedURL);
 							}
 						}
-						await sleep(delayThrottleURLPathInjection);
+						await sleep(delayURLPathInjection);
 					}
 					if (newInjectedPathURLs.length !== 0) {
 						injectedPathURLs = injectedPathURLs.concat(newInjectedPathURLs);
@@ -772,11 +772,11 @@ const startURLSorter = async () => {
 					 scannableURLs,
 					 scannableURLsBuffer[0],
 					 bufferLengthURLs,
-					 delayThrottleURLIndexing) !== -1
+					 delayURLIndexing) !== -1
 		) {
 			/* scannableURLs already contains this URL */
 			scannableURLsBuffer = scannableURLsBuffer.slice(1);
-			await sleep(delayThrottleURLIndexing);
+			await sleep(delayURLIndexing);
 		}
 		if (scannableURLsBuffer.length !== 0) {
 			const newScannableURL = scannableURLsBuffer[0];

@@ -7,9 +7,9 @@
 let bufferLengthURLs = 80;
 let callbackURLOpenRedirectTimestamps = "http://0.0.0.0:4242";
 let callbackURLRequestTimestamps = "http://0.0.0.0:4243";
-let delayThrottleAutoScrollNode = 10;
-let delayThrottleRegexpSearch = 10;
-let delayThrottleURLIndexing = 10;
+let delayAutoScrollNode = 10;
+let delayRegexpSearch = 10;
+let delayURLIndexing = 10;
 const redirectURLs = [
 	"https://runescape.com",
 	// "https://runescape.com/",
@@ -357,7 +357,7 @@ const startAutoScrolling = async () => {
 				node.scrollTo(0, 0);
 				await sleep(500);
 			}
-			await sleep(delayThrottleAutoScrollNode);
+			await sleep(delayAutoScrollNode);
 		})();
 	}
 }
@@ -434,18 +434,18 @@ const scanForExploitableURIs = async () => {
 							   URLs,
 							   fullURL,
 							   bufferLengthURLs,
-							   delayThrottleURLIndexing) === -1
+							   delayURLIndexing) === -1
 						&& await bufferedIndexOf(
 							   injectableParameterURLs,
 							   fullURL,
 							   bufferLengthURLs,
-							   delayThrottleURLIndexing) === -1
+							   delayURLIndexing) === -1
 					) {
 						URLs.push(fullURL);
 					}
 				}
 			}
-			await sleep(delayThrottleURLIndexing);
+			await sleep(delayURLIndexing);
 		}
 		if (URLs.length > 0) {
 			injectableParameterURLs = injectableParameterURLs.concat(URLs);
@@ -486,16 +486,16 @@ const scanForURIs = async () => {
 							   URLs,
 							   match[0],
 							   bufferLengthURLs,
-							   delayThrottleURLIndexing) === -1
+							   delayURLIndexing) === -1
 						&& await bufferedIndexOf(
 							   scannableURLs,
 							   match[0],
 							   bufferLengthURLs,
-							   delayThrottleURLIndexing) === -1
+							   delayURLIndexing) === -1
 					) {
 						URLs.push(match[0]);
 					}
-					await sleep(delayThrottleRegexpSearch);
+					await sleep(delayRegexpSearch);
 				}
 			}
 			const allNodes = document.querySelectorAll("*");
@@ -546,12 +546,12 @@ const scanForURIs = async () => {
 							   URLs,
 							   fullURL,
 							   bufferLengthURLs,
-							   delayThrottleURLIndexing) === -1
+							   delayURLIndexing) === -1
 						&& await bufferedIndexOf(
 							   scannableURLs,
 							   fullURL,
 							   bufferLengthURLs,
-							   delayThrottleURLIndexing) === -1
+							   delayURLIndexing) === -1
 					) {
 						if (scanOutOfScopeOrigins) {
 							URLs.push(fullURL);
@@ -564,7 +564,7 @@ const scanForURIs = async () => {
 					}
 				}
 			}
-			await sleep(delayThrottleURLIndexing);
+			await sleep(delayURLIndexing);
 		}
 		if (URLs.length > 0) {
 			scannableURLs = scannableURLs.concat(URLs);

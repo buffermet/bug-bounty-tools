@@ -17,19 +17,20 @@ let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
 let delayPendingRetryURLsThread = 20000;
 let delayRangeRequests = [6000, 8000];
+let delayTabLimitCheck = 1000;
 let delayTabRemovalThread = 30000;
-let delayThrottleURLIndexing = 10;
+let delayThreadPause = 1000;
+let delayURLIndexing = 10;
 let threadCount = 2;
 let timeoutCallback = 40000;
 let timeoutRequests = 40000;
-let isFuzzerThreadPaused = false;
-let isScannerThreadPaused = false;
+let isRequestThreadPaused = false;
 let limitOfTabs = 5;
 let requestPriorities = [
-	0, /* injected parameter */
 	1, /* injected path */
-	3, /* scan */
 	2, /* injected redirect parameter */
+	0, /* injected parameter */
+	3, /* scan */
 ];
 let retryAttempts = 6;
 let scope = [
@@ -211,10 +212,19 @@ const openURLInNewTab = async url => {
 			url: url,
 			windowId: windowId,
 		}, async tab => {
+			if (!tab) isRequestThreadPaused = true;
 			tabIds.push(tab.id);
 			// execute crawlerScripts
-			localStorage.requestedURLs.push(url);
-			await writeStorage();
+			if (
+				bufferedIndexOf(
+					localStorage.requestedURLs,
+					url,
+					bufferLengthURLs,
+					delayURLIndexing) === -1
+			) {
+				localStorage.requestedURLs.push(url);
+				await writeStorage();
+			}
 			res(tab);
 		});
 	});
@@ -385,7 +395,7 @@ const registerWebRequestListeners = () => {
 								pendingRetryURLs,
 								details.url,
 								bufferLengthURLs,
-								delayThrottleURLIndexing) === -1
+								delayURLIndexing) === -1
 						) {
 							pendingRetryURLs.push(details.url);
 						}
@@ -405,7 +415,7 @@ const registerWebRequestListeners = () => {
 							pendingRetryURLs,
 							details.url,
 							bufferLengthURLs,
-							delayThrottleURLIndexing) === -1
+							delayURLIndexing) === -1
 					) {
 						pendingRetryURLs.push(details.url);
 					}
@@ -555,8 +565,11 @@ const startRequestThread = async () => {
 	for (let a = 0; a < threadCount; a++) {
 		(async () => {
 			while (true) {
+				while (isRequestThreadPaused) {
+					await sleep(delayThreadPause);
+				}
 				while (tabIds.length >= limitOfTabs) {
-					await sleep();
+					await sleep(delayTabLimitCheck);
 				}
 				let URL = "";
 				for (let b = 0; b < requestPriorities.length; b++) {
@@ -601,10 +614,10 @@ const startRequestThread = async () => {
 						openURLInNewTab(URL);
 					}
 					await writeStorage();
-					await sleep(getIntFromRange(
-						delayRangeRequests[0],
-						delayRangeRequests[1]));
 				}
+				await sleep(getIntFromRange(
+					delayRangeRequests[0],
+					delayRangeRequests[1]));
 			}
 		})();
 	}
