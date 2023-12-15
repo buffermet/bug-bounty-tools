@@ -26,10 +26,10 @@ let isFuzzerThreadPaused = false;
 let isScannerThreadPaused = false;
 let limitOfTabs = 5;
 let requestPriorities = [
-	1, /* injected path */
-	2, /* injected redirect parameter */
 	0, /* injected parameter */
+	1, /* injected path */
 	3, /* scan */
+	2, /* injected redirect parameter */
 ];
 let retryAttempts = 6;
 let scope = [
@@ -601,10 +601,10 @@ const startRequestThread = async () => {
 						openURLInNewTab(URL);
 					}
 					await writeStorage();
+					await sleep(getIntFromRange(
+						delayRangeRequests[0],
+						delayRangeRequests[1]));
 				}
-				await sleep(getIntFromRange(
-					delayRangeRequests[0],
-					delayRangeRequests[1]));
 			}
 		})();
 	}

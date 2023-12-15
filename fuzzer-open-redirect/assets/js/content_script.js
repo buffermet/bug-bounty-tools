@@ -445,7 +445,7 @@ const scanForExploitableURIs = async () => {
 					}
 				}
 			}
-	   await sleep(delayThrottleURLIndexing);
+			await sleep(delayThrottleURLIndexing);
 		}
 		if (URLs.length > 0) {
 			injectableParameterURLs = injectableParameterURLs.concat(URLs);

@@ -602,7 +602,7 @@ const startURLParameterInjectionThread = async () => {
 			}
 			let newInjectedParameterURLs = [];
 			let newInjectedRedirectParameterURLs = [];
-			/* Generate all permutations of injected paramters. */
+			/* Generate all permutations of injected parameters. */
 			if (injectableParameterURLsBuffer.length !== 0) {
 				const newExploitableURL = injectableParameterURLsBuffer[0]
 				injectableParameterURLs = injectableParameterURLs.concat(newExploitableURL);
@@ -611,7 +611,7 @@ const startURLParameterInjectionThread = async () => {
 				for (let a = 0; a < amountOfChunks; a++) {
 					for (
 						let b = a * bufferLengthURLs;
-							 b < encodedRedirectURLVariants.length
+						   b < encodedRedirectURLVariants.length
 						&& b < (a * bufferLengthURLs) + bufferLengthURLs - 1;
 						b++
 					) {
@@ -693,7 +693,6 @@ const startURLPathInjectionThread = async () => {
 	while (true) {
 		if (injectablePathURLsBuffer.length !== 0) {
 			let newInjectedPathURLs = [];
-			let amountOfChunks = Math.ceil(injectablePathURLsBuffer.length / bufferLengthURLs);
 			while (
 					 injectablePathURLsBuffer.length !== 0
 				&& await bufferedIndexOf(
@@ -721,6 +720,10 @@ const startURLPathInjectionThread = async () => {
 					}
 					for (let a = 0; a < matchIndices.length; a++) {
 						for (let b = 0; b < redirectURLsForPathExploitation.length; b++) {
+							if (
+								injectablePathURLsBuffer[0].endsWith(
+									redirectURLsForPathExploitation[b])
+							) continue;
 							const injectedURL = parsedInjectablePathURL.slice(0, 3).join("") +
 								parsedInjectablePathURL[3].slice(0, matchIndices[a]) +
 								redirectURLsForPathExploitation[b] +
