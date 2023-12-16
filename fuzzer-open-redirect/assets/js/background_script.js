@@ -330,7 +330,7 @@ const parseURL = url => {
 
 /**
  * Pauses a thread with a given name.
- * @param {string} threadName 
+ * @param {string} threadName - Choices: [request]
  * @returns {boolean} success
  */
 const pauseThread = threadName => {
@@ -353,6 +353,11 @@ const registerMessageListeners = () => {
 			   message.injectableParameterURLs
 			|| message.scannableURLs
 		) {
+if (message.injectableParameterURLs) {
+	message.injectableParameterURLs.forEach(url => {
+		if (/[?].*[=](?:http|%68%74%74%70|[/]|[?]|%[23]f|%23|[.]{1,2}[/]|(?:%2e){1,2}%2f)/.test(url)) console.log(url)
+	})
+}
 			worker.postMessage(message);
 		}
 		if (message.timestamp) {
@@ -369,6 +374,9 @@ const registerMessageListeners = () => {
 		}
 	});
 	worker.onmessage = async message => {
+if (message.data.debug) {
+	console.log(message.data)
+}
 		if (message.data.appendage) {
 			if (message.data.appendage.injectedParameterURLsQueue) {
 				localStorage.injectedParameterURLsQueue = localStorage
@@ -381,7 +389,6 @@ const registerMessageListeners = () => {
 						message.data.appendage.injectedPathURLsQueue);
 			}
 			if (message.data.appendage.injectedRedirectParameterURLsQueue) {
-console.log(message)
 				localStorage.injectedRedirectParameterURLsQueue = localStorage
 					.injectedRedirectParameterURLsQueue.concat(
 						message.data.appendage.injectedRedirectParameterURLsQueue);

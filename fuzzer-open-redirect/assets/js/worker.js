@@ -425,6 +425,7 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
 	let match;
 	while (match = regexpSelectorURLParameterValue.exec(parsedURL[4])) {
 		if (regexpSelectorURLRedirectParameter.test(match[0])) {
+postMessage({debug: [match.index, match[0]]})
 			regexpMatches.injectableRedirectParameterURLs.push({
 				index: match.index,
 				match: match[0],
@@ -607,7 +608,7 @@ const startURLParameterInjectionThread = async () => {
 			let newInjectedParameterURLs = [];
 			let newInjectedRedirectParameterURLs = [];
 			if (injectableParameterURLsBuffer.length !== 0) {
-				const newExploitableURL = injectableParameterURLsBuffer[0]
+				const newExploitableURL = injectableParameterURLsBuffer[0];
 				injectableParameterURLs = injectableParameterURLs.concat(newExploitableURL);
 				injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
 				/* Generate all permutations of injected parameters. */
@@ -644,7 +645,8 @@ const startURLParameterInjectionThread = async () => {
 							bufferLengthURLs,
 							delayURLIndexing) === -1
 					) {
-						filteredNewInjectedParameterURLs.push(newInjectedParameterURLs[a]);
+						filteredNewInjectedParameterURLs.push(
+							newInjectedParameterURLs[a]);
 					}
 				}
 				let filteredNewInjectedRedirectParameterURLs = [];
@@ -819,6 +821,7 @@ const trimLeadingAndTrailingWhitespaces = str => {
 	await prepareRedirectURLsForPathExploitation();
 	await encodeRedirectURLs();
 	registerMessageListener();
+	await sleep(1000);
 	startURLParameterInjectionThread();
 	startURLPathInjectionThread();
 	startURLSorter();
