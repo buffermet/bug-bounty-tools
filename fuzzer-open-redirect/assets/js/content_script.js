@@ -54,6 +54,7 @@ const regexpSelectorDebrisHTMLAttributeTwo = /^["']/;
 const regexpSelectorDebrisHTMLAttributeThree = /["']$/;
 const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
 const regexpSelectorHTMLURLAttribute = /^ (?:action|href|src)[=]/i;
+const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorJSONPruneWebkitStorageInfoOne = /webkitStorageInfo/;
 const regexpSelectorJSONPruneWebkitStorageInfoTwo = /webkitStorageInfo/g;
 const regexpSelectorPathWithDirectory = /^[^/]+[/][^/]+/i;
@@ -240,7 +241,8 @@ const getAllStringValues = obj => {
  * ])
  */
 const parseURL = url => {
-	const strippedURL = trimWhitespaces(url);
+	let sliceLength = 0;
+	const strippedURL = trimLeadingAndTrailingWhitespaces(url);
 	const retval = ["","","","","",""];
 	/* protocol */
 	retval[0] = strippedURL.replace(regexpSelectorURLProtocol, "$1");
@@ -257,13 +259,16 @@ const parseURL = url => {
 		retval[1] = strippedURL.slice(retval[0].length).replace(regexpSelectorURLHost, "$1");
 	}
 	/* port */
-	retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(regexpSelectorURLPort, "$1");
+	sliceLength = retval[0].length + retval[1].length;
+	retval[2] = strippedURL.slice(sliceLength).replace(regexpSelectorURLPort, "$1");
 	/* path */
-	retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(regexpSelectorURLPath, "$1");
+	sliceLength = sliceLength + retval[2].length;
+	retval[3] = strippedURL.slice(sliceLength).replace(regexpSelectorURLPath, "$1");
 	/* search */
-	retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(regexpSelectorURLSearch, "$1");
+	sliceLength = sliceLength + retval[3].length;
+	retval[4] = strippedURL.slice(sliceLength).replace(regexpSelectorURLSearch, "$1");
 	/* hash */
-	retval[5] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length + retval[4].length);
+	retval[5] = strippedURL.slice(sliceLength + retval[4].length);
 	return retval;
 };
 
@@ -328,8 +333,8 @@ const toFullURL = uri => {
  * (example input: " https://example.com/  \n")
  * (example output: "https://example.com/")
  */
-const trimWhitespaces = str => {
-	return str.replace(/^\s*(.*)\s*$/g, "$1");
+const trimLeadingAndTrailingWhitespaces = str => {
+	return str.replace(regexpSelectorLeadingAndTrailingWhitespace, "$1");
 };
 
 /**
@@ -431,15 +436,15 @@ const scanForExploitableURIs = async () => {
 							|| isInScopeOrigin(parsedFullURL.slice(0, 2).join(""))
 						)
 						&& await bufferedIndexOf(
-							   URLs,
-							   fullURL,
-							   bufferLengthURLs,
-							   delayURLIndexing) === -1
+							URLs,
+							fullURL,
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 						&& await bufferedIndexOf(
-							   injectableParameterURLs,
-							   fullURL,
-							   bufferLengthURLs,
-							   delayURLIndexing) === -1
+							injectableParameterURLs,
+							fullURL,
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 					) {
 						URLs.push(fullURL);
 					}
@@ -483,15 +488,15 @@ const scanForURIs = async () => {
 							|| isInScopeOrigin(parsedURL.slice(0, 2).join(""))
 						)
 						&& await bufferedIndexOf(
-							   URLs,
-							   match[0],
-							   bufferLengthURLs,
-							   delayURLIndexing) === -1
+							URLs,
+							match[0],
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 						&& await bufferedIndexOf(
-							   scannableURLs,
-							   match[0],
-							   bufferLengthURLs,
-							   delayURLIndexing) === -1
+							scannableURLs,
+							match[0],
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 					) {
 						URLs.push(match[0]);
 					}
@@ -543,15 +548,15 @@ const scanForURIs = async () => {
 					if (
 						   fullURL !== location.href
 						&& await bufferedIndexOf(
-							   URLs,
-							   fullURL,
-							   bufferLengthURLs,
-							   delayURLIndexing) === -1
+							URLs,
+							fullURL,
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 						&& await bufferedIndexOf(
-							   scannableURLs,
-							   fullURL,
-							   bufferLengthURLs,
-							   delayURLIndexing) === -1
+							scannableURLs,
+							fullURL,
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 					) {
 						if (scanOutOfScopeOrigins) {
 							URLs.push(fullURL);

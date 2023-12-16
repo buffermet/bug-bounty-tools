@@ -65,7 +65,7 @@ const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPathDirectory = /[/][^/]*/g;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
-const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[23]f)/i;
+const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[23]f|%23|[.]{1,2}[/]|(?:%2e){1,2}%2f)/i;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
 
 /**
@@ -506,6 +506,7 @@ const getInjectedURLPermutations = async (targetURL, redirectURL) => {
  * ])
  */
 const parseURL = url => {
+	let sliceLength = 0;
 	const strippedURL = trimLeadingAndTrailingWhitespaces(url);
 	const retval = ["","","","","",""];
 	/* protocol */
@@ -513,7 +514,7 @@ const parseURL = url => {
 	const protocol = retval[0].toLowerCase();
 	if (protocol.length !== 0) {
 		if (
-				 protocol === "data:"
+			   protocol === "data:"
 			|| protocol === "javascript:"
 		) {
 			retval[3] = url.slice(retval[0].length);
@@ -523,13 +524,16 @@ const parseURL = url => {
 		retval[1] = strippedURL.slice(retval[0].length).replace(regexpSelectorURLHost, "$1");
 	}
 	/* port */
-	retval[2] = strippedURL.slice(retval[0].length + retval[1].length).replace(regexpSelectorURLPort, "$1");
+	sliceLength = retval[0].length + retval[1].length;
+	retval[2] = strippedURL.slice(sliceLength).replace(regexpSelectorURLPort, "$1");
 	/* path */
-	retval[3] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length).replace(regexpSelectorURLPath, "$1");
+	sliceLength = sliceLength + retval[2].length;
+	retval[3] = strippedURL.slice(sliceLength).replace(regexpSelectorURLPath, "$1");
 	/* search */
-	retval[4] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length).replace(regexpSelectorURLSearch, "$1");
+	sliceLength = sliceLength + retval[3].length;
+	retval[4] = strippedURL.slice(sliceLength).replace(regexpSelectorURLSearch, "$1");
 	/* hash */
-	retval[5] = strippedURL.slice(retval[0].length + retval[1].length + retval[2].length + retval[3].length + retval[4].length);
+	retval[5] = strippedURL.slice(sliceLength + retval[4].length);
 	return retval;
 };
 
@@ -542,7 +546,7 @@ const prepareRedirectURLsForPathExploitation = async () => {
 	for (let a = 0; a < redirectURLs.length; a++) {
 		const parsedURL = parseURL(redirectURLs[a]);
 		if (
-				 parsedURL[0].length !== 0
+			   parsedURL[0].length !== 0
 			&& parsedURL[0].toLowerCase() !== "data:"
 			&& parsedURL[0].toLowerCase() !== "javascript:"
 		) {
@@ -565,14 +569,14 @@ const registerMessageListener = () => {
 				threadCount = message.data.threadCount;
 			}
 			if (
-					 message.data.injectableParameterURLs
+				   message.data.injectableParameterURLs
 				&& message.data.injectableParameterURLs.length !== 0
 			) {
 				injectableParameterURLsBuffer = injectableParameterURLsBuffer.concat(
 					message.data.injectableParameterURLs);
 			}
 			if (
-					 message.data.scannableURLs
+				   message.data.scannableURLs
 				&& message.data.scannableURLs.length !== 0
 			) {
 				scannableURLsBuffer = scannableURLsBuffer.concat(message.data.scannableURLs)
@@ -602,11 +606,11 @@ const startURLParameterInjectionThread = async () => {
 			}
 			let newInjectedParameterURLs = [];
 			let newInjectedRedirectParameterURLs = [];
-			/* Generate all permutations of injected parameters. */
 			if (injectableParameterURLsBuffer.length !== 0) {
 				const newExploitableURL = injectableParameterURLsBuffer[0]
 				injectableParameterURLs = injectableParameterURLs.concat(newExploitableURL);
 				injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
+				/* Generate all permutations of injected parameters. */
 				let amountOfChunks = Math.ceil(encodedRedirectURLVariants.length / bufferLengthURLs);
 				for (let a = 0; a < amountOfChunks; a++) {
 					for (
@@ -629,16 +633,16 @@ const startURLParameterInjectionThread = async () => {
 				let filteredNewInjectedParameterURLs = [];
 				for (let a = 0; a < newInjectedParameterURLs.length; a++) {
 					if (
-							await bufferedIndexOf(
-								filteredNewInjectedParameterURLs,
-								newInjectedParameterURLs[a],
-								bufferLengthURLs,
-								delayURLIndexing) === -1
-					 && await bufferedIndexOf(
-								injectedParameterURLs,
-								newInjectedParameterURLs[a],
-								bufferLengthURLs,
-								delayURLIndexing) === -1
+						   await bufferedIndexOf(
+							filteredNewInjectedParameterURLs,
+							newInjectedParameterURLs[a],
+							bufferLengthURLs,
+							delayURLIndexing) === -1
+						&& await bufferedIndexOf(
+							injectedParameterURLs,
+							newInjectedParameterURLs[a],
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 					) {
 						filteredNewInjectedParameterURLs.push(newInjectedParameterURLs[a]);
 					}
@@ -646,21 +650,22 @@ const startURLParameterInjectionThread = async () => {
 				let filteredNewInjectedRedirectParameterURLs = [];
 				for (let a = 0; a < newInjectedRedirectParameterURLs.length; a++) {
 					if (
-							 await bufferedIndexOf(
-								 filteredNewInjectedRedirectParameterURLs,
-								 newInjectedRedirectParameterURLs[a],
-								 bufferLengthURLs,
-								 delayURLIndexing) === -1
+						   await bufferedIndexOf(
+							filteredNewInjectedRedirectParameterURLs,
+							newInjectedRedirectParameterURLs[a],
+							bufferLengthURLs,
+							delayURLIndexing) === -1
 						&& await bufferedIndexOf(
-								 injectedRedirectParameterURLs,
-								 newInjectedRedirectParameterURLs[a],
-								 bufferLengthURLs,
-								 delayURLIndexing) === -1
-							) {
+							injectedRedirectParameterURLs,
+							newInjectedRedirectParameterURLs[a],
+							bufferLengthURLs,
+							delayURLIndexing) === -1
+					) {
 						filteredNewInjectedRedirectParameterURLs.push(
 							newInjectedRedirectParameterURLs[a]);
 					}
 				}
+				/* Send new injected URLs to background script. */
 				if (filteredNewInjectedParameterURLs.length !== 0) {
 					injectedParameterURLs = injectedParameterURLs.concat(
 						filteredNewInjectedParameterURLs);
@@ -694,12 +699,12 @@ const startURLPathInjectionThread = async () => {
 		if (injectablePathURLsBuffer.length !== 0) {
 			let newInjectedPathURLs = [];
 			while (
-					 injectablePathURLsBuffer.length !== 0
+				   injectablePathURLsBuffer.length !== 0
 				&& await bufferedIndexOf(
-						 injectablePathURLs,
-						 injectablePathURLsBuffer[0],
-						 bufferLengthURLs,
-						 delayURLIndexing) !== -1
+					injectablePathURLs,
+					injectablePathURLsBuffer[0],
+					bufferLengthURLs,
+					delayURLIndexing) !== -1
 			) {
 				injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
 				await sleep(delayURLIndexing);
@@ -722,26 +727,24 @@ const startURLPathInjectionThread = async () => {
 						for (let b = 0; b < redirectURLsForPathExploitation.length; b++) {
 							if (
 								injectablePathURLsBuffer[0].endsWith(
-									redirectURLsForPathExploitation[b])
+									redirectURLsForPathExploitation[b].slice(1))
 							) continue;
 							const injectedURL = parsedInjectablePathURL.slice(0, 3).join("") +
 								parsedInjectablePathURL[3].slice(0, matchIndices[a]) +
 								redirectURLsForPathExploitation[b] +
 								parsedInjectablePathURL.slice(5, 6).join("");
 							if (
-									 await bufferedIndexOf(
-										 newInjectedPathURLs,
-										 injectedURL,
-										 bufferLengthURLs,
-										 delayURLIndexing) === -1
+								   await bufferedIndexOf(
+									newInjectedPathURLs,
+									injectedURL,
+									bufferLengthURLs,
+									delayURLIndexing) === -1
 								&& await bufferedIndexOf(
-										 injectedPathURLs,
-										 injectedURL,
-										 bufferLengthURLs,
-										 delayURLIndexing) === -1
-							) {
-								newInjectedPathURLs.push(injectedURL);
-							}
+									injectedPathURLs,
+									injectedURL,
+									bufferLengthURLs,
+									delayURLIndexing) === -1
+							) newInjectedPathURLs.push(injectedURL);
 						}
 						await sleep(delayURLPathInjection);
 					}
@@ -767,12 +770,12 @@ const startURLPathInjectionThread = async () => {
 const startURLSorter = async () => {
 	while (true) {
 		while (
-				 scannableURLsBuffer.length !== 0
+			   scannableURLsBuffer.length !== 0
 			&& await bufferedIndexOf(
-					 scannableURLs,
-					 scannableURLsBuffer[0],
-					 bufferLengthURLs,
-					 delayURLIndexing) !== -1
+				scannableURLs,
+				scannableURLsBuffer[0],
+				bufferLengthURLs,
+				delayURLIndexing) !== -1
 		) {
 			/* scannableURLs already contains this URL */
 			scannableURLsBuffer = scannableURLsBuffer.slice(1);
