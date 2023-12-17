@@ -27,12 +27,6 @@ let timeoutCallback = 40000;
 let timeoutRequests = 40000;
 let isRequestThreadPaused = false;
 let limitOfTabs = 6;
-let requestPriorities = [
-	2, /* injected redirect parameter */
-	1, /* injected path */
-	0, /* injected parameter */
-	3, /* scan */
-];
 let retryAttempts = 6;
 let scope = [
 	"*://*.playstation.net",
@@ -47,6 +41,12 @@ let scope = [
 	"*://api.direct.playstation.com",
 ];
 let statusCodesFail = ["4*", "5*"];
+let urlPriorities = [
+	2, /* injected redirect parameter */
+	1, /* injected path */
+	0, /* injected parameter */
+	3, /* scan */
+];
 
 const consoleCSS = "background-color:rgb(80,255,0);text-shadow:0 1px 1px rgba(0,0,0,.3);color:black";
 const redirectURLs = [
@@ -61,9 +61,11 @@ const redirectURLs = [
 const regexpSelectorEscapeChars = /([^*a-z0-9\]])/ig;
 const regexpSelectorLeadingAndTrailingWhitespace = /^\s*(.*)\s*$/g;
 const regexpSelectorURLHost = /^((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,63}(?:[a-z]{1,63})|(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9])\.(?:25[0-5]|2[0-4][0-9]|[1][0-9][0-9]|[1-9]?[0-9]))?.*$/i;
+const regexpSelectorURLParameterValue = /=[^&=#]*/g;
 const regexpSelectorURLPath = /^([^?#]{1,2048})?.*$/i;
 const regexpSelectorURLPort = /^([:](?:6553[0-5]|655[0-2][0-9]|65[0-4][0-9][0-9]|6[0-4][0-9][0-9][0-9]|[0-5][0-9][0-9][0-9][0-9]|[1-9][0-9]{0,3}))?.*$/i;
 const regexpSelectorURLProtocol = /^((?:[a-z0-9.+-]{1,256}[:])(?:[/][/])?|(?:[a-z0-9.+-]{1,256}[:])?[/][/])?.*$/i;
+const regexpSelectorURLRedirectParameter = /^[=](?:http|%68%74%74%70|[/]|[?]|%[23]f|%23|[.]{1,2}[/]|(?:%2e){1,2}%2f)/i;
 const regexpSelectorURLSchemeEscaped = /^([a-z0-9.+-]*)\*([a-z0-9.+-]*)\[:\]/ig;
 const regexpSelectorURLSearch = /^([?][^#]{0,2048})?.*$/i;
 const regexpSelectorWildcardStatusCode = /\*/g;
@@ -349,15 +351,27 @@ const pauseThread = threadName => {
  */
 const registerMessageListeners = () => {
 	chrome.runtime.onMessage.addListener(async (message, sender) => {
-		if (
-			   message.injectableParameterURLs
-			|| message.scannableURLs
-		) {
-if (message.injectableParameterURLs) {
-	message.injectableParameterURLs.forEach(url => {
-		if (/[?].*[=](?:http|%68%74%74%70|[/]|[?]|%[23]f|%23|[.]{1,2}[/]|(?:%2e){1,2}%2f)/.test(url)) console.log(url)
-	})
-}
+		if (message.injectableParameterURLs) {
+			const injectableRedirectParameterURLs = [];
+			const injectableParameterURLs = [];
+			message.injectableParameterURLs.forEach(url => {
+				const parsedURL = parseURL(url);
+				let match, isRedirect;
+				while (match = regexpSelectorURLParameterValue.exec(parsedURL[4])) {
+					if (regexpSelectorURLRedirectParameter.test(match[0])) {
+						injectableRedirectParameterURLs.push(url);
+						isRedirect = true;
+						break;
+					}
+				}
+				if (!isRedirect) injectableParameterURLs.push(url);
+			});
+			worker.postMessage({
+				injectableParameterURLs: injectableParameterURLs,
+				injectableRedirectParameterURLs: injectableRedirectParameterURLs,
+			});
+		}
+		if (message.scannableURLs) {
 			worker.postMessage(message);
 		}
 		if (message.timestamp) {
@@ -599,11 +613,11 @@ const startRequestThread = async () => {
 				) await sleep(1000);
 				let URL = "";
 				while (!URL) {
-					for (let b = 0; b < requestPriorities.length; b++) {
+					for (let b = 0; b < urlPriorities.length; b++) {
 						if (URL.length !== 0) {
 							break;
 						}
-						switch (requestPriorities[b]) {
+						switch (urlPriorities[b]) {
 							case 0:  /* injected parameter */
 								if (localStorage.injectedParameterURLsQueue.length !== 0) {
 									URL = localStorage.injectedParameterURLsQueue[0];
