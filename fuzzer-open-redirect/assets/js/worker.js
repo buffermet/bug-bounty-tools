@@ -2,6 +2,27 @@
  * Web worker for fuzzer-open-redirect.
  */
 
+let localStorage = {
+	injectableParameterURLs: [],
+	injectableParameterURLsBuffer: [],
+	injectablePathURLs: [],
+	injectablePathURLsBuffer: [],
+	injectableRedirectParameterURLs: [],
+	injectableRedirectParameterURLsBuffer: [],
+	injectedParameterURLs: [],
+	injectedParameterURLsRequestQueue: [],
+	injectedPathURLs: [],
+	injectedPathURLsRequestQueue: [],
+	injectedRedirectParameterURLs: [],
+	injectedRedirectParameterURLsRequestQueue: [],
+	pendingRetryCallbackURLs: [],
+	pendingRetryURLs: [],
+	requestedURLs: [],
+	scannableURLs: [],
+	scannableURLsBuffer: [],
+	scannableURLsRequestQueue: [],
+};
+
 let bufferLengthURLs = 80;
 let delayURLIndexing = 10;
 let delayURLInjectionThread = 2000;
@@ -22,37 +43,25 @@ let encodingTypes = [
 	[18],
 ];
 let encodedRedirectURLVariants = [];
+let injectableParameterURLsBuffer = [];
+let injectablePathURLsBuffer = [];
+let injectableRedirectParameterURLsBuffer = [];
 let injectedRedirectParameterURLs = [];
 let injectedParameterURLs = [];
 let injectedPathURLs = [];
-let injectableParameterURLs = [];
-let injectableParameterURLsBuffer = [];
-let injectablePathURLs = [];
-let injectablePathURLsBuffer = [];
-let injectableRedirectParameterURLs = [];
-let injectableRedirectParameterURLsBuffer = [];
 let matchSetPermutations = [];
 const redirectURLs = [
 	"https://runescape.com",
-	// "https://runescape.com/",
-	// "https://runescape.com/splash",
-	// "https://runescape.com/splash?ing",
 	"http://runescape.com",
-	// "http://runescape.com/",
-	// "http://runescape.com/splash",
-	// "http://runescape.com/splash?ing",
 	"//runescape.com",
-	// "//runescape.com/",
-	// "//runescape.com/splash",
-	// "//runescape.com/splash?ing",
-	// "runescape.com",
-	// "runescape.com/",
-	// "runescape.com/splash",
-	// "runescape.com/splash?ing",
 	"data:text/html,<script>location='https://runescape.com'</script>",
 	"data:text/html;base64,PHNjcmlwdD5sb2NhdGlvbj0naHR0cHM6Ly9ydW5lc2NhcGUuY29tJzwvc2NyaXB0Pg",
 	"javascript:location='https://runescape.com'",
 	"javascript:location='//runescape.com'",
+	"javascript:location=\"https://runescape.com\"",
+	"javascript:location=\"//runescape.com\"",
+	"javascript:location=`https://runescape.com`",
+	"javascript:location=`//runescape.com`",
 ];
 let redirectURLsForPathExploitation = [];
 let scannableURLs = [];
@@ -426,26 +435,26 @@ const getInjectedURLParameterPermutations = async (targetURL, redirectURL) => {
 		console.error("URL contains no search:", targetURL);
 		return [];
 	}
-	const injectableParameterURLs = [];
+	const injectableURLs = [];
 	let match;
 	while (match = regexpSelectorURLParameterValue.exec(parsedURL[4])) {
-		injectableParameterURLs.push({
+		injectableURLs.push({
 			index: match.index,
 			match: match[0],
 		});
 	}
 	/* Inject all URL parameters. */
 	matchSetPermutations = [];
-	getArrayPermutations([], injectableParameterURLs);
+	getArrayPermutations([], injectableURLs);
 postMessage({debug: ['matchSetPermutations', matchSetPermutations]})
-	let newInjectedParameterURLs = [];
+	const newInjectedParameterURLs = [];
 	for (let a = 0; a < matchSetPermutations.length; a++) {
 		let matchSets = matchSetPermutations[a];
 		let injectedSearch = parsedURL[4];
 		for (let b = 0; b < matchSets.length; b++) {
 			const matchSet = matchSets[b];
 			const lengthLeadingMatches = matchSets.slice(0, b)
-				.map(set => { return set.match }).join("").length;
+				.map(set => set.match).join("").length;
 			const search_ = injectedSearch.slice(
 				0,
 				matchSet.index
@@ -476,11 +485,11 @@ const getInjectedURLRedirectParameterPermutations = async (targetURL, redirectUR
 		console.error("URL contains no search:", targetURL);
 		return [];
 	}
-	const injectableRedirectParameterURLs = [];
+	const injectableURLs = [];
 	let match;
 	while (match = regexpSelectorURLParameterValue.exec(parsedURL[4])) {
 		if (regexpSelectorURLRedirectParameter.test(match[0])) {
-			injectableRedirectParameterURLs.push({
+			injectableURLs.push({
 				index: match.index,
 				match: match[0],
 			});
@@ -488,16 +497,16 @@ const getInjectedURLRedirectParameterPermutations = async (targetURL, redirectUR
 	}
 	/* Inject redirect URL parameters. */
 	matchSetPermutations = [];
-	getArrayPermutations([], injectableRedirectParameterURLs);
+	getArrayPermutations([], injectableURLs);
 postMessage({debug: ['matchSetPermutations', matchSetPermutations]})
-	let newInjectedRedirectParameterURLs = [];
+	const injectedURLs = [];
 	for (let a = 0; a < matchSetPermutations.length; a++) {
 		let matchSets = matchSetPermutations[a];
 		let injectedSearch = parsedURL[4];
 		for (let b = 0; b < matchSets.length; b++) {
 			const matchSet = matchSets[b];
 			const lengthLeadingMatches = matchSets.slice(0, b)
-				.map(set => { return set.match }).join("").length;
+				.map(set => set.match).join("").length;
 			const search_ = injectedSearch.slice(
 				0,
 				matchSet.index
@@ -510,9 +519,9 @@ postMessage({debug: ['matchSetPermutations', matchSetPermutations]})
 			injectedSearch = search_ + "=" + redirectURL + _search;
 		}
 		const injectedURL = parsedURL.slice(0, 4).join("") + injectedSearch + parsedURL[5];
-		newInjectedRedirectParameterURLs.push(injectedURL);
+		injectedURLs.push(injectedURL);
 	}
-	return newInjectedRedirectParameterURLs;
+	return injectedURLs;
 };
 
 /**
@@ -591,6 +600,9 @@ const registerMessageListener = () => {
 			if (message.data.threadCount) {
 				threadCount = message.data.threadCount;
 			}
+			if (message.data.localStorage) {
+				localStorage = message.data.localStorage;
+			}
 			if (
 				   message.data.injectableParameterURLs
 				&& message.data.injectableParameterURLs.length !== 0
@@ -604,8 +616,9 @@ const registerMessageListener = () => {
 			) {
 				injectableParameterURLsBuffer = injectableParameterURLsBuffer.concat(
 					message.data.injectableRedirectParameterURLs);
-				injectableRedirectParameterURLsBuffer = injectableRedirectParameterURLsBuffer.concat(
-					message.data.injectableRedirectParameterURLs);
+				injectableRedirectParameterURLsBuffer =
+					injectableRedirectParameterURLsBuffer.concat(
+						message.data.injectableRedirectParameterURLs);
 			}
 			if (
 				   message.data.scannableURLs
@@ -628,21 +641,33 @@ const shiftURLParameterInjectionBuffer = async () => {
 			/* Filter already discovered URLs that have injectable parameters. */
 			while (
 				bufferedIndexOf(
-					injectableParameterURLs,
+					localStorage.injectableParameterURLs,
 					injectableParameterURLsBuffer[0],
 					bufferLengthURLs,
 					delayURLIndexing) !== -1
 			) {
-				injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
+				injectableParameterURLsBuffer.shift();
+				postMessage({
+					shift: "injectableParameterURLsBuffer"
+				});
 				await sleep(delayURLThread);
 			}
 			let newInjectedParameterURLs = [];
 			if (injectableParameterURLsBuffer.length !== 0) {
 				const newExploitableURL = injectableParameterURLsBuffer[0];
-				injectableParameterURLs = injectableParameterURLs.concat(newExploitableURL);
-				injectableParameterURLsBuffer = injectableParameterURLsBuffer.slice(1);
+				localStorage.injectableParameterURLs.push(newExploitableURL);
+				postMessage({
+					appendage: {
+						injectableParameterURLs: newExploitableURL
+					}
+				});
+				injectableParameterURLsBuffer.shift();
+				postMessage({
+					shift: "injectableParameterURLsBuffer"
+				});
 				/* Generate all permutations of injected parameters. */
-				let amountOfChunks = Math.ceil(encodedRedirectURLVariants.length / bufferLengthURLs);
+				let amountOfChunks = Math.ceil(
+					encodedRedirectURLVariants.length / bufferLengthURLs);
 				for (let a = 0; a < amountOfChunks; a++) {
 					for (
 						let b = a * bufferLengthURLs;
@@ -683,7 +708,7 @@ const shiftURLParameterInjectionBuffer = async () => {
 						filteredNewInjectedParameterURLs);
 					postMessage({
 						appendage: {
-							injectedParameterURLsQueue: filteredNewInjectedParameterURLs
+							injectedParameterURLsRequestQueue: filteredNewInjectedParameterURLs
 						}
 					});
 				}
@@ -702,19 +727,30 @@ const shiftURLRedirectParameterInjectionBuffer = async () => {
 		while (
 			   injectableRedirectParameterURLsBuffer.length !== 0
 			&& bufferedIndexOf(
-				injectableRedirectParameterURLs,
+				localStorage.injectableRedirectParameterURLs,
 				injectableRedirectParameterURLsBuffer[0],
 				bufferLengthURLs,
 				delayURLIndexing) !== -1
 		) {
-			injectableRedirectParameterURLsBuffer = injectableRedirectParameterURLsBuffer.slice(1);
+			injectableRedirectParameterURLsBuffer.shift();
+			postMessage({
+				shift: "injectableRedirectParameterURLsBuffer"
+			});
 			await sleep(delayURLThread);
 		}
 		let newInjectedRedirectParameterURLs = [];
 		if (injectableRedirectParameterURLsBuffer.length !== 0) {
 			const newExploitableURL = injectableRedirectParameterURLsBuffer[0];
-			injectableRedirectParameterURLs = injectableRedirectParameterURLs.concat(newExploitableURL);
-			injectableRedirectParameterURLsBuffer = injectableRedirectParameterURLsBuffer.slice(1);
+			localStorage.injectableRedirectParameterURLs.push(newExploitableURL);
+			postMessage({
+				appendage: {
+					injectableRedirectParameterURLs: newExploitableURL
+				}
+			});
+			injectableRedirectParameterURLsBuffer.shift();
+			postMessage({
+				shift: "injectableRedirectParameterURLsBuffer"
+			});
 			/* Generate all permutations of injected parameters. */
 			let amountOfChunks = Math.ceil(
 				encodedRedirectURLVariants.length / bufferLengthURLs);
@@ -758,7 +794,7 @@ const shiftURLRedirectParameterInjectionBuffer = async () => {
 					filteredNewInjectedRedirectParameterURLs);
 				postMessage({
 					appendage: {
-						injectedRedirectParameterURLsQueue:
+						injectedRedirectParameterURLsRequestQueue:
 							filteredNewInjectedRedirectParameterURLs
 					}
 				});
@@ -778,22 +814,38 @@ const shiftURLPathInjectionBuffer = async () => {
 		while (
 			   injectablePathURLsBuffer.length !== 0
 			&& await bufferedIndexOf(
-				injectablePathURLs,
+				localStorage.injectablePathURLs,
 				injectablePathURLsBuffer[0],
 				bufferLengthURLs,
 				delayURLIndexing) !== -1
 		) {
-			injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
+			injectablePathURLsBuffer.shift();
+			postMessage({
+				shift: "injectablePathURLsBuffer"
+			});
 			await sleep(delayURLIndexing);
 		}
 		let newInjectedPathURLs = [];
 		if (injectablePathURLsBuffer.length !== 0) {
-			injectablePathURLs.push(injectablePathURLsBuffer[0]);
+			const newExploitableURL = injectablePathURLsBuffer[0];
+			localStorage.injectablePathURLs.push(newExploitableURL);
+			postMessage({
+				appendage: {
+					injectablePathURLs: newExploitableURL
+				}
+			});
+			injectablePathURLsBuffer.shift();
+			postMessage({
+				shift: "injectablePathURLsBuffer"
+			});
 			const parsedInjectablePathURL = parseURL(injectablePathURLsBuffer[0]);
 			if (parsedInjectablePathURL[3].length !== 0) {
 				let matchIndices = [];
 				let match;
-				while (match = regexpSelectorURLPathDirectory.exec(parsedInjectablePathURL[3])) {
+				while (
+					match = regexpSelectorURLPathDirectory.exec(
+						parsedInjectablePathURL[3])
+				) {
 					matchIndices.push(match.index);
 				}
 				if (matchIndices.length !== 1) {
@@ -828,12 +880,14 @@ const shiftURLPathInjectionBuffer = async () => {
 					injectedPathURLs = injectedPathURLs.concat(newInjectedPathURLs);
 					postMessage({
 						appendage: {
-							injectedPathURLsQueue: newInjectedPathURLs
+							injectedPathURLsRequestQueue: newInjectedPathURLs
 						}
 					});
 				}
 			}
-			injectablePathURLsBuffer = injectablePathURLsBuffer.slice(1);
+			postMessage({
+				shift: "injectablePathURLsBuffer"
+			});
 		}
 		res();
 	});
@@ -853,17 +907,23 @@ const shiftURLScannerBuffer = async () => {
 				delayURLIndexing) !== -1
 		) {
 			/* scannableURLs already contains this URL */
-			scannableURLsBuffer = scannableURLsBuffer.slice(1);
+			scannableURLsBuffer.shift();
+			postMessage({
+				shift: "scannableURLsBuffer"
+			});
 			await sleep(delayURLThread);
 		}
 		if (scannableURLsBuffer.length !== 0) {
 			const newScannableURL = scannableURLsBuffer[0];
 			scannableURLs = scannableURLs.concat(newScannableURL);
-			scannableURLsBuffer = scannableURLsBuffer.slice(1);
 			postMessage({
 				appendage: {
-					scannableURLsQueue: [newScannableURL]
+					scannableURLsRequestQueue: [newScannableURL]
 				}
+			});
+			scannableURLsBuffer.shift();
+			postMessage({
+				shift: "scannableURLsBuffer"
 			});
 		}
 		res();
@@ -924,6 +984,6 @@ const trimLeadingAndTrailingWhitespaces = str => {
 	await prepareRedirectURLsForPathExploitation();
 	await encodeRedirectURLs();
 	registerMessageListener();
-	await sleep(2000); // use a listener for localStorage instead
+	await sleep(5000); // use a listener for localStorage instead
 	startURLThread();
 })();
