@@ -29,6 +29,9 @@ const module = {
                 + module.charsNumeric,
             length)
     },
+    /**
+     * 
+     */
     string: (chars, length) => {
         const buffer = ''
         for (let a = 0; a !== length; a++) {
@@ -41,3 +44,4 @@ const module = {
 Object.freeze(module)
 
 export default module
+

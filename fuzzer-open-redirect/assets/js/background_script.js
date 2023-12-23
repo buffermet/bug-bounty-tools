@@ -4,27 +4,6 @@
 
 import constants from "./constants.mjs"
 
-let localStorage = {
-	injectableParameterURLs: [],
-	injectableParameterURLsBuffer: [],
-	injectablePathURLs: [],
-	injectablePathURLsBuffer: [],
-	injectableRedirectParameterURLs: [],
-	injectableRedirectParameterURLsBuffer: [],
-	injectedParameterURLs: [],
-	injectedParameterURLsRequestQueue: [],
-	injectedPathURLs: [],
-	injectedPathURLsRequestQueue: [],
-	injectedRedirectParameterURLs: [],
-	injectedRedirectParameterURLsRequestQueue: [],
-	pendingRetryCallbackURLs: [],
-	pendingRetryURLs: [],
-	requestedURLs: [],
-	scannableURLs: [],
-	scannableURLsBuffer: [],
-	scannableURLsRequestQueue: [],
-};
-
 let bufferLengthURLs = 80;
 let crawlerScripts = [];
 let delayForceWakeTabsThread = 1000;
@@ -319,47 +298,6 @@ const openWindow = async () => {
 			windowId = w.id
 			res();
 		});
-	});
-};
-
-/**
- * 
- */
-const parseCallbackURLs = async () => {
-	return new Promise((res, err) => {
-		/* Parse specified callback URLs for open redirects and requests. */
-		parsedCallbackURLOpenRedirectTimestamps = parseURL(
-			callbackURLOpenRedirectTimestamps);
-		if (parsedCallbackURLOpenRedirectTimestamps[1] === "") {
-			console.error("%cfuzzer-open-redirect", consoleCSS,
-				"No valid origin was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").");
-			err();
-		}
-		if (parsedCallbackURLOpenRedirectTimestamps[0] === "") {
-			console.warn("%cfuzzer-open-redirect", consoleCSS,
-				"No protocol was provided in the specified callback URL for open redirect timestamps (" + callbackURLOpenRedirectTimestamps + ").",
-				"Defaulting to \"http://\".");
-			parsedCallbackURLOpenRedirectTimestamps[0] = "http://";
-		}
-		console.log("%cfuzzer-open-redirect", consoleCSS,
-			"Callback URL for open redirect timestamps is parsed: " +
-			parsedCallbackURLOpenRedirectTimestamps.join(""));
-		parsedCallbackURLRequestTimestamps = parseURL(callbackURLRequestTimestamps);
-		if (parsedCallbackURLRequestTimestamps[1] === "") {
-			console.error("%cfuzzer-open-redirect", consoleCSS,
-				"No valid origin was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").");
-			err();
-		}
-		if (parsedCallbackURLRequestTimestamps[0] === "") {
-			console.warn("%cfuzzer-open-redirect", consoleCSS,
-				"No protocol was provided in the specified callback URL for request timestamps (" + callbackURLOpenRedirectTimestamps + ").",
-				"Defaulting to \"http://\".");
-			parsedCallbackURLRequestTimestamps[0] = "http://";
-		}
-		console.log("%cfuzzer-open-redirect", consoleCSS,
-			"Callback URL for request timestamps is parsed: " +
-			parsedCallbackURLRequestTimestamps.join(""));
-		res();
 	});
 };
 
